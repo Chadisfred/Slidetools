@@ -60,6 +60,7 @@ Each tool sits in its own panel, stacked from top to bottom. Every panel header 
 | Dotted grip on the left | Drag up or down to reorder the tools |
 | Tool name or the arrow on the right | Fold the panel down to just its header, or unfold it |
 | Detail button (Basic, More, Full) | Click to cycle how much of the tool is shown |
+| i icon | Hover or tab to it for a short guide to the tool |
 | Three dots | Move up, move down, reset the tool to its defaults, or hide it |
 
 The sliders button at the top right lists every tool so you can show or hide each one. It also has Unfold all, Fold all and Reset panel arrangement.
@@ -104,7 +105,7 @@ Sets the width and height of every selected shape, using plain numbers or formul
 | More | Live result, lock aspect ratio, resize from point (anchor), Use selection, match to largest or smallest |
 | Full | Recent formulas |
 
-Hover over the small i at the top right of the tool, or tab to it, to read how formulas work.
+Hover over the small i in the tool's header, or tab to it, to read how formulas work.
 
 Tips:
 
@@ -241,6 +242,27 @@ Tips:
 4. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
 5. The colour pickers in the Styles and Shape styles editors suggest these colours.
 
+### Consistency check
+
+One scan of every normal slide that lists small inconsistencies, so a deck can be tidied in one pass.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Check slides and the results |
+| More | Choose which checks run, and the grid tolerance |
+
+Checks:
+
+| Check | Finds | Fix |
+| --- | --- | --- |
+| Nearly on the grid | Shapes whose left or top edge is within the tolerance (0.1 in by default) of a Layout grid line or a step of g, but not on it | Snap |
+| Text with no style | Text whose look matches none of your text styles, listed once per text box and font | Review |
+| Unlinked lookalikes | Text and shapes that look like one of your styles but aren't linked | Link, keeping their colour |
+| Odd corner radii | Rounded rectangles whose radius differs from the most common one | Set the common radius |
+| Colours not in your palette | Fills, outlines and text in colours outside your palette, theme colours and styles | Review |
+
+Click any item to select it on its slide. Groups with more than one fix have a Fix all button. Nothing changes until you click a fix, and masters and layouts are never checked or changed.
+
 ## Formulas
 
 Every number box accepts maths, for example `12.5-2*0.42`. The Resize boxes also understand these names:
@@ -294,6 +316,7 @@ js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
 js/tools/colours.js      Colours tool (palette)
+js/tools/check.js        Consistency check tool
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons
 ```
