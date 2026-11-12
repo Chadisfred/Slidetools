@@ -14,7 +14,7 @@
   var XML_SLOTS = { Light1: "lt1", Dark1: "dk1", Light2: "lt2", Dark2: "dk2", Accent1: "accent1", Accent2: "accent2", Accent3: "accent3", Accent4: "accent4", Accent5: "accent5", Accent6: "accent6" };
   var DML = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
-  var defaults = { colTarget: "fill" };
+  var defaults = { colTarget: "fill", colTab: "theme" };
   ST.addDefaults(defaults);
 
   var ICON = '<svg viewBox="0 0 18 18"><circle cx="6" cy="6.5" r="4" fill="currentColor"/><circle cx="12" cy="6.5" r="4" fill="currentColor" opacity="0.55"/><circle cx="9" cy="11.8" r="4" fill="currentColor" opacity="0.3"/></svg>';
@@ -316,6 +316,40 @@
     });
   }
 
+  // PowerPoint lays Custom Colors out as rows of 10, padding empty slots with white.
+  // A column whose slots are all filled is treated as a family (a colour and its tints);
+  // everything else is a single colour. Empty white slots are dropped.
+  // True when every colour in the list is a tint or shade of the same hue.
+  function sameHue(col) {
+    var hs = col.map(function (c) { return rgbToHsl(c.hex); });
+    var grey = function (h) { return h[1] < 0.12; };
+    if (hs.every(grey)) return true;
+    if (hs.some(grey)) return false;
+    return hs.every(function (h) { var d = Math.abs(h[0] - hs[0][0]); return Math.min(d, 360 - d) <= 18; });
+  }
+  function splitTemplate(list) {
+    var COLS = 10, out = { singles: [], families: [], rows: 0 };
+    var empty = function (c) { return !c || c.hex === "#FFFFFF"; };
+    if (list.length < COLS * 2 || list.length % COLS) {
+      out.singles = list.filter(function (c) { return list.length < COLS * 2 ? true : !empty(c); });
+      return out;
+    }
+    var rows = list.length / COLS, famCols = [];
+    for (var c = 0; c < COLS; c++) {
+      var col = [];
+      for (var r = 0; r < rows; r++) col.push(list[r * COLS + c]);
+      if (col.every(function (x) { return !empty(x); }) && sameHue(col)) famCols.push(c);
+    }
+    for (var r2 = 0; r2 < rows; r2++) for (var c2 = 0; c2 < COLS; c2++) {
+      var x = list[r2 * COLS + c2];
+      if (famCols.indexOf(c2) < 0 && !empty(x)) out.singles.push(x);
+    }
+    out.families = famCols.map(function (fc) { var f = []; for (var r3 = 0; r3 < rows; r3++) f.push(list[r3 * COLS + fc]); return f; });
+    out.rows = rows;
+    return out;
+  }
+  ST._splitTemplate = splitTemplate; // exposed for testing
+
   // ---------- Rendering ----------
   function swatch(c, i) {
     var b = document.createElement("button");
@@ -333,7 +367,6 @@
     updateDatalist();
     Array.prototype.forEach.call($("colTarget").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.colTarget); });
     themeRow.innerHTML = ""; mine.innerHTML = ""; edit.innerHTML = "";
-    $("colThemeWrap").hidden = !theme.length;
     // Base theme colours, then five rows of tints and shades under each, like PowerPoint.
     theme.forEach(function (c, i) { themeRow.appendChild(swatch(c, i)); });
     var tints = theme.map(variants), grid = $("colTints");
@@ -341,10 +374,25 @@
     grid.style.gridTemplateColumns = "repeat(" + Math.max(1, theme.length) + ", 1fr)";
     themeRow.style.gridTemplateColumns = grid.style.gridTemplateColumns;
     for (var r = 0; r < 5; r++) tints.forEach(function (col) { if (col[r]) grid.appendChild(swatch(col[r])); });
-    var tpl = $("colTemplate");
-    tpl.innerHTML = "";
-    $("colTemplateWrap").hidden = !template.length;
-    template.forEach(function (c) { tpl.appendChild(swatch(c)); });
+    // Template colours: single colours in one row, then each family as a column with its tints.
+    var split = splitTemplate(template), singles = $("colSingles"), fams = $("colFamilies");
+    singles.innerHTML = ""; fams.innerHTML = "";
+    split.singles.forEach(function (c) { singles.appendChild(swatch(c)); });
+    fams.style.gridTemplateColumns = "repeat(" + Math.max(1, split.families.length) + ", 1fr)";
+    for (var fr = 0; fr < split.rows; fr++) split.families.forEach(function (f) { if (f[fr]) fams.appendChild(swatch(f[fr])); });
+    $("colSinglesLabel").hidden = !split.singles.length || !split.families.length;
+    $("colFamiliesLabel").hidden = !split.families.length;
+    // Tabs: hide Theme or Template when the deck doesn't have them.
+    var tabs = { theme: theme.length > 0, template: template.length > 0, mine: true };
+    var tab = tabs[ST.state.colTab] ? ST.state.colTab : (tabs.theme ? "theme" : tabs.template ? "template" : "mine");
+    Array.prototype.forEach.call($("colTabs").children, function (b) {
+      var v = b.getAttribute("data-v");
+      b.hidden = !tabs[v]; b.classList.toggle("on", v === tab);
+    });
+    $("colTabs").style.gridTemplateColumns = "repeat(" + Object.keys(tabs).filter(function (k) { return tabs[k]; }).length + ", 1fr)";
+    $("colThemeWrap").hidden = tab !== "theme";
+    $("colTemplateWrap").hidden = tab !== "template";
+    $("colMineWrap").hidden = tab !== "mine";
     if (!palette.length) mine.innerHTML = '<div class="muted-note">' + (loaded || !ST.inOffice ? "No colours yet. Add one below, or take one from the selection." : "Reading colours from this presentation.") + "</div>";
     palette.forEach(function (c, i) { mine.appendChild(swatch(c, i)); });
     palette.forEach(function (c, i) {
@@ -374,15 +422,20 @@
       'The colour pickers in the style editors suggest these colours too.</span>' +
     '</span>' +
     '<div class="seg seg3" id="colTarget"></div>' +
-    '<div id="colThemeWrap"><div class="sublabel">Theme colours</div><div class="theme-grid" id="colTheme"></div><div class="theme-grid tints" id="colTints"></div></div>' +
-    '<div id="colTemplateWrap" hidden><div class="sublabel">Template colours</div><div class="swatches" id="colTemplate"></div></div>' +
-    '<div class="sublabel">Your colours</div>' +
-    '<div class="swatches" id="colMine"></div>' +
-    '<div class="inline"><div class="color-field"><input type="color" id="colPick" value="#0071e3"><input type="text" id="colHex" placeholder="#0071E3"></div>' +
-      '<button class="btn small" id="colAdd">Add</button></div>' +
-    '<button class="btn small" id="colFromSel">Add from selection</button>' +
-    '<div class="group-label" data-min="2">Edit your colours</div>' +
-    '<div class="col-edit" id="colEdit" data-min="2"></div>';
+    '<div class="seg col-tabs" id="colTabs"><button data-v="theme">Theme</button><button data-v="template">Template</button><button data-v="mine">Yours</button></div>' +
+    '<div id="colThemeWrap" class="col-pane"><div class="theme-grid" id="colTheme"></div><div class="theme-grid tints" id="colTints"></div></div>' +
+    '<div id="colTemplateWrap" class="col-pane" hidden>' +
+      '<div class="sublabel" id="colSinglesLabel">Colours</div><div class="fixed-grid" id="colSingles"></div>' +
+      '<div class="sublabel" id="colFamiliesLabel">Families</div><div class="theme-grid families" id="colFamilies"></div>' +
+    '</div>' +
+    '<div id="colMineWrap" class="col-pane" hidden>' +
+      '<div class="fixed-grid" id="colMine"></div>' +
+      '<div class="inline"><div class="color-field"><input type="color" id="colPick" value="#0071e3"><input type="text" id="colHex" placeholder="#0071E3"></div>' +
+        '<button class="btn small" id="colAdd">Add</button></div>' +
+      '<button class="btn small" id="colFromSel">Add from selection</button>' +
+      '<div class="group-label" data-min="2">Edit your colours</div>' +
+      '<div class="col-edit" id="colEdit" data-min="2"></div>' +
+    '</div>';
 
   function build(body) {
     body.appendChild(ST.html(MARKUP));
@@ -392,6 +445,9 @@
       b.textContent = o[1]; b.setAttribute("data-v", o[0]);
       b.addEventListener("click", function () { ST.state.colTarget = o[0]; ST.save(); render(); });
       seg.appendChild(b);
+    });
+    Array.prototype.forEach.call($("colTabs").children, function (b) {
+      b.addEventListener("click", function () { ST.state.colTab = b.getAttribute("data-v"); ST.save(); render(); });
     });
     var pick = $("colPick"), hex = $("colHex");
     pick.addEventListener("input", function () { hex.value = pick.value.toUpperCase(); });
