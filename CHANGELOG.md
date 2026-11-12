@@ -2,6 +2,15 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.8.0] 2026-11-12
+
+### Changed
+
+1. Colours: Theme, Template and Yours are now tabs under the Fill, Outline and Text switch, and the panel remembers the last one used.
+2. Colours: template colours are split into single colours and colour families (a colour with its tints in a column). Empty white slots are left out, and the grids keep their columns at any width instead of wrapping.
+3. Narrow panels hide the detail level word in tool headers so the fold arrow stays on screen.
+4. The install file's provider name is now "Slide Tools". Manifest version 1.0.0.2.
+
 ## [2.7.0] 2026-11-12
 
 ### Added
