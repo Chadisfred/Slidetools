@@ -2,6 +2,15 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.4.0] 2026-11-12
+
+### Added
+
+1. Arrange tool: align left, centre, right, top, middle or bottom, relative to the selection, the Layout grid area or the largest shape.
+2. Distribute across or down with an exact gap that accepts formulas such as g, and even gaps that keep the outer shapes still.
+3. Snap to grid: to the nearest Layout cell corner, optionally resizing to whole cells, or to a fine grid in steps of g, optionally snapping all four edges.
+4. Nudge by an amount or formula, and swap two shapes.
+
 ## [2.3.0] 2026-11-12
 
 ### Added
