@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.2.1] 2026-11-12
+
+### Fixed
+
+1. The i info tips were cut off by the edge of their tool, so the Resize tool had to be at Full to read the whole tip. Tips now open over the rest of the panel, above the icon when there isn't room below, and scroll if they're taller than the panel.
+
 ## [2.2.0] 2026-11-12
 
 ### Added
