@@ -8,15 +8,18 @@
   var STORE_KEY = "SLIDETOOLS_COLOURS";
   var PART_SIZE = 2000;
   var SHAPE_TYPES = ["GeometricShape", "TextBox", "Placeholder", "Callout", "Freeform"];
-  var THEME_SLOTS = ["Dark1", "Light1", "Dark2", "Light2", "Accent1", "Accent2", "Accent3", "Accent4", "Accent5", "Accent6"];
-  var THEME_NAMES = { Dark1: "Dark 1", Light1: "Light 1", Dark2: "Dark 2", Light2: "Light 2", Accent1: "Accent 1", Accent2: "Accent 2", Accent3: "Accent 3", Accent4: "Accent 4", Accent5: "Accent 5", Accent6: "Accent 6" };
+  // PowerPoint's picker order and names.
+  var THEME_SLOTS = ["Light1", "Dark1", "Light2", "Dark2", "Accent1", "Accent2", "Accent3", "Accent4", "Accent5", "Accent6"];
+  var THEME_NAMES = { Light1: "Background 1", Dark1: "Text 1", Light2: "Background 2", Dark2: "Text 2", Accent1: "Accent 1", Accent2: "Accent 2", Accent3: "Accent 3", Accent4: "Accent 4", Accent5: "Accent 5", Accent6: "Accent 6" };
+  var XML_SLOTS = { Light1: "lt1", Dark1: "dk1", Light2: "lt2", Dark2: "dk2", Accent1: "accent1", Accent2: "accent2", Accent3: "accent3", Accent4: "accent4", Accent5: "accent5", Accent6: "accent6" };
+  var DML = "http://schemas.openxmlformats.org/drawingml/2006/main";
 
   var defaults = { colTarget: "fill" };
   ST.addDefaults(defaults);
 
   var ICON = '<svg viewBox="0 0 18 18"><circle cx="6" cy="6.5" r="4" fill="currentColor"/><circle cx="12" cy="6.5" r="4" fill="currentColor" opacity="0.55"/><circle cx="9" cy="11.8" r="4" fill="currentColor" opacity="0.3"/></svg>';
 
-  var palette = [], theme = [], loaded = false;
+  var palette = [], theme = [], template = [], loaded = false;
 
   function norm(c) {
     c = String(c || "").trim();
@@ -32,8 +35,116 @@
     return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#1d1d1f" : "#ffffff";
   }
 
-  // Shared with the style editors: their colour pickers suggest palette and theme colours.
-  ST.palette = { list: function () { return theme.concat(palette); } };
+  // ---------- Tints and shades, the way Office works them out ----------
+  function rgbToHsl(hex) {
+    var r = parseInt(hex.substr(1, 2), 16) / 255, g = parseInt(hex.substr(3, 2), 16) / 255, b = parseInt(hex.substr(5, 2), 16) / 255;
+    var mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2, h = 0, s = 0, d = mx - mn;
+    if (d) {
+      s = d / (1 - Math.abs(2 * l - 1));
+      if (mx === r) h = ((g - b) / d) % 6; else if (mx === g) h = (b - r) / d + 2; else h = (r - g) / d + 4;
+      h *= 60; if (h < 0) h += 360;
+    }
+    return [h, s, l];
+  }
+  function hslToHex(h, s, l) {
+    var c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2, r = 0, g = 0, b = 0;
+    if (h < 60) { r = c; g = x; } else if (h < 120) { r = x; g = c; } else if (h < 180) { g = c; b = x; }
+    else if (h < 240) { g = x; b = c; } else if (h < 300) { r = x; b = c; } else { r = c; b = x; }
+    // Office rounds halves down, so 50% grey is #7F7F7F.
+    return "#" + [r, g, b].map(function (v) { return ("0" + Math.round((v + m) * 255 - 1e-6).toString(16)).slice(-2); }).join("").toUpperCase();
+  }
+  // Five variants per theme colour, matching the rows under PowerPoint's theme colours.
+  function variants(c) {
+    var hsl = rgbToHsl(c.hex), l = hsl[2], steps;
+    if (l >= 0.999) steps = [-5, -15, -25, -35, -50];
+    else if (l <= 0.001) steps = [50, 35, 25, 15, 5];
+    else if (l < 0.2) steps = [90, 75, 50, 25, 10];
+    else if (l > 0.8) steps = [-10, -25, -50, -75, -90];
+    else steps = [80, 60, 40, -25, -50];
+    return steps.map(function (st) {
+      var p = st / 100, nl = p > 0 ? l * (1 - p) + p : l * (1 + p);
+      return { hex: hslToHex(hsl[0], hsl[1], Math.min(1, Math.max(0, nl))), name: c.name + ", " + (p > 0 ? "Lighter " : "Darker ") + Math.abs(st) + "%", theme: true };
+    });
+  }
+  ST.colourVariants = variants; // exposed for testing
+
+  // ---------- Template colours from the theme file ----------
+  // Exports a copy of the first slide (never changes the deck), unzips it in the browser
+  // and reads the theme's colour scheme and Custom Colors list.
+  function b64ToBytes(b64) {
+    var bin = atob(b64), out = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  function inflate(bytes) {
+    var ds = new DecompressionStream("deflate-raw");
+    var stream = new Blob([bytes]).stream().pipeThrough(ds);
+    return new Response(stream).arrayBuffer().then(function (buf) { return new Uint8Array(buf); });
+  }
+  // Minimal ZIP reader: returns the text of entries whose names pass the filter.
+  function readZip(bytes, want) {
+    var view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), eocd = -1;
+    for (var i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) { if (view.getUint32(i, true) === 0x06054b50) { eocd = i; break; } }
+    if (eocd < 0) return Promise.reject(new Error("not a zip"));
+    var count = view.getUint16(eocd + 10, true), p = view.getUint32(eocd + 16, true), dec = new TextDecoder(), jobs = [];
+    for (var n = 0; n < count; n++) {
+      if (view.getUint32(p, true) !== 0x02014b50) break;
+      var method = view.getUint16(p + 10, true), csize = view.getUint32(p + 20, true);
+      var nameLen = view.getUint16(p + 28, true), extraLen = view.getUint16(p + 30, true), commentLen = view.getUint16(p + 32, true);
+      var local = view.getUint32(p + 42, true), name = dec.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+      p += 46 + nameLen + extraLen + commentLen;
+      if (!want(name)) continue;
+      var start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+      var data = bytes.subarray(start, start + csize);
+      jobs.push((method === 8 ? inflate(data) : Promise.resolve(data)).then((function (nm) {
+        return function (raw) { return { name: nm, text: dec.decode(raw) }; };
+      })(name)));
+    }
+    return Promise.all(jobs);
+  }
+  function colourOf(el) {
+    if (!el) return null;
+    var s = el.getElementsByTagNameNS(DML, "srgbClr")[0];
+    if (s) return norm(s.getAttribute("val"));
+    var y = el.getElementsByTagNameNS(DML, "sysClr")[0];
+    return y ? norm(y.getAttribute("lastClr")) : null;
+  }
+  function parseTheme(xml) {
+    var doc = new DOMParser().parseFromString(xml, "application/xml"), out = { scheme: [], custom: [] };
+    var scheme = doc.getElementsByTagNameNS(DML, "clrScheme")[0];
+    if (scheme) THEME_SLOTS.forEach(function (slot) {
+      var hex = colourOf(scheme.getElementsByTagNameNS(DML, XML_SLOTS[slot])[0]);
+      if (hex) out.scheme.push({ hex: hex, name: THEME_NAMES[slot], theme: true });
+    });
+    Array.prototype.forEach.call(doc.getElementsByTagNameNS(DML, "custClr"), function (el, i) {
+      var hex = colourOf(el);
+      if (hex) out.custom.push({ hex: hex, name: el.getAttribute("name") || "Custom colour " + (i + 1), template: true });
+    });
+    return out;
+  }
+  function readTemplate(context) {
+    if (!ST.supports("1.8") || typeof DecompressionStream !== "function") return Promise.resolve(null);
+    var slides = context.presentation.slides;
+    slides.load("items");
+    return context.sync().then(function () {
+      if (!slides.items.length) return null;
+      var data = slides.items[0].exportAsBase64();
+      return context.sync().then(function () {
+        return readZip(b64ToBytes(data.value), function (n) { return /^ppt\/theme\/theme\d+\.xml$/.test(n); });
+      }).then(function (files) {
+        var themes = files.map(function (f) { return parseTheme(f.text); });
+        return themes.filter(function (t) { return t.custom.length; })[0] || themes.filter(function (t) { return t.scheme.length; })[0] || null;
+      });
+    }).catch(function () { return null; });
+  }
+
+  // Shared with the style editors: their colour pickers suggest these colours.
+  function allColours() {
+    var tints = [];
+    theme.forEach(function (c) { tints = tints.concat(variants(c)); });
+    return theme.concat(tints, template, palette);
+  }
+  ST.palette = { list: allColours };
   function updateDatalist() {
     var dl = document.getElementById("paletteList");
     if (!dl) { dl = document.createElement("datalist"); dl.id = "paletteList"; document.body.appendChild(dl); }
@@ -46,32 +157,40 @@
   function load() {
     if (!ST.inOffice || !ST.supports("1.3")) { loaded = true; render(); return; }
     PowerPoint.run(function (context) {
-      var tags = context.presentation.tags, count = tags.getItemOrNullObject(STORE_KEY + "_N");
-      count.load("value");
       var themeResults = [];
+      var step = Promise.resolve();
       if (ST.supports("1.10")) {
-        var slides = context.presentation.slides;
-        slides.load("items");
-        return context.sync().then(function () {
-          if (slides.items.length) {
+        step = step.then(function () {
+          var slides = context.presentation.slides;
+          slides.load("items");
+          return context.sync().then(function () {
+            if (!slides.items.length) return;
             var scheme = slides.items[0].themeColorScheme;
             THEME_SLOTS.forEach(function (slot) { themeResults.push({ slot: slot, r: scheme.getThemeColor(slot) }); });
-          }
-          return readParts();
+            return context.sync();
+          }).then(function () {
+            theme = themeResults.map(function (t) { var hex = norm(t.r.value); return hex ? { hex: hex, name: THEME_NAMES[t.slot], theme: true } : null; }).filter(Boolean);
+          }).catch(function () { theme = []; });
         });
       }
-      return readParts();
-      function readParts() {
+      step = step.then(function () {
+        return readTemplate(context).then(function (t) {
+          template = t ? t.custom : [];
+          if (t && t.scheme.length && theme.length < THEME_SLOTS.length) theme = t.scheme;
+        });
+      });
+      return step.then(function () {
+        var tags = context.presentation.tags, count = tags.getItemOrNullObject(STORE_KEY + "_N");
+        count.load("value");
         return context.sync().then(function () {
           var n = count.isNullObject ? 0 : parseInt(count.value, 10) || 0, parts = [];
           for (var i = 0; i < n; i++) { var t = tags.getItemOrNullObject(STORE_KEY + "_" + i); t.load("value"); parts.push(t); }
           return context.sync().then(function () {
             var text = parts.map(function (t) { return t.isNullObject ? "" : t.value; }).join("");
             palette = text ? JSON.parse(text) : [];
-            theme = themeResults.map(function (t) { var hex = norm(t.r.value); return hex ? { hex: hex, name: THEME_NAMES[t.slot], theme: true } : null; }).filter(Boolean);
           });
         });
-      }
+      });
     }).catch(function () {
       ST.toast("Couldn't read the colours saved in this presentation.", true);
     }).then(function () { loaded = true; render(); });
@@ -215,7 +334,17 @@
     Array.prototype.forEach.call($("colTarget").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.colTarget); });
     themeRow.innerHTML = ""; mine.innerHTML = ""; edit.innerHTML = "";
     $("colThemeWrap").hidden = !theme.length;
+    // Base theme colours, then five rows of tints and shades under each, like PowerPoint.
     theme.forEach(function (c, i) { themeRow.appendChild(swatch(c, i)); });
+    var tints = theme.map(variants), grid = $("colTints");
+    grid.innerHTML = "";
+    grid.style.gridTemplateColumns = "repeat(" + Math.max(1, theme.length) + ", 1fr)";
+    themeRow.style.gridTemplateColumns = grid.style.gridTemplateColumns;
+    for (var r = 0; r < 5; r++) tints.forEach(function (col) { if (col[r]) grid.appendChild(swatch(col[r])); });
+    var tpl = $("colTemplate");
+    tpl.innerHTML = "";
+    $("colTemplateWrap").hidden = !template.length;
+    template.forEach(function (c) { tpl.appendChild(swatch(c)); });
     if (!palette.length) mine.innerHTML = '<div class="muted-note">' + (loaded || !ST.inOffice ? "No colours yet. Add one below, or take one from the selection." : "Reading colours from this presentation.") + "</div>";
     palette.forEach(function (c, i) { mine.appendChild(swatch(c, i)); });
     palette.forEach(function (c, i) {
@@ -240,12 +369,13 @@
   var MARKUP =
     '<span class="info res-info" tabindex="0" role="button" aria-label="How Colours works">i' +
       '<span class="tip" role="tooltip">Pick what to colour, then click a swatch to apply it to the selected shapes or text.<br><br>' +
-      'Theme colours come from this presentation\'s theme and can\'t be changed here. Your colours are saved in the presentation.<br><br>' +
+      'Theme colours, with the same tints and shades as PowerPoint\'s colour menu, and the template\'s custom colours come from this presentation\'s theme. They can\'t be changed here. Your colours are saved in the presentation.<br><br>' +
       'Colouring styled text here keeps it linked to its text style, unlike the ribbon\'s font colour button. Shapes keep their shape style link either way.<br><br>' +
       'The colour pickers in the style editors suggest these colours too.</span>' +
     '</span>' +
     '<div class="seg seg3" id="colTarget"></div>' +
-    '<div id="colThemeWrap"><div class="sublabel">Theme</div><div class="swatches" id="colTheme"></div></div>' +
+    '<div id="colThemeWrap"><div class="sublabel">Theme colours</div><div class="theme-grid" id="colTheme"></div><div class="theme-grid tints" id="colTints"></div></div>' +
+    '<div id="colTemplateWrap" hidden><div class="sublabel">Template colours</div><div class="swatches" id="colTemplate"></div></div>' +
     '<div class="sublabel">Your colours</div>' +
     '<div class="swatches" id="colMine"></div>' +
     '<div class="inline"><div class="color-field"><input type="color" id="colPick" value="#0071e3"><input type="text" id="colHex" placeholder="#0071E3"></div>' +
