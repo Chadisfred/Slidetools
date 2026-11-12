@@ -45,6 +45,7 @@
     applyTheme();
     setPill();
     ST.changed();
+    ST.emit("ready");
   }
 
   ST.loadState();
