@@ -404,3 +404,21 @@ select:focus { border-color: var(--accent); }
 .col-hex { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .col-row .icon-btn { width: 22px; height: 22px; font-size: 13px; }
 .col-row .icon-btn:disabled { opacity: 0.3; cursor: default; }
+
+/* ---------- Consistency check ---------- */
+.chk-options { display: grid; gap: 6px; }
+.chk-results { display: grid; gap: 8px; }
+.chk-results:empty { display: none; }
+.chk-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.chk-count {
+  min-width: 22px; height: 20px; padding: 0 7px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  display: grid; place-items: center; color: #8a5a00; background: #fff1d6;
+}
+.chk-count.ok { color: var(--ok); background: rgba(30, 142, 62, 0.12); }
+[data-theme="dark"] .chk-count { color: #f3d9a6; background: #4a3a1d; }
+.chk-item .btn.small { height: 26px; font-size: 11px; padding: 0 8px; }
+.chk-item.fixed .link-btn { color: var(--muted); text-decoration: line-through; }
+
+/* Info icons sit in the tool header */
+.tool-head .res-info { position: static; flex: none; margin: 0 4px 0 2px; }
+.style-status { margin-right: 0; }

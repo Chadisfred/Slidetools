@@ -2,6 +2,18 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.6.0] 2026-11-12
+
+### Added
+
+1. Consistency check tool: one scan of normal slides for shapes nearly on the grid, text with no style, unlinked text and shape lookalikes, odd corner radii, and colours outside the palette.
+2. Click an item to select it on its slide. Snap, Link and Set fixes per item, and Fix all per group.
+3. Choose which checks run and the grid tolerance at the More level.
+
+### Changed
+
+1. Each tool's i icon now sits in its header, so it no longer covers the tool's first row.
+
 ## [2.5.0] 2026-11-12
 
 ### Added

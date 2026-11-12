@@ -58,6 +58,13 @@
     var body = card.querySelector(".tool-body");
     ST.$("stack").appendChild(card); // tools look up their boxes by id, so attach first
     t.build(body, card);
+    // A tool's i tip lives in its header, so it never covers the tool's first row.
+    var info = body.querySelector(".res-info");
+    if (info) {
+      var head = card.querySelector(".tool-head");
+      head.insertBefore(info, card.querySelector(".level-btn") || card.querySelector(".menu-btn"));
+      info.addEventListener("click", function (e) { e.stopPropagation(); });
+    }
 
     card.querySelector(".tool-title").addEventListener("click", function () { toggleFold(t.id); });
     card.querySelector(".fold-btn").addEventListener("click", function () { toggleFold(t.id); });
