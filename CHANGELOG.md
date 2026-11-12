@@ -2,6 +2,24 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.2.0] 2026-11-12
+
+### Added
+
+1. Styles tool for character styles, saved inside the presentation.
+2. Sample a style from selected text, or start from a blank style. Mixed settings are left out.
+3. Apply a style to selected text or whole text boxes with one click.
+4. Edit styles, then Update all pushes the edits to every normal slide after showing what will change. Masters and layouts are never touched.
+5. Local changes on linked text are kept when a style is updated.
+6. Lookalike detection for text that matches a style but has lost its link, for example after recolouring from the ribbon. Choose to leave it, apply the style and colour, or apply the style and keep its colour, for the whole group or item by item.
+7. Selection status at the More level shows the style in use, a "+" for local changes, and buttons to reset, unlink or relink.
+8. Font suggestions in the style editor: fonts used in the presentation, fonts in saved styles, and installed fonts where PowerPoint's browser allows listing them. A refused or unavailable font check is remembered for about 12 hours so you aren't asked again.
+9. Weight safeguards: weighted fonts such as Semibold, Black or Light get Bold set to Off automatically, with a warning if you switch it back on. Applying a weighted font with Bold on Leave switches leftover bold off. Bold On with no font warns about fake bold.
+
+### Changed
+
+1. Reset to defaults is greyed out in the tool menu for tools that have nothing to reset.
+
 ## [2.1.0] 2026-11-12
 
 ### Changed
