@@ -223,6 +223,35 @@
     });
   }
 
+  // ---------- Info tips ----------
+  // Tips are positioned against the whole panel, so a folded or short tool can't clip them.
+  // They open below the i icon, or above it when there isn't room.
+  function placeTip(info) {
+    var tip = info.querySelector(".tip");
+    if (!tip) return;
+    tip.style.display = "block";
+    var r = info.getBoundingClientRect(), w = tip.offsetWidth, h = tip.offsetHeight, gap = 2, margin = 8;
+    var left = Math.min(Math.max(margin, r.right - w), window.innerWidth - w - margin);
+    var below = window.innerHeight - r.bottom - gap - margin, above = r.top - gap - margin;
+    var top = h <= below || below >= above ? r.bottom + gap : Math.max(margin, r.top - gap - h);
+    tip.style.left = left + "px";
+    tip.style.top = top + "px";
+    tip.style.maxHeight = Math.max(below, above, 120) + "px";
+    tip.style.display = "";
+  }
+  function wireTips() {
+    var place = function (e) {
+      var info = e.target.closest && e.target.closest(".info");
+      if (info) placeTip(info);
+    };
+    document.addEventListener("mouseover", place);
+    document.addEventListener("focusin", place);
+    window.addEventListener("scroll", function () {
+      var open = document.querySelector(".info:hover, .info:focus");
+      if (open) placeTip(open);
+    }, true);
+  }
+
   // ---------- Start ----------
   ST.buildPanels = function () {
     loadLayout();
@@ -232,6 +261,7 @@
     document.addEventListener("click", function (e) { if (openMenu && !openMenu.contains(e.target)) closeMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
     window.addEventListener("resize", closeMenu);
+    wireTips();
   };
   ST.levelOf = function (id) { return levelOf(tool(id)); };
   ST.isOpen = function (id) { return !layout.folded[id] && !layout.hidden[id]; };
