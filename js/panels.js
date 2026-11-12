@@ -158,7 +158,7 @@
       { label: "Move up", disabled: i <= 0, action: function () { move(id, -1); } },
       { label: "Move down", disabled: i >= visible.length - 1, action: function () { move(id, 1); } },
       "sep",
-      { label: "Reset " + t.title + " to defaults", action: function () { resetTool(id); } },
+      { label: "Reset " + t.title + " to defaults", disabled: !Object.keys(t.defaults || {}).length, action: function () { resetTool(id); } },
       { label: "Hide " + t.title, action: function () { setHidden(id, true); ST.toast(t.title + " hidden. Use the gear button to show it again."); } }
     ]);
   }
