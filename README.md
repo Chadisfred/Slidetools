@@ -227,21 +227,26 @@ Limits:
 
 ### Colours
 
-Your palette and the theme's colours, one click away.
+Your template's colours and your own, one click away.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Fill, Outline or Text switch, theme colours with their tints and shades, template colours, your colours, add a colour, add from selection |
-| More | Rename, reorder and remove your colours |
+| Basic | Fill, Outline or Text switch, and three tabs: Theme, Template and Yours |
+| More | On the Yours tab, rename, reorder and remove your colours |
 
-Tips:
+The tabs:
 
-1. Choose Fill, Outline or Text, then click a swatch to apply it to the selected shapes or text.
-2. Theme colours are read from the presentation's theme, in the same order as PowerPoint's colour menu, with the same five rows of tints and shades underneath. Hover a swatch to see its name, such as "Accent 1, Lighter 40%". They're never changed from the panel, because they belong to the slide master.
-3. Template colours are the Custom Colors saved in the template's theme, shown by name in template order. The panel reads them from a copy of the first slide, so nothing in the deck changes. This needs PowerPoint API 1.8. Without it the row is hidden.
-4. Your colours are saved in the presentation. Add one by hex code, the colour picker, or Add from selection, which takes the selected shape's fill or the selected text's colour.
-5. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
-6. The colour pickers in the Styles and Shape styles editors suggest these colours.
+1. Theme: the ten theme colours in PowerPoint's order (Background 1, Text 1, Background 2, Text 2, Accent 1 to 6), with the same five rows of tints and shades as PowerPoint's colour menu. Hover a swatch for its name, such as "Accent 1, Lighter 40%".
+2. Template: the Custom Colors saved in the template's theme. Single colours sit in one row, and each colour family (a colour with its tints) is a column, the same way the theme tints work. Empty white slots from PowerPoint's 10 column layout are left out. The grids keep their columns at any panel width, so nothing wraps.
+3. Yours: your own colours, saved in the presentation. Add one by hex code, the colour picker, or Add from selection, which takes the selected shape's fill or the selected text's colour.
+
+The panel remembers the last tab you used. Tabs for colours the deck doesn't have are hidden.
+
+Notes:
+
+1. Theme and template colours are read only. They belong to the slide master, so the panel never changes them. Template colours are read from a copy of the first slide, which needs PowerPoint API 1.8.
+2. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
+3. The colour pickers in the Styles and Shape styles editors suggest these colours.
 
 ## Formulas
 
