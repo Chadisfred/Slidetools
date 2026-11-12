@@ -1,6 +1,6 @@
 # Slide Tools
 
-A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners and managing character styles. It runs as an Office web add-in and is hosted on GitHub Pages:
+A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners, and managing character and shape styles. It runs as an Office web add-in and is hosted on GitHub Pages:
 
 https://chadisfred.github.io/Slidetools/taskpane.html
 
@@ -169,6 +169,44 @@ How linking works: add-ins can't attach data to individual characters, so each s
 7. Tables aren't checked by Update all.
 8. Update all can be undone with Ctrl+Z, though it may take several presses.
 
+### Shape styles
+
+Named looks for shapes: fill, outline, corners and text box settings, optionally with one of your text styles for the text inside. Saved in the presentation, like text styles.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Your shape styles (click one to apply it to the selected shapes), Sample, Update all |
+| More | What style the selected shape uses, each style's settings, New blank style |
+
+A shape style can set:
+
+| Area | Settings |
+| --- | --- |
+| Fill | Solid colour or no fill, transparency |
+| Outline | Line or no line, colour, weight, dash, line type (single, double, thick and thin, triple), transparency |
+| Corners | Radius in points, on rounded rectangles |
+| Text box | Left, right, top and bottom margins, vertical alignment, wrap text, autofit |
+| Text | One of your text styles, applied to all the text inside |
+
+Any setting can be left out with Leave.
+
+Using it:
+
+1. Select a shape and click Sample. Name the style and click Save style. The sampled shape is linked and gets any changes you made before saving.
+2. Select shapes and click a style to apply it, including its text style.
+3. Edit a style with its pencil, then click Update all. It only updates shapes. Text styles have their own Update all in the Styles tool.
+4. Update all lists linked shapes, which update while keeping settings you changed by hand, and lookalikes: unlinked shapes with the same fill and outline. For lookalikes choose to leave them, apply the style, or apply the style but keep their own fill and outline colours, for the whole group or one by one.
+5. At the More level, selecting a shape shows its style, a "+" for local changes, and buttons to reset, unlink or link a lookalike.
+
+Shapes are linked by a hidden label on the shape, so recolouring a shape never breaks its link. If a style's text style changes, Update all applies the new text style to linked shapes' text.
+
+Limits:
+
+1. Gradient, picture and pattern fills can't be set or sampled. Sampling leaves the fill out.
+2. Shadows, glow, soft edges, 3D and arrowheads aren't available to add-ins.
+3. Lines, pictures, charts and tables aren't included.
+4. Only normal slides are changed, never masters or layouts.
+
 ## Formulas
 
 Every number box accepts maths, for example `12.5-2*0.42`. The Resize boxes also understand these names:
@@ -219,6 +257,7 @@ js/tools/layout.js       Layout tool
 js/tools/resize.js       Resize tool
 js/tools/corners.js      Corners tool
 js/tools/styles.js       Styles tool (character styles)
+js/tools/shapestyles.js  Shape styles tool
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons
 ```

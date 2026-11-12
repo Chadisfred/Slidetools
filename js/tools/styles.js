@@ -174,11 +174,12 @@
     }).catch(function () {
       styles = [];
       ST.toast("Couldn't read the styles saved in this presentation.", true);
-    }).then(function () { stylesLoaded = true; render(); refreshStatus(); });
+    }).then(function () { stylesLoaded = true; render(); refreshStatus(); ST.emit("textstyles"); });
   }
 
   function saveStyles() {
     render();
+    ST.emit("textstyles");
     if (!ST.inOffice || !ST.supports("1.3")) return Promise.resolve();
     var text = JSON.stringify(styles), parts = [];
     for (var i = 0; i < text.length; i += PART_SIZE) parts.push(text.slice(i, i + PART_SIZE));
@@ -963,6 +964,27 @@
     defaults: {},
     build: build
   });
+
+  // Used by the Shape styles tool to apply a character style to a shape's text.
+  ST.textStyles = {
+    list: function () { return styles; },
+    byId: byId,
+    shapeTag: SHAPE_TAG,
+    fontProps: loadList,
+    // Applies text style id to all text in shape. existingTag is the shape's current SLIDETOOLS_USES value.
+    writeToShape: function (shape, id, existingTag) {
+      var st = byId(id);
+      if (!st) return false;
+      writeFont(shape.textFrame.textRange, st);
+      addTag(shape, existingTag, id);
+      return true;
+    },
+    // Returns the text style a whole text uses, or null.
+    detect: function (font, tagValue) {
+      var c = classify(readFont(font), parseTag(tagValue));
+      return c.kind === "linked" ? c.style.id : null;
+    }
+  };
 
   // Exposed for testing only
   ST._styles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, scanDeck: scanDeck, parseTag: parseTag, tagWith: tagWith,
