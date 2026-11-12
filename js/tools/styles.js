@@ -1015,18 +1015,6 @@
         });
       });
     },
-    // Used by the Consistency check.
-    scan: function (context) { return scanDeck(context); },
-    classifySeg: function (seg) { return classify(seg.font, seg.e.tags); },
-    linkSeg: function (context, seg, styleId, keepColor) {
-      var st = byId(styleId);
-      if (!st) return;
-      var shape = getShape(context, seg.e.sid, seg.e.path);
-      var range = shape.textFrame.textRange.getSubstring(seg.start, seg.len);
-      writeFont(range, st, { keepColor: keepColor, current: seg.font });
-      var kept = keepColor && seg.font.color && base(seg.font.color) !== base(st.font.color) ? seg.font.color : null;
-      seg.e.tagValue = addTag(shape, seg.e.tagValue, styleId, kept);
-    },
     // Returns the text style a whole text uses, or null.
     detect: function (font, tagValue) {
       var c = classify(readFont(font), parseTag(tagValue));

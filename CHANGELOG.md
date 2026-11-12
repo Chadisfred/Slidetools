@@ -2,6 +2,21 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.7.0] 2026-11-12
+
+### Added
+
+1. Colours: the five rows of tints and shades under each theme colour, worked out the same way as PowerPoint's colour menu and named the same way, for example "Accent 1, Lighter 40%".
+2. Colours: Template colours, the Custom Colors saved in the template's theme, read from a copy of the first slide without changing the deck.
+
+### Changed
+
+1. Colours: theme colours now follow PowerPoint's order and names (Background 1, Text 1, Background 2, Text 2, Accent 1 to 6).
+
+### Removed
+
+1. The Consistency check tool. It was too granular to be useful, listing hundreds of tiny grid offsets on a single slide.
+
 ## [2.6.0] 2026-11-12
 
 ### Added
