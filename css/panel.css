@@ -357,3 +357,16 @@ select:focus { border-color: var(--accent); }
 .weight-note.warn { color: #8a5a00; background: #fff1d6; }
 [data-theme="dark"] .weight-note.warn { color: #f3d9a6; background: #4a3a1d; }
 .weight-note[hidden] { display: none; }
+
+/* ---------- Shape styles tool ---------- */
+.shape-tile {
+  width: 34px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 7px;
+  border: 1px solid var(--line);
+  background-color: #fff;
+  background-image: linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%),
+                    linear-gradient(45deg, #e6e6e6 25%, transparent 25%, transparent 75%, #e6e6e6 75%);
+  background-size: 8px 8px; background-position: 0 0, 4px 4px;
+}
+.shape-tile i { display: block; width: 24px; height: 18px; box-sizing: border-box; }
+.ss-fill[hidden], .ss-line[hidden], #ssList[hidden], #ssReview[hidden], #ssActions[hidden], #ssStatus[hidden] { display: none !important; }
+.ss-actions, .ss-review { display: grid; gap: 8px; }
