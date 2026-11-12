@@ -101,8 +101,10 @@ Sets the width and height of every selected shape, using plain numbers or formul
 | Level | Shows |
 | --- | --- |
 | Basic | Width, Height, Resize |
-| More | Live result, lock aspect ratio, Use selection, match to largest or smallest |
-| Full | Resize from point (anchor), recent formulas, formula help |
+| More | Live result, lock aspect ratio, resize from point (anchor), Use selection, match to largest or smallest |
+| Full | Recent formulas |
+
+Hover over the small i at the top right of the tool, or tab to it, to read how formulas work.
 
 Tips:
 
