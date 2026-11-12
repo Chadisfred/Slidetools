@@ -13,6 +13,8 @@ All notable changes to Slide Tools are listed here, newest first. Version number
 5. Local changes on linked text are kept when a style is updated.
 6. Lookalike detection for text that matches a style but has lost its link, for example after recolouring from the ribbon. Choose to leave it, apply the style and colour, or apply the style and keep its colour, for the whole group or item by item.
 7. Selection status at the More level shows the style in use, a "+" for local changes, and buttons to reset, unlink or relink.
+8. Font suggestions in the style editor: fonts used in the presentation, fonts in saved styles, and installed fonts where PowerPoint's browser allows listing them. A refused or unavailable font check is remembered for about 12 hours so you aren't asked again.
+9. Weight safeguards: weighted fonts such as Semibold, Black or Light get Bold set to Off automatically, with a warning if you switch it back on. Applying a weighted font with Bold on Leave switches leftover bold off. Bold On with no font warns about fake bold.
 
 ### Changed
 

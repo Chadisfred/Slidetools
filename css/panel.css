@@ -352,3 +352,7 @@ select:focus { border-color: var(--accent); }
 .review-item { display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
 .review-item select { max-width: 130px; }
 #styleReview { display: grid; gap: 8px; }
+.weight-note { font-size: 11px; line-height: 1.45; color: var(--muted); background: var(--page); border-radius: 8px; padding: 7px 9px; }
+.weight-note.warn { color: #8a5a00; background: #fff1d6; }
+[data-theme="dark"] .weight-note.warn { color: #f3d9a6; background: #4a3a1d; }
+.weight-note[hidden] { display: none; }
