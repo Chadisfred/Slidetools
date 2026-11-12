@@ -282,3 +282,20 @@ input.err { border-color: var(--danger); }
 .toast.bad { background: var(--danger); }
 .tool[data-level="1"] .res-actions { grid-template-columns: 1fr; }
 .calc:empty { display: none; }
+
+/* Info icon with a hover or focus tip, used for formula help */
+.tool-body { position: relative; }
+.info {
+  width: 16px; height: 16px; border-radius: 50%; border: 1.3px solid var(--muted); color: var(--muted);
+  font: italic 600 10px/13px Georgia, "Times New Roman", serif; text-align: center; cursor: help; outline: none;
+}
+.info:hover, .info:focus { border-color: var(--accent); color: var(--accent); }
+.res-info { position: absolute; top: 2px; right: 12px; z-index: 5; }
+.info .tip {
+  display: none; position: absolute; top: 22px; right: -4px; width: min(280px, calc(100vw - 40px));
+  background: var(--card); color: var(--text); border: 1px solid var(--line); border-radius: 10px;
+  box-shadow: 0 8px 24px var(--shadow); padding: 10px 12px; text-align: left;
+  font: normal 400 11px/1.5 "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+.info .tip code { background: var(--page); border-radius: 4px; padding: 0 4px; }
+.info:hover .tip, .info:focus .tip { display: block; }
