@@ -101,7 +101,7 @@
     var useNullFrame = ST.supports("1.10"), canRound = ST.cornersSupported();
     var items = shapes.map(function (sh) {
       var it = { shape: sh };
-      sh.load("id,type,width,height");
+      sh.load("id,type,left,top,width,height");
       sh.fill.load("type,foregroundColor,transparency");
       sh.lineFormat.load("visible,color,weight,dashStyle,style,transparency");
       it.tagObj = sh.tags.getItemOrNullObject(SHAPE_TAG); it.tagObj.load("value");
@@ -148,7 +148,7 @@
         var textTag = it.textTagObj.isNullObject ? "" : it.textTagObj.value;
         if (it.font && ST.textStyles) v.textStyleId = ST.textStyles.detect(it.font, textTag);
         return {
-          shape: sh, id: sh.id, type: sh.type, w: sh.width, h: sh.height, values: v,
+          shape: sh, id: sh.id, type: sh.type, x: sh.left, y: sh.top, w: sh.width, h: sh.height, values: v,
           hasFrame: !!it.tf, canRound: !!it.adj, hasText: !!(it.tf && it.tf.hasText),
           tagId: it.tagObj.isNullObject ? 0 : parseInt(it.tagObj.value, 10) || 0, textTag: textTag
         };
@@ -770,6 +770,22 @@
     defaults: {},
     build: build
   });
+
+  // Used by the Consistency check.
+  ST.shapeStyles = {
+    list: function () { return styles; },
+    byId: byId,
+    scan: function (context) { return scanDeck(context); },
+    classify: classify,
+    getShape: getShape,
+    // Links a lookalike shape to a style, keeping its own colours.
+    link: function (context, info, styleId) {
+      var st = byId(styleId);
+      if (!st) return;
+      info.shape = getShape(context, info.sid, info.path);
+      writeShape(info, st, { keepColors: true });
+    }
+  };
 
   // Exposed for testing only
   ST._shapeStyles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, norm: norm };
