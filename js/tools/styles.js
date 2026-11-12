@@ -62,6 +62,94 @@
   function base(color) { return hex(rgb(color).map(function (v) { return v & ~3; })); }
   ST.styleCode = { encode: encode, decodeId: decodeId, base: base }; // exposed for testing
 
+  // ---------- Font weights ----------
+  // Fonts whose name already carries a weight (Segoe UI Semibold, Arial Black, Roboto Light)
+  // shouldn't also get PowerPoint's bold, which thickens them artificially.
+  var WEIGHT_RE = /\b(thin|hairline|(extra|ultra|semi)[ -]?light|light|book|medium|(demi|semi|extra|ultra)[ -]?bold|bold|black|heavy)\b/i;
+  function isWeighted(name) { return !!name && WEIGHT_RE.test(String(name)); }
+
+  // ---------- Font list ----------
+  // Fonts used in this deck (collected while scanning), fonts in saved styles, and
+  // installed fonts when the browser inside PowerPoint allows listing them.
+  var FONT_CHECK_KEY = "slideToolsFontCheck";
+  var FONT_CHECK_HOURS = 12;
+  var deckFonts = [], installedFonts = [], deckFontsState = "idle", installedState = null;
+  function rememberedFontCheck() {
+    if (installedState) return installedState;
+    try {
+      var s = sessionStorage.getItem(FONT_CHECK_KEY);
+      if (s) return s;
+      var saved = JSON.parse(localStorage.getItem(FONT_CHECK_KEY) || "null");
+      if (saved && Date.now() - saved.at < FONT_CHECK_HOURS * 3600 * 1000) return saved.result;
+    } catch (e) { /* storage unavailable */ }
+    return null;
+  }
+  function rememberFontCheck(result) {
+    installedState = result;
+    try {
+      sessionStorage.setItem(FONT_CHECK_KEY, result);
+      localStorage.setItem(FONT_CHECK_KEY, JSON.stringify({ result: result, at: Date.now() }));
+    } catch (e) { /* storage unavailable */ }
+  }
+  function addDeckFonts(names) {
+    names.forEach(function (n) { if (n && deckFonts.indexOf(n) < 0) deckFonts.push(n); });
+    deckFonts.sort(function (a, b) { return a.localeCompare(b); });
+    updateFontList();
+  }
+  // PowerPoint names non standard weights by their full name (Segoe UI Semibold),
+  // and Regular, Bold and Italic by the family name.
+  function pptName(font) {
+    var style = String(font.style || "").toLowerCase().replace(/\s+/g, " ").trim();
+    if (["regular", "normal", "bold", "italic", "oblique", "bold italic", "bold oblique"].indexOf(style) >= 0) return font.family;
+    return String(font.fullName || font.family).replace(/ (Italic|Oblique)$/i, "");
+  }
+  function tryInstalledFonts() {
+    if (installedFonts.length) return;
+    var state = rememberedFontCheck();
+    if (state === "denied" || state === "unsupported" || state === "failed") return;
+    if (typeof window.queryLocalFonts !== "function") { rememberFontCheck("unsupported"); return; }
+    // The browser only allows the request straight after a click or key press.
+    if (navigator.userActivation && !navigator.userActivation.isActive) return;
+    var go = function () {
+      window.queryLocalFonts().then(function (fonts) {
+        var names = [];
+        fonts.forEach(function (f) { var n = pptName(f); if (n && names.indexOf(n) < 0) names.push(n); });
+        installedFonts = names.sort(function (a, b) { return a.localeCompare(b); });
+        rememberFontCheck(installedFonts.length ? "ok" : "failed");
+        updateFontList();
+      }).catch(function (e) {
+        rememberFontCheck(e && e.name === "NotAllowedError" ? "denied" : "failed");
+      });
+    };
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: "local-fonts" }).then(function (p) {
+        if (p.state === "denied") rememberFontCheck("denied"); else go();
+      }, go);
+    } else go();
+  }
+  function collectDeckFonts() {
+    if (!ST.inOffice || !ST.supports("1.5") || deckFontsState !== "idle") return;
+    deckFontsState = "busy";
+    PowerPoint.run(function (context) { return scanDeck(context, ["name"]); }).then(function (r) {
+      deckFontsState = "done";
+      addDeckFonts(r.segs.map(function (x) { return x.font.name; }));
+    }, function () { deckFontsState = "idle"; });
+  }
+  function updateFontList() {
+    var dl = $("fontList");
+    if (!dl) return;
+    var seen = {}, html = "";
+    var add = function (n, label) {
+      if (!n || seen[n.toLowerCase()]) return;
+      seen[n.toLowerCase()] = 1;
+      html += '<option value="' + esc(n) + '"' + (label ? ' label="' + label + '"' : "") + "></option>";
+    };
+    deckFonts.forEach(function (n) { add(n, "In this presentation"); });
+    styles.forEach(function (st) { add(st.font.name, "In a style"); });
+    installedFonts.forEach(function (n) { add(n, ""); });
+    dl.innerHTML = html;
+  }
+
   function byId(id) { return styles.filter(function (s) { return s.id === id; })[0]; }
   function nextId() { for (var i = 1; i <= MAX_ID; i++) if (!byId(i)) return i; return 0; }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -124,6 +212,10 @@
     else if (opts.keepOverrides && cur && cur.color && base(cur.color) !== base(encode(old.color, style.id)) && base(cur.color) !== base(encode(f.color, style.id))) color = encode(cur.color, style.id);
     else color = encode(f.color, style.id);
     range.font.color = color;
+    // A weighted font with Bold on Leave: switch bold off so leftover bold doesn't stack.
+    if (isWeighted(f.name) && (f.bold === null || f.bold === undefined) && (!opts.keepOverrides || !cur || !same(cur.name, f.name))) {
+      range.font.bold = false;
+    }
   }
   // Shape tag format: "3,7:00A651" means styles 3 and 7 are used here, and style 7
   // also appears with a kept colour whose coded base is #00A651.
@@ -205,7 +297,9 @@
         var linked = decodeId(f.color);
         f.color = byId(linked) ? base(f.color) : f.color;
         var left = props().filter(function (p) { return f[p] === null; });
-        draft = { font: f, link: true };
+        var boldNote = false;
+        if (isWeighted(f.name) && f.bold !== false) { f.bold = false; boldNote = true; }
+        draft = { font: f, link: true, boldNote: boldNote };
         editing = "new";
         render();
         var name = $("styleName");
@@ -350,7 +444,10 @@
   }
 
   // ---------- Scanning the deck (normal slides only) ----------
-  function scanDeck(context) {
+  // only: optional list of font properties to read, e.g. ["name"] for a quick font list.
+  function scanDeck(context, only) {
+    var list = only ? only.join(",") : loadList();
+    var isUniform = only ? function (f) { return only.every(function (p) { return f[p] !== null; }); } : uniform;
     var slides = context.presentation.slides;
     slides.load("items/id");
     var entries = [], groups = [], segs = [];
@@ -399,11 +496,11 @@
       function round() {
         if (!queue.length) return Promise.resolve();
         var batch = queue.splice(0, BATCH);
-        batch.forEach(function (q) { q.rng = q.e.tf.textRange.getSubstring(q.start, q.len); q.rng.font.load(loadList()); });
+        batch.forEach(function (q) { q.rng = q.e.tf.textRange.getSubstring(q.start, q.len); q.rng.font.load(list); });
         return context.sync().then(function () {
           batch.forEach(function (q) {
-            var f = readFont(q.rng.font);
-            if (uniform(f) || q.len === 1) segs.push({ e: q.e, start: q.start, len: q.len, font: f });
+            var f = only ? readOnly(q.rng.font, only) : readFont(q.rng.font);
+            if (isUniform(f) || q.len === 1) segs.push({ e: q.e, start: q.start, len: q.len, font: f });
             else {
               var h = Math.floor(q.len / 2);
               queue.push({ e: q.e, start: q.start, len: h }, { e: q.e, start: q.start + h, len: q.len - h });
@@ -427,6 +524,12 @@
     });
   }
 
+  function readOnly(font, only) {
+    var f = {};
+    only.forEach(function (p) { f[p] = font[p] === undefined ? null : font[p]; });
+    return f;
+  }
+
   function getShape(context, sid, path) {
     var shape = context.presentation.slides.getItem(sid).shapes.getItem(path[0]);
     for (var i = 1; i < path.length; i++) shape = shape.group.shapes.getItem(path[i]);
@@ -447,6 +550,8 @@
     }).then(function (result) {
       var groupsById = {};
       styles.forEach(function (s) { groupsById[s.id] = { style: s, linked: [], look: [], choice: "leave" }; });
+      addDeckFonts(result.segs.map(function (x) { return x.font.name; }));
+      if (deckFontsState === "idle") deckFontsState = "done";
       result.segs.forEach(function (seg) {
         if (!/\S/.test(seg.text)) return;
         var c = classify(seg.font, seg.e.tags);
@@ -554,7 +659,7 @@
     return '<div class="style-editor">' +
       '<label class="field">Style name<input type="text" id="styleName" maxlength="32" value="' + esc(name) + '" placeholder="e.g. Header"></label>' +
       '<div class="row">' +
-        '<label class="field">Font<input type="text" id="sFont" value="' + esc(f.name) + '" placeholder="Leave"></label>' +
+        '<label class="field">Font<input type="text" id="sFont" list="fontList" autocomplete="off" value="' + esc(f.name) + '" placeholder="Leave"></label>' +
         '<label class="field">Size (pt)<input type="text" id="sSize" inputmode="decimal" value="' + esc(f.size) + '" placeholder="Leave"></label>' +
       '</div>' +
       '<label class="field">Colour<div class="color-field"><input type="color" id="sColorPick" value="' + esc(base(f.color).toLowerCase()) + '"><input type="text" id="sColor" value="' + esc(f.color) + '"></div></label>' +
@@ -566,6 +671,8 @@
           '<label>Caps' + optSelect("sCaps", [["", "Leave"], ["none", "Normal"], ["all", "All caps"], ["small", "Small caps"]], caps) + '</label>' +
           '<label>Position' + optSelect("sPos", [["", "Leave"], ["normal", "Normal"], ["super", "Superscript"], ["sub", "Subscript"]], pos) + '</label>' : "") +
       '</div>' +
+      '<datalist id="fontList"></datalist>' +
+      '<div class="weight-note" id="sWarn" hidden></div>' +
       (isNew && draft && draft.link ? '<div class="muted-note">Saving links the sampled text to this style.</div>' : "") +
       '<div class="btn-row">' +
         '<button class="btn" id="sCancel">Cancel</button>' +
@@ -709,6 +816,45 @@
 
   function wireEditor(id) {
     var pick = $("sColorPick"), text = $("sColor");
+    var fontBox = $("sFont"), boldBox = $("sBold"), warn = $("sWarn");
+    var lastAutoFont = null;
+    function checkWeight(fromFont) {
+      var name = fontBox.value.trim(), bold = boldBox.value;
+      var msg = "", warnLevel = false;
+      if (fromFont && isWeighted(name) && bold !== "0" && name !== lastAutoFont) {
+        boldBox.value = "0"; bold = "0"; lastAutoFont = name;
+        msg = "Bold set to Off, because " + name + " is already a weighted font.";
+      } else if (isWeighted(name) && bold === "1") {
+        msg = "Double bold: " + name + " is already a weighted font, so Bold On makes PowerPoint thicken it artificially. It can look smeared and print badly.";
+        warnLevel = true;
+      } else if (!name && bold === "1") {
+        msg = "Bold On without a font may give a fake bold on light or regular fonts. For a true weight, pick the font's own bold version, such as Segoe UI Semibold or Segoe UI Bold.";
+        warnLevel = true;
+      } else if (isWeighted(name) && bold === "0" && warn.getAttribute("data-auto") === "1") {
+        return; // keep the earlier note visible
+      }
+      warn.hidden = !msg;
+      warn.textContent = msg;
+      warn.className = "weight-note" + (warnLevel ? " warn" : "");
+      warn.setAttribute("data-auto", msg && !warnLevel ? "1" : "0");
+    }
+    fontBox.addEventListener("change", function () { checkWeight(true); });
+    fontBox.addEventListener("blur", function () { checkWeight(true); });
+    fontBox.addEventListener("input", function () { if (!fontBox.value.trim()) checkWeight(false); });
+    fontBox.addEventListener("focus", tryInstalledFonts);
+    fontBox.addEventListener("pointerdown", tryInstalledFonts);
+    boldBox.addEventListener("change", function () { warn.setAttribute("data-auto", "0"); checkWeight(false); });
+    updateFontList();
+    collectDeckFonts();
+    tryInstalledFonts();
+    if (draft && draft.boldNote && editing === "new") {
+      lastAutoFont = fontBox.value.trim();
+      warn.hidden = false;
+      warn.textContent = "Bold set to Off, because " + lastAutoFont + " is already a weighted font.";
+      warn.setAttribute("data-auto", "1");
+    } else {
+      checkWeight(false);
+    }
     pick.addEventListener("input", function () { text.value = pick.value.toUpperCase(); });
     text.addEventListener("input", function () { if (/^#?[0-9a-f]{6}$/i.test(text.value.trim())) pick.value = ("#" + text.value.trim().replace("#", "")).toLowerCase(); });
     $("sCancel").addEventListener("click", function () { editing = null; draft = null; render(); });
@@ -819,5 +965,6 @@
   });
 
   // Exposed for testing only
-  ST._styles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, scanDeck: scanDeck, parseTag: parseTag, tagWith: tagWith };
+  ST._styles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, scanDeck: scanDeck, parseTag: parseTag, tagWith: tagWith,
+    isWeighted: isWeighted, pptName: pptName, fonts: function () { return { deck: deckFonts, installed: installedFonts, state: rememberedFontCheck() }; } };
 })();
