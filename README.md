@@ -231,37 +231,17 @@ Your palette and the theme's colours, one click away.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Fill, Outline or Text switch, theme colours, your colours, add a colour, add from selection |
+| Basic | Fill, Outline or Text switch, theme colours with their tints and shades, template colours, your colours, add a colour, add from selection |
 | More | Rename, reorder and remove your colours |
 
 Tips:
 
 1. Choose Fill, Outline or Text, then click a swatch to apply it to the selected shapes or text.
-2. Theme colours are read from the presentation's theme. They're never changed from the panel, because they belong to the slide master.
-3. Your colours are saved in the presentation. Add one by hex code, the colour picker, or Add from selection, which takes the selected shape's fill or the selected text's colour.
-4. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
-5. The colour pickers in the Styles and Shape styles editors suggest these colours.
-
-### Consistency check
-
-One scan of every normal slide that lists small inconsistencies, so a deck can be tidied in one pass.
-
-| Level | Shows |
-| --- | --- |
-| Basic | Check slides and the results |
-| More | Choose which checks run, and the grid tolerance |
-
-Checks:
-
-| Check | Finds | Fix |
-| --- | --- | --- |
-| Nearly on the grid | Shapes whose left or top edge is within the tolerance (0.1 in by default) of a Layout grid line or a step of g, but not on it | Snap |
-| Text with no style | Text whose look matches none of your text styles, listed once per text box and font | Review |
-| Unlinked lookalikes | Text and shapes that look like one of your styles but aren't linked | Link, keeping their colour |
-| Odd corner radii | Rounded rectangles whose radius differs from the most common one | Set the common radius |
-| Colours not in your palette | Fills, outlines and text in colours outside your palette, theme colours and styles | Review |
-
-Click any item to select it on its slide. Groups with more than one fix have a Fix all button. Nothing changes until you click a fix, and masters and layouts are never checked or changed.
+2. Theme colours are read from the presentation's theme, in the same order as PowerPoint's colour menu, with the same five rows of tints and shades underneath. Hover a swatch to see its name, such as "Accent 1, Lighter 40%". They're never changed from the panel, because they belong to the slide master.
+3. Template colours are the Custom Colors saved in the template's theme, shown by name in template order. The panel reads them from a copy of the first slide, so nothing in the deck changes. This needs PowerPoint API 1.8. Without it the row is hidden.
+4. Your colours are saved in the presentation. Add one by hex code, the colour picker, or Add from selection, which takes the selected shape's fill or the selected text's colour.
+5. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
+6. The colour pickers in the Styles and Shape styles editors suggest these colours.
 
 ## Formulas
 
@@ -316,7 +296,6 @@ js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
 js/tools/colours.js      Colours tool (palette)
-js/tools/check.js        Consistency check tool
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons
 ```
