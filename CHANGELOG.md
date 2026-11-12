@@ -2,6 +2,15 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.3.0] 2026-11-12
+
+### Added
+
+1. Shape styles tool, saved inside the presentation, covering fill (solid or none, transparency), outline (on or off, colour, weight, dash, line type, transparency), corner radius, text box margins, vertical alignment, wrap and autofit.
+2. A shape style can include a text style, applied to the text inside.
+3. Sample a shape, apply with one click, and Update all for shapes, which keeps hand changes on linked shapes and offers lookalikes with a choice to leave them, apply the style, or apply it and keep their colours.
+4. Selection status at the More level with reset, unlink and link buttons.
+
 ## [2.2.1] 2026-11-12
 
 ### Fixed
