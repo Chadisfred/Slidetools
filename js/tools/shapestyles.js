@@ -471,7 +471,7 @@
   function pct(v) { return has(v) ? String(Math.round(v * 100)) : ""; }
   function colorField(idBase, value) {
     var c = norm(value) || "#000000";
-    return '<div class="color-field"><input type="color" id="' + idBase + 'Pick" value="' + c.toLowerCase() + '"><input type="text" id="' + idBase + '" value="' + esc(value) + '" placeholder="Leave"></div>';
+    return '<div class="color-field"><input type="color" id="' + idBase + 'Pick" list="paletteList" value="' + c.toLowerCase() + '"><input type="text" id="' + idBase + '" value="' + esc(value) + '" placeholder="Leave"></div>';
   }
   function textStyleOptions(value) {
     var opts = textStyles().map(function (t) { return [String(t.id), t.name]; });
