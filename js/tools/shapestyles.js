@@ -771,22 +771,6 @@
     build: build
   });
 
-  // Used by the Consistency check.
-  ST.shapeStyles = {
-    list: function () { return styles; },
-    byId: byId,
-    scan: function (context) { return scanDeck(context); },
-    classify: classify,
-    getShape: getShape,
-    // Links a lookalike shape to a style, keeping its own colours.
-    link: function (context, info, styleId) {
-      var st = byId(styleId);
-      if (!st) return;
-      info.shape = getShape(context, info.sid, info.path);
-      writeShape(info, st, { keepColors: true });
-    }
-  };
-
   // Exposed for testing only
   ST._shapeStyles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, norm: norm };
 })();
