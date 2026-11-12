@@ -13,13 +13,19 @@
   var ANCHOR_NAMES = ["top left", "top", "top right", "left", "centre", "right", "bottom left", "bottom", "bottom right"];
 
   var MARKUP =
+    '<span class="info res-info" tabindex="0" role="button" aria-label="How formulas work">i' +
+      '<span class="tip" role="tooltip">Press Enter in a box to apply just that size. With the lock on, the other side follows, and Resize uses Width.<br><br>' +
+      'Names you can use: <code>g</code> grid spacing, <code>col</code> column width, <code>row</code> row height, ' +
+      '<code>gap</code> and <code>vgap</code> the gaps, <code>w</code> and <code>h</code> the shape\'s current size.<br><br>' +
+      'Examples: <code>1.5g</code> <code>10g</code> <code>2col+gap</code> <code>*2</code> <code>1.4*2</code>. Every number box in this panel accepts maths too.</span>' +
+    '</span>' +
     '<div class="row">' +
       '<label class="field">Width<input type="text" id="resW" placeholder="e.g. 2col+gap"></label>' +
       '<label class="field">Height<input type="text" id="resH" placeholder="e.g. 10g"></label>' +
     '</div>' +
     '<div class="calc" id="calc" data-min="2"></div>' +
     '<div class="toggle" data-min="2">Lock aspect ratio<label class="switch"><input type="checkbox" id="lockAspect"><span></span></label></div>' +
-    '<div class="anchor-row" data-min="3"><span>Resize from <b id="anchorName"></b></span><div class="anchor" id="anchor"></div></div>' +
+    '<div class="anchor-row" data-min="2"><span>Resize from <b id="anchorName"></b></span><div class="anchor" id="anchor"></div></div>' +
     '<div class="btn-row res-actions">' +
       '<button class="btn" id="useSel" data-min="2" title="Copy the selected shape\'s size into the boxes">Use selection</button>' +
       '<button class="btn primary" id="resize">Resize</button>' +
@@ -30,11 +36,7 @@
       '<button class="btn small" id="matchSmall">Smallest</button>' +
     '</div>' +
     '<div class="group-label" data-min="3">Recent formulas</div>' +
-    '<div class="mini-chips" id="recent" data-min="3"></div>' +
-    '<div class="help" data-min="3">Press Enter in a box to apply just that size. With the lock on, the other side follows, and Resize uses Width. ' +
-      'Names you can use: <code>g</code> grid spacing, <code>col</code> column width, <code>row</code> row height, ' +
-      '<code>gap</code> and <code>vgap</code> the gaps, <code>w</code> and <code>h</code> the shape\'s current size. ' +
-      'Examples: <code>1.5g</code> <code>10g</code> <code>2col+gap</code> <code>*2</code> <code>1.4*2</code>. Every number box in this panel accepts maths too.</div>';
+    '<div class="mini-chips" id="recent" data-min="3"></div>';
 
   function anchorFactors() {
     var a = ST.state.anchor || 0;

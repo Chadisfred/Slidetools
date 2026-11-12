@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.1.0] 2026-11-12
+
+### Changed
+
+1. Resize: Resize from (the anchor picker) now shows at the More level as well as Full.
+2. Resize: the formula help is now a small i icon at the top right of the tool. Hover over it, or tab to it, to read the help. It's available at every level.
+
 ## [2.0.0] 2026-11-12
 
 ### Changed
