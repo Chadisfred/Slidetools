@@ -370,3 +370,19 @@ select:focus { border-color: var(--accent); }
 .shape-tile i { display: block; width: 24px; height: 18px; box-sizing: border-box; }
 .ss-fill[hidden], .ss-line[hidden], #ssList[hidden], #ssReview[hidden], #ssActions[hidden], #ssStatus[hidden] { display: none !important; }
 .ss-actions, .ss-review { display: grid; gap: 8px; }
+
+/* ---------- Arrange tool ---------- */
+.icon-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; background: var(--page); border-radius: 9px; padding: 3px; }
+.tool-btn {
+  height: 30px; border: none; background: transparent; border-radius: 7px; cursor: pointer; color: var(--text);
+  display: grid; place-items: center;
+}
+.tool-btn:hover { background: var(--card); color: var(--accent); box-shadow: 0 1px 3px var(--shadow); }
+.tool-btn svg { width: 16px; height: 16px; }
+.seg.seg2 { grid-template-columns: repeat(2, 1fr); }
+.seg.seg3 { grid-template-columns: repeat(3, 1fr); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.nudge-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.nudge-pad { display: grid; grid-template-columns: repeat(4, 34px); gap: 4px; }
+.nudge-pad .btn { padding: 0; }
+.toggle.off { display: none !important; }

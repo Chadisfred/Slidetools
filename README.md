@@ -125,6 +125,23 @@ Sets the corner radius of rounded rectangles in points, so corners match across 
 
 Press Enter in the Radius box to round the selection straight away. Square rectangles can't be converted from the panel. Draw them rounded, or use Round in the VBA Slide Tools. Corner changes need PowerPoint API 1.10 or later.
 
+### Arrange
+
+Lines shapes up and spaces them exactly, using the same grid as Layout.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap to grid |
+| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap mode and options |
+| Full | Nudge by an amount, swap two shapes |
+
+Tips:
+
+1. The gap and nudge boxes take formulas, such as `g`, `0.5g` or `gap`, using the Layout grid's values.
+2. Distribute keeps the first shape where it is and places the rest after it with the exact gap. Even gaps keeps the outer shapes still and shares the space between them equally.
+3. Aligning a single shape to the selection aligns it to the grid area instead.
+4. Snap to grid has two modes. Grid cells moves each shape's top left corner to the nearest cell corner, and with "Resize to the cells it covers" also sizes it to span whole cells. Fine grid snaps to steps of `g` measured from the grid area's top left, and can snap all four edges.
+
 ### Styles
 
 Character styles in the spirit of InDesign: save the look of some text once, apply it anywhere, then change it everywhere at once. Styles are saved inside the presentation, so they travel with the file.
@@ -256,6 +273,7 @@ js/panels.js             Panel framework: headers, detail levels, folding, drag 
 js/tools/layout.js       Layout tool
 js/tools/resize.js       Resize tool
 js/tools/corners.js      Corners tool
+js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
 js/app.js                Starts everything and connects to PowerPoint
