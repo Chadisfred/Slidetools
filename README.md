@@ -224,6 +224,23 @@ Limits:
 3. Lines, pictures, charts and tables aren't included.
 4. Only normal slides are changed, never masters or layouts.
 
+### Colours
+
+Your palette and the theme's colours, one click away.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Fill, Outline or Text switch, theme colours, your colours, add a colour, add from selection |
+| More | Rename, reorder and remove your colours |
+
+Tips:
+
+1. Choose Fill, Outline or Text, then click a swatch to apply it to the selected shapes or text.
+2. Theme colours are read from the presentation's theme. They're never changed from the panel, because they belong to the slide master.
+3. Your colours are saved in the presentation. Add one by hex code, the colour picker, or Add from selection, which takes the selected shape's fill or the selected text's colour.
+4. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
+5. The colour pickers in the Styles and Shape styles editors suggest these colours.
+
 ## Formulas
 
 Every number box accepts maths, for example `12.5-2*0.42`. The Resize boxes also understand these names:
@@ -276,6 +293,7 @@ js/tools/corners.js      Corners tool
 js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
+js/tools/colours.js      Colours tool (palette)
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons
 ```

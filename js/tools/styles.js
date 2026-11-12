@@ -663,7 +663,7 @@
         '<label class="field">Font<input type="text" id="sFont" list="fontList" autocomplete="off" value="' + esc(f.name) + '" placeholder="Leave"></label>' +
         '<label class="field">Size (pt)<input type="text" id="sSize" inputmode="decimal" value="' + esc(f.size) + '" placeholder="Leave"></label>' +
       '</div>' +
-      '<label class="field">Colour<div class="color-field"><input type="color" id="sColorPick" value="' + esc(base(f.color).toLowerCase()) + '"><input type="text" id="sColor" value="' + esc(f.color) + '"></div></label>' +
+      '<label class="field">Colour<div class="color-field"><input type="color" id="sColorPick" list="paletteList" value="' + esc(base(f.color).toLowerCase()) + '"><input type="text" id="sColor" value="' + esc(f.color) + '"></div></label>' +
       '<div class="prop-grid">' +
         '<label>Bold' + triSelect("sBold", f.bold) + '</label>' +
         '<label>Italic' + triSelect("sItalic", f.italic) + '</label>' +
@@ -978,6 +978,42 @@
       writeFont(shape.textFrame.textRange, st);
       addTag(shape, existingTag, id);
       return true;
+    },
+    // Recolours a text range without breaking style links: linked characters get the new
+    // colour re-coded with their style ID, and the kept colour is recorded in the shape tag.
+    recolor: function (context, range, shape, tagValue, color) {
+      color = String(color).toUpperCase();
+      range.load("length");
+      return context.sync().then(function () {
+        var n = range.length;
+        if (!n) return 0;
+        var tags = parseTag(tagValue), chars = [], step = n > 400 ? 0 : 1;
+        if (step) for (var i = 0; i < n; i++) { var c = range.getSubstring(i, 1); c.font.load("color"); chars.push(c); }
+        else { range.font.load("color"); }
+        return context.sync().then(function () {
+          function linkedId(col) {
+            if (!col) return 0;
+            var id = decodeId(col), st = byId(id), b = base(col);
+            return st && tags[id] && (b === base(st.font.color) || b === base(st.applied.color) || tags[id].indexOf(b) >= 0) ? id : 0;
+          }
+          var runs = [];
+          if (step) chars.forEach(function (c, i) {
+            var id = linkedId(c.font.color), last = runs[runs.length - 1];
+            if (last && last.id === id) last.len++; else runs.push({ start: i, len: 1, id: id });
+          });
+          else runs.push({ start: 0, len: n, id: linkedId(range.font.color) });
+          var value = tagValue, kept = false;
+          runs.forEach(function (r) {
+            var target = r.start === 0 && r.len === n ? range : range.getSubstring(r.start, r.len);
+            if (r.id) {
+              target.font.color = encode(color, r.id);
+              if (base(color) !== base(byId(r.id).font.color)) { value = tagWith(value, r.id, color); kept = true; }
+            } else target.font.color = color;
+          });
+          if (kept) shape.tags.add(SHAPE_TAG, value);
+          return context.sync().then(function () { return runs.filter(function (r) { return r.id; }).length; });
+        });
+      });
     },
     // Returns the text style a whole text uses, or null.
     detect: function (font, tagValue) {

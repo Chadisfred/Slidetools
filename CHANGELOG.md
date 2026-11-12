@@ -2,6 +2,15 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.5.0] 2026-11-12
+
+### Added
+
+1. Colours tool: theme colours (read only) and your own palette saved in the presentation, applied to fill, outline or text with one click.
+2. Add colours by hex, colour picker, or from the selected shape's fill or text's colour. Rename, reorder and remove them at the More level.
+3. Recolouring styled text from the Colours tool keeps its text style link, recording the colour as a local change.
+4. The colour pickers in the Styles and Shape styles editors suggest palette and theme colours.
+
 ## [2.4.0] 2026-11-12
 
 ### Added
