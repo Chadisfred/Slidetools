@@ -5,8 +5,8 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>3fdacb2e-ca13-4e60-b6d9-4472e2e81fdc</Id>
-  <Version>1.0.0.1</Version>
-  <ProviderName>Chad</ProviderName>
+  <Version>1.0.0.2</Version>
+  <ProviderName>Slide Tools</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Slide Tools Panel"/>
   <Description DefaultValue="Grid layout, fitting, formula resizing and corner tools in a side panel."/>
