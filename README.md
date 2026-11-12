@@ -1,6 +1,6 @@
 # Slide Tools
 
-A PowerPoint side panel for laying out grids, resizing shapes with formulas and rounding corners. It runs as an Office web add-in and is hosted on GitHub Pages:
+A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners and managing character styles. It runs as an Office web add-in and is hosted on GitHub Pages:
 
 https://chadisfred.github.io/Slidetools/taskpane.html
 
@@ -125,6 +125,50 @@ Sets the corner radius of rounded rectangles in points, so corners match across 
 
 Press Enter in the Radius box to round the selection straight away. Square rectangles can't be converted from the panel. Draw them rounded, or use Round in the VBA Slide Tools. Corner changes need PowerPoint API 1.10 or later.
 
+### Styles
+
+Character styles in the spirit of InDesign: save the look of some text once, apply it anywhere, then change it everywhere at once. Styles are saved inside the presentation, so they travel with the file.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Your styles (click one to apply it), Sample, Update all |
+| More | What style the selected text uses, each style's settings, New blank style |
+
+A style can set font, size, colour, bold, italic, underline, strikethrough, caps (normal, all caps, small caps) and position (normal, superscript, subscript). Any setting can be left out with Leave. Every style needs a colour and at least a font or a size.
+
+Fonts and weights:
+
+1. The Font box suggests fonts used in this presentation first, then fonts in your styles, then your installed fonts. Typing any other name works too.
+2. Listing installed fonts depends on the browser inside PowerPoint. The first time, it may ask for permission. If it's refused or unavailable, the panel remembers that for about 12 hours and doesn't ask again. Fonts from the presentation still appear.
+3. Fonts that already carry a weight in their name, such as Segoe UI Semibold, Arial Black or Roboto Light, automatically get Bold set to Off, because PowerPoint's bold on top would thicken them artificially. You can switch it back on, with a warning.
+4. When a style with a weighted font has Bold on Leave, applying it switches bold off on the text, so leftover bold doesn't stack.
+5. A style with Bold On but no font gets a warning, because on a light or regular font that gives a fake bold. Pick the font's real bold version instead.
+
+Making and using styles:
+
+1. Select some text and click Sample. The panel fills in the settings from that text. Settings that are mixed in the selection are left out. Name it and click Save style. The sampled text is linked to the new style straight away.
+2. To apply a style, select text, or whole text boxes, and click the style.
+3. To change a style, click its pencil, edit and save. It shows Edited until you push the change.
+4. Click Update all to push edits through the presentation. Nothing changes until you confirm.
+
+Update all checks every normal slide. It never touches slide masters or layouts. For each style it reports:
+
+1. Linked text, which will update. Settings you changed by hand on linked text, such as a different colour or italic, are kept.
+2. Lookalikes: text that matches a style's font settings but isn't linked, usually because it was recoloured from the ribbon or written before the style existed. Choose to leave them alone, apply the style and its colour, or apply the style but keep their own colour. Review each one lists them by slide. Click an item to select it on the slide, or give it its own choice.
+
+At the More level, selecting text shows its style. A "+" means it has local changes. You can reset it to the style, unlink it, or relink a lookalike while keeping its colour.
+
+How linking works: add-ins can't attach data to individual characters, so each style's number is hidden in a tiny shift of the text colour, at most 3 out of 255 per channel, which can't be seen. Text boxes using a style also carry a hidden label. This means:
+
+1. A style's exact hex code may differ slightly from the value you typed. #0071E3 might be stored on the text as #0070E1.
+2. Recolouring styled text from the ribbon breaks its link. Update all then offers it as a lookalike, so nothing is silently lost.
+3. Copying text with Format Painter or the eyedropper copies its style code too.
+4. A presentation can hold up to 63 styles.
+5. Colours are fixed values, not theme colours.
+6. Paragraph settings such as space before and after, line spacing and kerning aren't available to add-ins, so styles cover character settings only.
+7. Tables aren't checked by Update all.
+8. Update all can be undone with Ctrl+Z, though it may take several presses.
+
 ## Formulas
 
 Every number box accepts maths, for example `12.5-2*0.42`. The Resize boxes also understand these names:
@@ -160,7 +204,8 @@ Script and style links in `taskpane.html` end in `?v=` plus the version number. 
 | The panel shows an old version | Close PowerPoint, delete the contents of `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, reopen |
 | The panel is blank or shows an error | Check the web address above loads in a browser, then reopen the panel |
 | The Grid Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
-| A slide button says the version is too old | Update Office. Draw, Fit and Resize need PowerPoint API 1.5, grouping needs 1.8 and corners need 1.10 |
+| A slide button says the version is too old | Update Office. Draw, Fit, Resize and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Corners need 1.10 |
+| Update all reports something you didn't expect | Click Cancel. Nothing changes until you click Update |
 
 ## Project layout
 
@@ -173,6 +218,7 @@ js/panels.js             Panel framework: headers, detail levels, folding, drag 
 js/tools/layout.js       Layout tool
 js/tools/resize.js       Resize tool
 js/tools/corners.js      Corners tool
+js/tools/styles.js       Styles tool (character styles)
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons
 ```
