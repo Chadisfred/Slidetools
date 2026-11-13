@@ -2,6 +2,25 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.9.0] 2026-11-13
+
+### Added
+
+1. Match tool: select every shape on the slide that matches the selected one by fill colour, outline, shape style, text style, size or type.
+2. Match: Previous slide and Next slide jump to the next slide with matches and select them there, with a count for the slide and the whole presentation.
+3. Match: copy a shape's position and size and paste the position, the size or both onto selected shapes, lined up by any of nine anchor points.
+
+### Changed
+
+1. PowerPoint errors are shown as plain sentences, for example "A shape or slide changed while this was running", instead of PowerPoint's own wording.
+2. Styles: scanning the slides for Update all and font suggestions takes about a third as many trips to PowerPoint, which is noticeably faster on large presentations.
+3. Colours and Layout load only the slide details they need, which helps on large presentations.
+
+### Fixed
+
+1. Resize with Lock aspect ratio on a straight line no longer produces an invalid size.
+2. Draw on slide and Fit selection explain why when the grid doesn't fit its area, instead of doing nothing.
+
 ## [2.8.0] 2026-11-12
 
 ### Changed
