@@ -269,11 +269,11 @@
   function drawGrid() {
     if (!ST.needOffice()) return;
     var grid = ST.calculate();
-    if (!grid.valid) return;
+    if (!grid.valid) { ST.toast("The grid doesn't fit its area. Check the spacing, size and number of columns and rows.", true); return; }
     var rounded = ST.state.drawRounded, group = ST.state.groupDrawn;
     ST.run(function (context) {
       var slides = context.presentation.getSelectedSlides();
-      slides.load("items");
+      slides.load("items/id");
       return context.sync().then(function () {
         if (!slides.items.length) { ST.toast("Select a slide first.", true); return; }
         var slide = slides.items[0], made = [];
@@ -330,7 +330,7 @@
 
   function fitSelection() {
     var grid = ST.calculate();
-    if (!grid.valid) return;
+    if (!grid.valid) { ST.toast("The grid doesn't fit its area. Check the spacing, size and number of columns and rows.", true); return; }
     ST.withSelection(["left", "top"], function (context, items) {
       var cells = grid.cols * grid.rows;
       if (items.length > cells) {

@@ -18,6 +18,7 @@
   var PART_SIZE = 2000;
   var MAX_ID = 63;
   var BATCH = 300;
+  var SCAN_BATCH = 1000; // font reads per round trip when scanning; reads are small, so fewer trips is faster
   var TEXT_TYPES = ["GeometricShape", "TextBox", "Placeholder", "Callout", "Freeform"];
 
   var ICON = '<svg viewBox="0 0 18 18" fill="currentColor"><path d="M2.2 15L6.3 3.5h1.6L12 15h-1.9l-1-3H5l-1 3H2.2zm3.4-4.6h3L7.1 6 5.6 10.4z"/><rect x="12.6" y="9" width="3.6" height="6" rx="0.8" opacity="0.55"/></svg>';
@@ -194,7 +195,7 @@
         tags.add(STORE_KEY + "_N", String(parts.length));
         return context.sync();
       });
-    }).catch(function (e) { ST.toast("Couldn't save styles: " + (e && e.message ? e.message : e), true); });
+    }).catch(function (e) { ST.toast("Couldn't save styles: " + ST.reason(e), true); });
   }
 
   // ---------- Writing to text ----------
@@ -496,7 +497,7 @@
       });
       function round() {
         if (!queue.length) return Promise.resolve();
-        var batch = queue.splice(0, BATCH);
+        var batch = queue.splice(0, SCAN_BATCH);
         batch.forEach(function (q) { q.rng = q.e.tf.textRange.getSubstring(q.start, q.len); q.rng.font.load(list); });
         return context.sync().then(function () {
           batch.forEach(function (q) {
@@ -513,7 +514,8 @@
       return round();
     }).then(function () {
       // Join neighbouring pieces that ended up with identical formatting.
-      segs.sort(function (a, b) { return a.e === b.e ? a.start - b.start : entries.indexOf(a.e) - entries.indexOf(b.e); });
+      entries.forEach(function (e, i) { e.order = i; });
+      segs.sort(function (a, b) { return a.e === b.e ? a.start - b.start : a.e.order - b.e.order; });
       var merged = [];
       segs.forEach(function (s) {
         var last = merged[merged.length - 1];
@@ -574,7 +576,7 @@
       render();
     }).catch(function (e) {
       busy = false; review = null; render();
-      ST.toast("Couldn't scan the slides: " + (e && e.message ? e.message : e), true);
+      ST.toast("Couldn't scan the slides: " + ST.reason(e), true);
     });
   }
 
@@ -627,7 +629,7 @@
       });
     }).catch(function (e) {
       busy = false;
-      ST.toast("Update stopped: " + (e && e.message ? e.message : e) + ". Some text may already be updated, use Undo if needed.", true);
+      ST.toast("Update stopped: " + ST.reason(e) + ". Some text may already be updated, use Undo if needed.", true);
       render();
     });
   }
