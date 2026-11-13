@@ -1,6 +1,6 @@
 # Slide Tools
 
-A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners, and managing character and shape styles. It runs as an Office web add-in and is hosted on GitHub Pages:
+A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners, selecting and matching similar shapes, and managing character and shape styles. It runs as an Office web add-in and is hosted on GitHub Pages:
 
 https://chadisfred.github.io/Slidetools/taskpane.html
 
@@ -143,6 +143,29 @@ Tips:
 3. Aligning a single shape to the selection aligns it to the grid area instead.
 4. Snap to grid has two modes. Grid cells moves each shape's top left corner to the nearest cell corner, and with "Resize to the cells it covers" also sizes it to span whole cells. Fine grid snaps to steps of `g` measured from the grid area's top left, and can snap all four edges.
 
+### Match
+
+Finds shapes like the one you've selected, and copies one shape's position and size onto others.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Match by chips, Select similar on slide, Copy and Paste with Position, Size or Both |
+| More | Previous slide and Next slide with a count of matches, Paste from (anchor point) |
+
+Select similar:
+
+1. Select an example shape, tick what to match by (Fill colour, Outline, Shape style, Text style, Size, Type), then click Select similar on slide. Every matching shape on that slide is selected.
+2. PowerPoint can only select shapes on one slide at a time. Next slide and Previous slide jump to the next slide that has matches and select them there, wrapping round at the end. The status line shows how many matches are on that slide and in the whole presentation.
+3. The example is remembered after you click Select similar, so you can keep stepping through slides after the selection changes. Changing the ticks applies to the next step.
+4. Size allows half a point of difference. Pictures, tables and groups can only be matched by Type and Size.
+5. Masters and layouts are never searched.
+
+Copy position and size:
+
+1. Select a shape and click Copy. The panel shows its position and size until it is closed.
+2. Go to another slide, select one or more shapes, and click Paste. Choose Position, Size or Both first.
+3. At More, Paste from chooses which point lines up when the sizes differ. Centre places shapes on the copied shape's centre, and with Size only, keeps each shape's own centre still while it is resized.
+
 ### Styles
 
 Character styles in the spirit of InDesign: save the look of some text once, apply it anywhere, then change it everywhere at once. Styles are saved inside the presentation, so they travel with the file.
@@ -283,7 +306,7 @@ Script and style links in `taskpane.html` end in `?v=` plus the version number. 
 | The panel shows an old version | Close PowerPoint, delete the contents of `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, reopen |
 | The panel is blank or shows an error | Check the web address above loads in a browser, then reopen the panel |
 | The Grid Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
-| A slide button says the version is too old | Update Office. Draw, Fit, Resize and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Corners need 1.10 |
+| A slide button says the version is too old | Update Office. Draw, Fit, Resize, Match and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Corners need 1.10 |
 | Update all reports something you didn't expect | Click Cancel. Nothing changes until you click Update |
 
 ## Project layout
@@ -298,6 +321,7 @@ js/tools/layout.js       Layout tool
 js/tools/resize.js       Resize tool
 js/tools/corners.js      Corners tool
 js/tools/arrange.js      Arrange tool (align, distribute, snap)
+js/tools/match.js        Match tool (select similar, copy position and size)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
 js/tools/colours.js      Colours tool (palette)
