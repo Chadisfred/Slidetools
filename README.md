@@ -142,12 +142,12 @@ Tips:
 2. Distribute keeps the first shape where it is and places the rest after it with the exact gap. Even gaps keeps the outer shapes still and shares the space between them equally.
 3. Aligning a single shape to the selection aligns it to the grid area instead.
 4. Snap moves each shape's top left corner to the nearest line, and a line under the buttons says what the chosen mode will do:
-   1. Guides: the guides built into your template, read from the current slide's layout and master. "Snap all four edges" also moves the right and bottom edges to the nearest guide.
+   1. Guides: the guides you see on the slide. That covers presentation guides (the ones you can drag on any slide, which a template usually brings with it) and guides in the current slide's layout and master. "Snap all four edges" also moves the right and bottom edges to the nearest guide.
    2. Columns: the column and row corners of the Layout grid. "Resize to the cells it covers" also sizes the shape to span whole cells.
    3. Steps: every `g` from the grid area's top left. Can snap all four edges.
-5. With Guides chosen, the More level reports the template's guides: how many there are, their spacing, and any that sit slightly off the pattern, for example "8.34722 in (1 pt right)". Use in Layout sets the Layout spacing and the grid area's left and top from the guides at full precision. Read again refreshes them after you change the template.
+5. With Guides chosen, the More level reports the guides: how many there are, their spacing, any that sit slightly off the pattern, for example "8.34722 in (1 pt right)", and where they were found. Use in Layout sets the Layout spacing and the grid area's left and top from the guides at full precision. Read again refreshes them after you move, add or remove guides.
 
-Template guides are only read, never changed, and need PowerPoint API 1.8. Guides you drag onto ordinary slides yourself may not be included, because only the slide's layout and master are read.
+Guides are read from a read only copy of the open file, so they're never changed. The copy is taken once and kept until you click Read again. If PowerPoint won't hand over the file, the panel falls back to a copy of the slide (PowerPoint API 1.8). That fallback only has the layout and master guides, and the report says so.
 
 If shapes drift a little further from the guides the further they are across the slide, the step size is slightly off. PowerPoint shows guide positions to two decimal places, so a 30 pt guide grid (0.41667 in) looks like 0.42. Use in Layout, or typing `30pt` in Spacing, fixes it.
 

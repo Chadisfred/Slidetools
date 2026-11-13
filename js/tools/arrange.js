@@ -136,23 +136,131 @@
     return { xs: xs, xe: xe, ys: ys, ye: ye, grid: g };
   }
   // ---------- Template guides ----------
-  // Guides live in the slide master and layout as <p15:guide> (and in viewProps as <p:guide>),
-  // with positions in eighths of a point. Exporting the slide gives us its layout and master to read.
-  var guides = null; // { slideId, v: [pt], h: [pt] }
-  function guidesSupported() { return ST.supports("1.8") && typeof DecompressionStream === "function"; }
-  function parseGuides(files) {
-    var v = {}, h = {};
-    files.forEach(function (f) {
-      var doc = new DOMParser().parseFromString(f.text, "application/xml");
-      Array.prototype.forEach.call(doc.getElementsByTagName("*"), function (el) {
-        if (el.localName !== "guide") return;
-        var pos = parseInt(el.getAttribute("pos") || "0", 10) / 8;
-        if (!isFinite(pos)) return;
-        (el.getAttribute("orient") === "horz" ? h : v)[pos] = true;
-      });
+  // Guides live in two places, with positions in eighths of a point:
+  //   ppt/viewProps.xml  <p:guide>    presentation guides, draggable on any slide
+  //   master and layout  <p15:guide>  template guides, locked outside Slide Master view
+  // The whole open file is read (read only) so both kinds are found. If that isn't possible,
+  // a copy of the slide gives its layout and master, but not the presentation guides.
+  var guides = null; // { slideId, v: [pt], h: [pt], sources: [label], whole: bool }
+  var fileBytes = null; // cached copy of the whole file, cleared by Read again
+  function canReadWholeFile() {
+    try { return !!(Office.context.document && Office.context.document.getFileAsync && Office.FileType && Office.FileType.Compressed); }
+    catch (e) { return false; }
+  }
+  function guidesSupported() {
+    return ST.inOffice && typeof DecompressionStream === "function" && (canReadWholeFile() || ST.supports("1.8"));
+  }
+  function guidesIn(text) {
+    var v = [], h = [];
+    var doc = new DOMParser().parseFromString(text, "application/xml");
+    Array.prototype.forEach.call(doc.getElementsByTagName("*"), function (el) {
+      if (el.localName !== "guide") return;
+      var pos = parseInt(el.getAttribute("pos") || "0", 10) / 8;
+      if (!isFinite(pos)) return;
+      (el.getAttribute("orient") === "horz" ? h : v).push(pos);
+    });
+    return { v: v, h: h };
+  }
+  // parts: [{ label, text }]. Returns sorted, de-duplicated guides and the labels that had any.
+  function collectGuides(parts) {
+    var v = {}, h = {}, sources = [];
+    parts.forEach(function (p) {
+      if (!p.text) return;
+      var g = guidesIn(p.text);
+      g.v.forEach(function (x) { v[x] = true; });
+      g.h.forEach(function (y) { h[y] = true; });
+      if (g.v.length || g.h.length) sources.push(p.label);
     });
     function list(o) { return Object.keys(o).map(Number).sort(function (a, b) { return a - b; }); }
-    return { v: list(v), h: list(h) };
+    return { v: list(v), h: list(h), sources: sources };
+  }
+
+  // Reads the open presentation as a zip, slice by slice. Resolves to bytes, or null.
+  function readWholeFile(force) {
+    if (!force && fileBytes) return Promise.resolve(fileBytes);
+    if (!canReadWholeFile()) return Promise.resolve(null);
+    return new Promise(function (resolve) {
+      try {
+        Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 4194304 }, function (res) {
+          if (res.status !== "succeeded" || !res.value) { resolve(null); return; }
+          var file = res.value, count = file.sliceCount, chunks = [], total = 0;
+          function done(bytes) { try { file.closeAsync(function () {}); } catch (e) { /* already closed */ } resolve(bytes); }
+          function next(i) {
+            if (i >= count) {
+              var out = new Uint8Array(total), at = 0;
+              chunks.forEach(function (c) { out.set(c, at); at += c.length; });
+              fileBytes = out;
+              done(out);
+              return;
+            }
+            file.getSliceAsync(i, function (s) {
+              if (s.status !== "succeeded" || !s.value) { done(null); return; }
+              var c = s.value.data instanceof Uint8Array ? s.value.data : new Uint8Array(s.value.data);
+              chunks.push(c); total += c.length;
+              next(i + 1);
+            });
+          }
+          next(0);
+        });
+      } catch (e) { resolve(null); }
+    });
+  }
+
+  // Zip paths: a target in a .rels file is relative to the folder of the part it belongs to.
+  function resolvePath(fromPart, target) {
+    if (target.charAt(0) === "/") return target.slice(1);
+    var parts = fromPart.split("/").slice(0, -1);
+    target.split("/").forEach(function (seg) { if (seg === "..") parts.pop(); else if (seg && seg !== ".") parts.push(seg); });
+    return parts.join("/");
+  }
+  function relsPath(part) { var i = part.lastIndexOf("/"); return part.slice(0, i) + "/_rels/" + part.slice(i + 1) + ".rels"; }
+  function relations(text) {
+    var doc = new DOMParser().parseFromString(text || "<x/>", "application/xml");
+    return Array.prototype.filter.call(doc.getElementsByTagName("*"), function (el) { return el.localName === "Relationship"; })
+      .map(function (el) { return { id: el.getAttribute("Id"), type: el.getAttribute("Type") || "", target: el.getAttribute("Target") || "" }; });
+  }
+  function relTarget(files, part, typeEnd) {
+    var r = relations(files[relsPath(part)]).filter(function (x) { return x.type.slice(x.type.lastIndexOf("/") + 1) === typeEnd; })[0];
+    return r ? resolvePath(part, r.target) : null;
+  }
+
+  // Finds the guides for the slide at index from the whole file's bytes.
+  function guidesFromFile(bytes, index) {
+    var zip = ST.zip, files = {};
+    var first = /^(ppt\/viewProps\.xml|ppt\/presentation\.xml|ppt\/_rels\/presentation\.xml\.rels|ppt\/slides\/_rels\/[^\/]+\.rels|ppt\/slideLayouts\/_rels\/[^\/]+\.rels)$/;
+    return zip.readZip(bytes, function (n) { return first.test(n); }).then(function (list) {
+      list.forEach(function (f) { files[f.name] = f.text; });
+      var pres = new DOMParser().parseFromString(files["ppt/presentation.xml"] || "<x/>", "application/xml");
+      var ids = Array.prototype.filter.call(pres.getElementsByTagName("*"), function (el) { return el.localName === "sldId"; });
+      var sld = ids[index], rid = null;
+      if (sld) Array.prototype.forEach.call(sld.attributes, function (a) { if (a.localName === "id" && a.namespaceURI && /relationships$/.test(a.namespaceURI)) rid = a.value; });
+      var rel = rid ? relations(files["ppt/_rels/presentation.xml.rels"]).filter(function (r) { return r.id === rid; })[0] : null;
+      var slidePart = rel ? resolvePath("ppt/presentation.xml", rel.target) : null;
+      var layoutPart = slidePart ? relTarget(files, slidePart, "slideLayout") : null;
+      var masterPart = layoutPart ? relTarget(files, layoutPart, "slideMaster") : null;
+      var wanted = [layoutPart, masterPart].filter(Boolean);
+      return (wanted.length ? zip.readZip(bytes, function (n) { return wanted.indexOf(n) >= 0; }) : Promise.resolve([])).then(function (more) {
+        more.forEach(function (f) { files[f.name] = f.text; });
+        var g = collectGuides([
+          { label: "presentation guides", text: files["ppt/viewProps.xml"] },
+          { label: "slide layout", text: layoutPart && files[layoutPart] },
+          { label: "slide master", text: masterPart && files[masterPart] }
+        ]);
+        g.whole = true;
+        return g;
+      });
+    });
+  }
+  function guidesFromCopy(context, slide) {
+    if (!ST.supports("1.8")) return Promise.resolve(null);
+    var data = slide.exportAsBase64();
+    return context.sync().then(function () {
+      return ST.zip.readZip(ST.zip.b64ToBytes(data.value), function (n) { return /^ppt\/(slideMasters\/slideMaster\d+|slideLayouts\/slideLayout\d+)\.xml$/.test(n); });
+    }).then(function (files) {
+      var g = collectGuides(files.map(function (f) { return { label: /Master/.test(f.name) ? "slide master" : "slide layout", text: f.text }; }));
+      g.whole = false;
+      return g;
+    });
   }
   function loadGuides(context, force) {
     if (!guidesSupported() || !ST.zip) return Promise.resolve(null);
@@ -162,13 +270,13 @@
       var slide = sel.items[0] || all.items[0];
       if (!slide) return null;
       if (!force && guides && guides.slideId === slide.id) return guides;
-      var data = slide.exportAsBase64();
-      return context.sync().then(function () {
-        return ST.zip.readZip(ST.zip.b64ToBytes(data.value), function (n) {
-          return /^ppt\/(slideMasters\/slideMaster\d+|slideLayouts\/slideLayout\d+|viewProps)\.xml$/.test(n);
-        });
-      }).then(function (files) {
-        var g = parseGuides(files);
+      var index = Math.max(0, all.items.map(function (s) { return s.id; }).indexOf(slide.id));
+      return readWholeFile(force).then(function (bytes) {
+        return bytes ? guidesFromFile(bytes, index).catch(function () { return null; }) : null;
+      }).then(function (g) {
+        return g || guidesFromCopy(context, slide);
+      }).then(function (g) {
+        if (!g) return null;
         g.slideId = slide.id;
         guides = g;
         renderGuideInfo();
@@ -196,6 +304,7 @@
     return { step: step, off: off, regular: counts[step] === gaps.length };
   }
   function inch(pt) { return ST.exact(pt / PT); }
+  function joinWords(list) { return list.length < 2 ? list.join("") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1]; }
   function describe(list, word) {
     if (!list.length) return "No " + word + " guides.";
     var a = analyse(list), text = ST.plural(list.length, word + " guide");
@@ -213,15 +322,20 @@
     if (!ST.inOffice) { el.textContent = "Guides are read from your template once the panel is open in PowerPoint."; return; }
     if (!guidesSupported()) { el.textContent = "This PowerPoint version can't read template guides."; return; }
     if (!guides) { el.textContent = "Guides haven't been read yet. They're read the first time you snap."; return; }
-    if (!guides.v.length && !guides.h.length) { el.textContent = "No guides found in this slide's layout or master."; return; }
-    el.textContent = describe(guides.v, "vertical") + " " + describe(guides.h, "horizontal");
+    if (!guides.v.length && !guides.h.length) {
+      el.textContent = guides.whole
+        ? "No guides found in the presentation guides, this slide's layout or its master."
+        : "No guides found in this slide's layout or master. The whole file couldn't be read, so guides drawn on the slides weren't checked.";
+      return;
+    }
+    el.textContent = describe(guides.v, "vertical") + " " + describe(guides.h, "horizontal") + " Found in the " + joinWords(guides.sources) + ".";
   }
   function readGuidesNow(force) {
     if (!ST.needOffice()) return;
     if (!guidesSupported()) { ST.toast("This PowerPoint version can't read template guides.", true); return; }
     ST.run(function (context) {
       return loadGuides(context, force).then(function (g) {
-        if (g) ST.toast("Read " + ST.plural(g.v.length + g.h.length, "guide") + " from the template.");
+        if (g) ST.toast(g.v.length + g.h.length ? "Read " + ST.plural(g.v.length + g.h.length, "guide") + "." : "No guides found.", !(g.v.length + g.h.length));
       });
     });
   }
@@ -243,7 +357,7 @@
       return loadGuides(context, false).then(function (g) {
         return context.sync().then(function () {
           if (!g) { ST.toast("This PowerPoint version can't read template guides.", true); return; }
-          if (!g.v.length && !g.h.length) { ST.toast("No guides found in this slide's layout or master.", true); return; }
+          if (!g.v.length && !g.h.length) { ST.toast("No guides found. See the guide report at the More level.", true); return; }
           var items = shapes.items;
           if (!items.length) { ST.toast("Select the shapes on your slide first.", true); return; }
           items.forEach(function (s) {
