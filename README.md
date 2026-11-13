@@ -132,8 +132,8 @@ Lines shapes up and spaces them exactly, using the same grid as Layout.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap to grid |
-| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap mode and options |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps |
+| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap options, template guide report |
 | Full | Nudge by an amount, swap two shapes |
 
 Tips:
@@ -141,7 +141,15 @@ Tips:
 1. The gap and nudge boxes take formulas, such as `g`, `0.5g` or `gap`, using the Layout grid's values.
 2. Distribute keeps the first shape where it is and places the rest after it with the exact gap. Even gaps keeps the outer shapes still and shares the space between them equally.
 3. Aligning a single shape to the selection aligns it to the grid area instead.
-4. Snap to grid has two modes. Grid cells moves each shape's top left corner to the nearest cell corner, and with "Resize to the cells it covers" also sizes it to span whole cells. Fine grid snaps to steps of `g` measured from the grid area's top left, and can snap all four edges.
+4. Snap moves each shape's top left corner to the nearest line, and a line under the buttons says what the chosen mode will do:
+   1. Guides: the guides built into your template, read from the current slide's layout and master. "Snap all four edges" also moves the right and bottom edges to the nearest guide.
+   2. Columns: the column and row corners of the Layout grid. "Resize to the cells it covers" also sizes the shape to span whole cells.
+   3. Steps: every `g` from the grid area's top left. Can snap all four edges.
+5. With Guides chosen, the More level reports the template's guides: how many there are, their spacing, and any that sit slightly off the pattern, for example "8.34722 in (1 pt right)". Use in Layout sets the Layout spacing and the grid area's left and top from the guides at full precision. Read again refreshes them after you change the template.
+
+Template guides are only read, never changed, and need PowerPoint API 1.8. Guides you drag onto ordinary slides yourself may not be included, because only the slide's layout and master are read.
+
+If shapes drift a little further from the guides the further they are across the slide, the step size is slightly off. PowerPoint shows guide positions to two decimal places, so a 30 pt guide grid (0.41667 in) looks like 0.42. Use in Layout, or typing `30pt` in Spacing, fixes it.
 
 ### Match
 
@@ -273,7 +281,7 @@ Notes:
 
 ## Formulas
 
-Every number box accepts maths, for example `12.5-2*0.42`. The Resize boxes also understand these names:
+Every number box accepts maths, for example `12.5-2*0.42`. Values are in inches unless you add a unit: `30pt`, `1.5cm` or `12mm`. Boxes keep five decimal places, so `30pt` becomes 0.41667. The Resize boxes also understand these names:
 
 | Name | Meaning |
 | --- | --- |
