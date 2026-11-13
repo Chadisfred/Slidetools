@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.10.1] 2026-11-13
+
+### Fixed
+
+1. Arrange: Guides found no guides in decks whose guides are presentation guides (the kind you can drag on any slide, usually brought in by the template). The panel now reads the open file, read only, and finds presentation guides as well as the current slide's layout and master guides.
+2. Arrange: the guide report says where the guides were found, and what was checked when none were.
+
 ## [2.10.0] 2026-11-13
 
 ### Added
