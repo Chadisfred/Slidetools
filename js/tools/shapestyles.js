@@ -772,5 +772,8 @@
   });
 
   // Exposed for testing only
+  // Used by the Match tool to compare shapes.
+  ST.shapeReader = { read: readShapes, types: SHAPE_TYPES, batch: BATCH };
+
   ST._shapeStyles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, norm: norm };
 })();
