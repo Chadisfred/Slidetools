@@ -171,9 +171,32 @@
     if (!ST.inOffice) { ST.toast("Open this panel inside PowerPoint to use this.", true); return false; }
     return true;
   };
+  // Plain sentences for the errors PowerPoint reports most often. Anything else shows its own message.
+  var ERRORS = {
+    ItemNotFound: "A shape or slide changed while this was running. Select it again and retry.",
+    InvalidArgument: "PowerPoint didn't accept one of the values. Check the numbers and retry.",
+    InvalidSelection: "PowerPoint can't use the current selection. Click a slide or shape and retry.",
+    InvalidOperation: "PowerPoint can't do that to this kind of shape.",
+    AccessDenied: "The presentation is read only or locked, so it can't be changed.",
+    NotImplemented: "This PowerPoint version can't do that yet.",
+    ApiNotFound: "This PowerPoint version can't do that yet.",
+    GeneralException: "PowerPoint couldn't finish that. Retry, or select fewer shapes."
+  };
+  // The reason on its own, with no full stop, for use inside a longer message.
+  ST.reason = function (e) {
+    var code = e && e.code;
+    var text = code && ERRORS[code] ? ERRORS[code] : String(e && e.message ? e.message : e);
+    return text.replace(/\.\s*$/, "");
+  };
+  ST.errorText = function (e) {
+    var code = e && e.code;
+    if (code && ERRORS[code]) return ERRORS[code];
+    return "PowerPoint said: " + ST.reason(e) + ".";
+  };
   ST.run = function (task) {
     return PowerPoint.run(task).catch(function (e) {
-      ST.toast("PowerPoint said: " + (e && e.message ? e.message : e), true);
+      if (window.console) console.error(e);
+      ST.toast(ST.errorText(e), true);
     });
   };
   // Loads the selected shapes with the given properties, or tells the user to select something.

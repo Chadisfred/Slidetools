@@ -92,7 +92,7 @@
         tags.add(STORE_KEY + "_N", String(parts.length));
         return context.sync();
       });
-    }).catch(function (e) { ST.toast("Couldn't save shape styles: " + (e && e.message ? e.message : e), true); });
+    }).catch(function (e) { ST.toast("Couldn't save shape styles: " + ST.reason(e), true); });
   }
 
   // ---------- Reading shapes ----------
@@ -409,7 +409,7 @@
       render();
     }).catch(function (e) {
       busy = false; review = null; render();
-      ST.toast("Couldn't scan the slides: " + (e && e.message ? e.message : e), true);
+      ST.toast("Couldn't scan the slides: " + ST.reason(e), true);
     });
   }
 
@@ -448,7 +448,7 @@
       });
     }).catch(function (e) {
       busy = false;
-      ST.toast("Update stopped: " + (e && e.message ? e.message : e) + ". Some shapes may already be updated, use Undo if needed.", true);
+      ST.toast("Update stopped: " + ST.reason(e) + ". Some shapes may already be updated, use Undo if needed.", true);
       render();
     });
   }

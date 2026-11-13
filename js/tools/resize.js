@@ -134,8 +134,10 @@
         if ((doW && !(nw > 0)) || (doH && !(nh > 0))) { ST.toast("That formula couldn't be worked out.", true); return; }
         if (nw !== null) nw *= PT;
         if (nh !== null) nh *= PT;
-        if (lock && nw !== null) nh = s.height * nw / s.width;
-        if (lock && nh !== null && nw === null) nw = s.width * nh / s.height;
+        // Lines have no width or height, so they can't keep a ratio
+        var canLock = lock && s.width > 0 && s.height > 0;
+        if (canLock && nw !== null) nh = s.height * nw / s.width;
+        if (canLock && nh !== null && nw === null) nw = s.width * nh / s.height;
         updates.push([s, nw, nh]);
       }
       updates.forEach(function (u) { applySize(u[0], u[1], u[2]); });
