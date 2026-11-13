@@ -259,7 +259,7 @@
       r = Math.max(r, s.left + s.w); b = Math.max(b, s.top + s.h);
     });
     var s = ST.state;
-    s.left = ST.nice(l); s.top = ST.nice(t); s.maxW = ST.nice(r - l); s.maxH = ST.nice(b - t);
+    s.left = ST.exact(l); s.top = ST.exact(t); s.maxW = ST.exact(r - l); s.maxH = ST.exact(b - t);
     markCustom("maxW");
     ST.emit("reset");
     ST.changed();

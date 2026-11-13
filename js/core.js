@@ -57,7 +57,9 @@
   // ---------- Formula evaluator ----------
   // Supports + - * / brackets, numbers, names, and implicit multiplication like 2col.
   ST.evaluate = function (text, vars, ownName) {
-    var t = String(text || "").toLowerCase().replace(/\s+/g, "").replace(/"/g, "").replace(/in/g, "");
+    var t = String(text || "").toLowerCase().replace(/\s+/g, "").replace(/"/g, "");
+    // Units: points, centimetres and millimetres become inches; "in" is just dropped
+    t = t.replace(/(\d*\.?\d+)pt/g, "($1/72)").replace(/(\d*\.?\d+)cm/g, "($1/2.54)").replace(/(\d*\.?\d+)mm/g, "($1/25.4)").replace(/in/g, "");
     if (!t) return null;
     if (ownName && "*/+".indexOf(t.charAt(0)) >= 0) t = ownName + t;
     var pos = 0;
@@ -108,6 +110,8 @@
     return v === null ? 0 : v;
   };
   ST.nice = function (x) { return String(Math.round(x * 1000) / 1000); };
+  // Five decimal places, enough that 30 pt (0.41667 in) steps don't drift across a slide.
+  ST.exact = function (x) { return String(Math.round(x * 100000) / 100000); };
   ST.plural = function (n, word) { return n + " " + word + (n === 1 ? "" : "s"); };
 
   // ---------- Grid maths ----------
@@ -253,8 +257,8 @@
     if (opts.number) {
       var commit = function () {
         var v = ST.evaluate(input.value, null, null);
-        if (v !== null && input.value.trim() !== ST.nice(v)) {
-          input.value = ST.nice(v); ST.state[key] = input.value; ST.changed();
+        if (v !== null && input.value.trim() !== ST.exact(v)) {
+          input.value = ST.exact(v); ST.state[key] = input.value; ST.changed();
         }
         input.classList.remove("err");
       };
