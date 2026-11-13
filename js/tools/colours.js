@@ -125,7 +125,7 @@
   function readTemplate(context) {
     if (!ST.supports("1.8") || typeof DecompressionStream !== "function") return Promise.resolve(null);
     var slides = context.presentation.slides;
-    slides.load("items");
+    slides.load("items/id");
     return context.sync().then(function () {
       if (!slides.items.length) return null;
       var data = slides.items[0].exportAsBase64();
@@ -162,7 +162,7 @@
       if (ST.supports("1.10")) {
         step = step.then(function () {
           var slides = context.presentation.slides;
-          slides.load("items");
+          slides.load("items/id");
           return context.sync().then(function () {
             if (!slides.items.length) return;
             var scheme = slides.items[0].themeColorScheme;
@@ -210,7 +210,7 @@
         tags.add(STORE_KEY + "_N", String(parts.length));
         return context.sync();
       });
-    }).catch(function (e) { ST.toast("Couldn't save colours: " + (e && e.message ? e.message : e), true); });
+    }).catch(function (e) { ST.toast("Couldn't save colours: " + ST.reason(e), true); });
   }
 
   // ---------- Applying ----------
