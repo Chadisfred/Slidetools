@@ -145,6 +145,7 @@
     return theme.concat(tints, template, palette);
   }
   ST.palette = { list: allColours };
+  ST.zip = { b64ToBytes: b64ToBytes, readZip: readZip }; // also used by Arrange to read template guides
   function updateDatalist() {
     var dl = document.getElementById("paletteList");
     if (!dl) { dl = document.createElement("datalist"); dl.id = "paletteList"; document.body.appendChild(dl); }

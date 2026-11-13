@@ -2,6 +2,24 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.10.0] 2026-11-13
+
+### Added
+
+1. Arrange: Snap to template guides. The guides built into your template are read from the current slide's layout and master, and shapes snap to the nearest real guide. Snap all four edges works with guides too.
+2. Arrange: a report on the template's guides at the More level, with their spacing and any guide slightly off the pattern, and Use in Layout to copy the spacing and starting position into the Layout tool.
+3. Number boxes accept units: `30pt`, `1.5cm` and `12mm` are converted to inches.
+
+### Changed
+
+1. Arrange: the snap modes are now Guides, Columns and Steps (previously Grid cells and Fine grid), shown at every level, with a line describing what the chosen mode does.
+2. The snap button is now just Snap, and the Grid heading is now Snap.
+
+### Fixed
+
+1. Number boxes rounded values to three decimal places when you clicked away, so a precise spacing such as 5/12 became 0.417 and shapes drifted from 30 pt guides across the slide. Values now keep five decimal places.
+2. Use selection as area keeps five decimal places too.
+
 ## [2.9.0] 2026-11-13
 
 ### Added

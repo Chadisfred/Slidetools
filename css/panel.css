@@ -436,3 +436,7 @@ select:focus { border-color: var(--accent); }
   .level-btn { padding: 0 6px; }
   .topbar h1 { font-size: 14px; }
 }
+
+/* Arrange: template guides report */
+.arr-guides { display: grid; gap: 8px; }
+.arr-guides.off { display: none; }
