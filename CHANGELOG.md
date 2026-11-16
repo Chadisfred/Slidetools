@@ -2,6 +2,14 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.11.0] 2026-11-16
+
+### Added
+
+1. INSTALL.md: a step by step install guide for new users, with quick install, manual install, uninstall and troubleshooting.
+2. A one click installer, `install/Install-SlideTools.cmd`, that downloads the install file into the user's folder and adds the per user PowerPoint setting. No admin rights needed.
+3. A matching uninstaller, `install/Uninstall-SlideTools.cmd`.
+
 ## [2.10.1] 2026-11-13
 
 ### Fixed
