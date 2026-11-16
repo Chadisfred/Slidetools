@@ -2,6 +2,18 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.13.2] 2026-11-16
+
+### Fixed
+
+1. Tables: tables inside content placeholders, which is how the table icon in a layout creates them, weren't recognised, so applying a style said no table was selected. They're now found when selected, with the cursor in a cell, and by Update all.
+2. Tables: when the selection isn't a table, the message names what is selected.
+3. Tables: total rows are ignored when guessing column roles, so an empty label cell in a total row no longer turns a label column into a category.
+
+### Added
+
+1. Tables: a line at the More level showing what PowerPoint reports about the selection.
+
 ## [2.13.1] 2026-11-16
 
 ### Fixed

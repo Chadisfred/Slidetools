@@ -295,6 +295,8 @@ Tips:
 3. Stack repeats blanks a category label when it repeats the row above within the same group. It never touches label or data columns or total rows, and PowerPoint's Undo brings the labels back.
 4. Edit a style, then Update all reformats every table on normal slides that uses it.
 5. Inserting needs PowerPoint API 1.8. Formatting an existing table needs 1.9. Only the top left cell of a merged area can be formatted.
+6. Tables inside content placeholders (made with the table icon in a layout) work the same as other tables.
+7. At the More level, a line under the column chips shows what PowerPoint reports about the selection, such as "1 selected shape (Placeholder holding Table), slide 3, 1 table on the slide". It helps when a table isn't being picked up.
 
 Grid-based sizes. With the Layout spacing as g:
 
