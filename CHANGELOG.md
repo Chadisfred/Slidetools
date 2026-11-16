@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.13.1] 2026-11-16
+
+### Fixed
+
+1. Tables: clicking a table style could say "Select a table first" even with a table selected, most often on the first click when the line check runs. The table is now found before the check and selected again afterwards.
+2. Tables: with the cursor inside a cell, where PowerPoint reports no selected shape, the panel uses the table it last saw on the slide, or the only table on the slide. The column chips show in that case too.
+
 ## [2.13.0] 2026-11-16
 
 ### Added
