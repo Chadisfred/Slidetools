@@ -293,7 +293,7 @@
           });
           return context.sync();
         }).then(function () {
-          lineCheck = { slideId: slide.id, shapeId: shape.id, then: then };
+          lineCheck = { slideId: slide.id, shapeId: shape.id, then: then, reselect: target };
           renderLineCheck();
         });
       });
@@ -307,6 +307,8 @@
     renderLineCheck();
     ST.run(function (context) {
       context.presentation.slides.getItem(check.slideId).shapes.getItem(check.shapeId).delete();
+      var back = check.reselect;
+      if (back && ST.supports("1.5")) context.presentation.slides.getItem(back.slideId).setSelectedShapes([back.shapeId]);
       return context.sync();
     }).then(function () {
       if (answer === "none") ST.toast("Lines will be set the standard way. If they look wrong, run Check lines again at the More level.", true);
@@ -464,23 +466,59 @@
     if (failed && failed.wider) note += " The columns need more room than the grid area, so the table is wider.";
     return note;
   }
-  function selectedTable(context) {
-    var shapes = context.presentation.getSelectedShapes();
+  // Finds the table to work on. PowerPoint doesn't always report the table as the selected
+  // shape (for example while the cursor is in a cell, or after the line check), so when no
+  // shape is selected this falls back to the table the panel last saw on this slide, or the
+  // only table on the slide.
+  var lastTable = null, target = null;
+  var NO_TABLE = "Click the table's border to select it, or put the cursor in one of its cells, then try again.";
+  function findTable(context) {
+    var shapes = context.presentation.getSelectedShapes(), slides = context.presentation.getSelectedSlides();
     shapes.load("items/id,items/type");
+    slides.load("items/id");
     return context.sync().then(function () {
-      return shapes.items.filter(function (s) { return s.type === "Table"; })[0] || null;
+      var slide = slides.items[0] || null;
+      var sel = shapes.items.filter(function (x) { return x.type === "Table"; })[0];
+      if (sel) { if (slide) lastTable = { slideId: slide.id, shapeId: sel.id }; return sel; }
+      if (shapes.items.length || !slide) return null; // something else is selected
+      function onlyTable() {
+        slide.shapes.load("items/id,items/type");
+        return context.sync().then(function () {
+          var tables = slide.shapes.items.filter(function (x) { return x.type === "Table"; });
+          if (tables.length !== 1) return null;
+          lastTable = { slideId: slide.id, shapeId: tables[0].id };
+          return tables[0];
+        });
+      }
+      var pin = target || lastTable;
+      if (!pin || pin.slideId !== slide.id || !slide.shapes.getItemOrNullObject) return onlyTable();
+      var shape = slide.shapes.getItemOrNullObject(pin.shapeId);
+      shape.load("id,type");
+      return context.sync().then(function () {
+        if (!shape.isNullObject && shape.type === "Table") { lastTable = pin; return shape; }
+        return onlyTable();
+      });
     });
+  }
+  // Resolves the table first, then runs the line check, so the check can't lose the table.
+  function checkThen(task) {
+    ST.run(function (context) {
+      return findTable(context).then(function (shape) {
+        if (!shape) { ST.toast(NO_TABLE, true); return; }
+        target = lastTable;
+      });
+    }).then(function () { if (target) startLineCheck(task); });
   }
 
   // ---------- Actions ----------
   function apply(style) {
     if (!ST.needOffice() || busy) return;
     if (!canFormat()) { ST.toast("This PowerPoint version can't format existing tables. Use Insert table instead.", true); return; }
-    if (!lineMode()) { withLines(function () { apply(style); }); return; }
+    if (!lineMode()) { checkThen(function () { apply(style); }); return; }
     busy = true;
     ST.run(function (context) {
-      return selectedTable(context).then(function (shape) {
-        if (!shape) { ST.toast("Select a table first, or use Insert table.", true); return; }
+      return findTable(context).then(function (shape) {
+        if (!shape) { ST.toast(NO_TABLE + " Or use Insert table.", true); return; }
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? info.tag.r.split("") : (current && current.shapeId === shape.id ? current.roles : guessRoles(info.values));
           return formatTable(context, info, style, roles).then(function (failed) {
@@ -490,7 +528,7 @@
           });
         });
       });
-    }).then(function () { busy = false; });
+    }).then(function () { busy = false; target = null; });
   }
 
   function insert() {
@@ -563,12 +601,12 @@
 
   function stackRepeats() {
     if (!ST.needOffice() || busy) return;
-    if (canFormat() && !lineMode()) { withLines(stackRepeats); return; }
+    if (canFormat() && !lineMode()) { checkThen(stackRepeats); return; }
     if (!canInsert()) { ST.toast("This PowerPoint version can't change table text from the panel.", true); return; }
     busy = true;
     ST.run(function (context) {
-      return selectedTable(context).then(function (shape) {
-        if (!shape) { ST.toast("Select a table first.", true); return; }
+      return findTable(context).then(function (shape) {
+        if (!shape) { ST.toast(NO_TABLE, true); return; }
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? info.tag.r.split("") : guessRoles(info.values);
           var style = byId(info.tag.s) || styles[0] || { props: defaultProps() };
@@ -588,7 +626,7 @@
           });
         });
       });
-    }).then(function () { busy = false; });
+    }).then(function () { busy = false; target = null; });
   }
 
   function setRole(c) {
@@ -598,7 +636,7 @@
     renderRoles();
     var id = current.shapeId, roles = current.roles.slice(), styleId = current.styleId;
     ST.run(function (context) {
-      return selectedTable(context).then(function (shape) {
+      return findTable(context).then(function (shape) {
         if (!shape || shape.id !== id) return;
         return readTable(context, shape).then(function (info) {
           var style = byId(styleId);
@@ -613,7 +651,7 @@
     if (!current) return;
     var id = current.shapeId;
     ST.run(function (context) {
-      return selectedTable(context).then(function (shape) {
+      return findTable(context).then(function (shape) {
         if (!shape || shape.id !== id) return;
         shape.tags.add(TABLE_TAG, JSON.stringify({ s: 0, r: current.roles.join("") }));
         return context.sync().then(function () { ST.toast("The table is no longer linked to a table style."); refreshTable(); });
@@ -665,7 +703,7 @@
   function refreshTable() {
     if (!ST.inOffice || !canInsert()) { current = null; renderRoles(); return; }
     PowerPoint.run(function (context) {
-      return selectedTable(context).then(function (shape) {
+      return findTable(context).then(function (shape) {
         if (!shape) { current = null; return; }
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? normRoles(info.tag.r.split(""), info.cols) : guessRoles(info.values);
