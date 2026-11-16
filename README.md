@@ -278,7 +278,7 @@ The first column starts as a Category. Text columns next to it that repeat or le
 The default table style:
 
 1. A 1 pt black rule under the header row and under the table.
-2. A 1 pt rule above each new group. A new value in a category column draws the rule from that column to the right edge, so a new year runs the full width and a new sub-group starts at its own column.
+2. A 1 pt rule above each new group. A new value in a category column draws the rule from that column to the right edge, so a new year runs the full width and a new sub-group starts at its own column. With only one category column, these group lines are 1/4 pt instead, so only the header, total and bottom rules are heavy. The style editor can switch this off.
 3. Total rows, found when the row's first filled cell starts with "Total", get Demi text and a 1 pt rule above, from the Total cell to the right edge.
 4. 1/4 pt black lines between rows in label and data columns. Category columns only get a line where a group starts.
 5. #F2F2F2 fill on the 2nd, 4th, 6th... columns, body rows only.
