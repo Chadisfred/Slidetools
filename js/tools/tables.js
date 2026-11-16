@@ -129,6 +129,18 @@
     return out;
   }
 
+  // The same settings for addTable, leaving out lines and fills that would only hide something.
+  function insertProps(values, roles, P) {
+    return cellProps(values, roles, P, {}).map(function (row) {
+      return row.map(function (p) {
+        var out = { font: p.font, margins: p.margins, horizontalAlignment: p.horizontalAlignment, verticalAlignment: p.verticalAlignment, borders: {} };
+        if (p.fill.transparency !== 1) out.fill = { color: p.fill.color };
+        Object.keys(p.borders).forEach(function (k) { var e = p.borders[k]; if (e.transparency !== 1) out.borders[k] = { color: e.color, weight: e.weight }; });
+        return out;
+      });
+    });
+  }
+
   // Blanks a category label when it repeats the row above within the same parent group.
   function stackedValues(values, roles, P) {
     var R = values.length, C = R ? values[0].length : 0, totals = totalColumns(values, P), out = clone(values), filled = [];
@@ -242,42 +254,71 @@
   function writeBorder(b, e) {
     b.color = e.color; b.weight = e.weight; b.transparency = e.transparency; b.dashStyle = e.dashStyle;
   }
-  // Writes the style's rules into an existing table, cell by cell.
-  function formatTable(context, info, style, roles) {
-    var props = cellProps(info.values, roles, style.props, info.merged);
-    try {
-      var s = info.table.styleSettings;
-      s.style = "NoStyleNoGrid";
-      s.areRowsBanded = false; s.areColumnsBanded = false;
-      s.isFirstRowHighlighted = false; s.isFirstColumnHighlighted = false;
-      s.isLastRowHighlighted = false; s.isLastColumnHighlighted = false;
-    } catch (e) { /* older hosts: the cell settings below still apply */ }
-    var count = 0;
-    function cellsFrom(r) {
-      for (; r < info.rows; r++) {
-        for (var c = 0; c < info.cols; c++) {
-          // Inside a merged area only the top left cell can be changed
-          if (info.merged[r + "," + c] && !info.anchors[r + "," + c]) continue;
-          var p = props[r][c], cell = info.table.getCellOrNullObject(r, c);
-          writeBorder(cell.borders.top, p.borders.top); writeBorder(cell.borders.bottom, p.borders.bottom);
-          writeBorder(cell.borders.left, p.borders.left); writeBorder(cell.borders.right, p.borders.right);
-          if (p.fill.transparency === 1) cell.fill.clear(); else { cell.fill.setSolidColor(p.fill.color); cell.fill.transparency = 0; }
-          Object.keys(p.font).forEach(function (k) { cell.font[k] = p.font[k]; });
-          cell.margins.left = p.margins.left; cell.margins.right = p.margins.right;
-          cell.margins.top = p.margins.top; cell.margins.bottom = p.margins.bottom;
-          cell.horizontalAlignment = p.horizontalAlignment;
-          cell.verticalAlignment = p.verticalAlignment;
-          count++;
-        }
-        // Send big tables in pieces so each request stays small
-        if (count >= 60 && r < info.rows - 1) { count = 0; var next = r + 1; return context.sync().then(function () { return cellsFrom(next); }); }
-      }
-      return context.sync();
+  // Each kind of setting is sent to PowerPoint on its own, so if one is refused the others
+  // still apply, and the panel can say which one it was.
+  var GROUPS = [
+    ["lines", function (cell, p, fresh) {
+      ["top", "bottom", "left", "right"].forEach(function (side) {
+        var e = p.borders[side];
+        if (fresh && e.transparency === 1) return; // a new table has no lines to hide
+        writeBorder(cell.borders[side], e);
+      });
+    }],
+    ["fill", function (cell, p, fresh) {
+      if (p.fill.transparency === 1) { if (!fresh) cell.fill.clear(); }
+      else cell.fill.setSolidColor(p.fill.color);
+    }],
+    ["fonts", function (cell, p) { Object.keys(p.font).forEach(function (k) { cell.font[k] = p.font[k]; }); }],
+    ["padding", function (cell, p) {
+      cell.margins.left = p.margins.left; cell.margins.right = p.margins.right;
+      cell.margins.top = p.margins.top; cell.margins.bottom = p.margins.bottom;
+    }],
+    ["alignment", function (cell, p) { cell.horizontalAlignment = p.horizontalAlignment; cell.verticalAlignment = p.verticalAlignment; }]
+  ];
+  // Writes the style's rules into a table, cell by cell. Resolves to the list of setting
+  // kinds PowerPoint refused (empty when everything applied). fresh: a table just inserted.
+  function formatTable(context, info, style, roles, fresh) {
+    var props = cellProps(info.values, roles, style.props, info.merged), failed = [];
+    function settings() {
+      try {
+        var s = info.table.styleSettings;
+        s.style = "NoStyleNoGrid";
+        s.areRowsBanded = false; s.areColumnsBanded = false;
+        s.isFirstRowHighlighted = false; s.isFirstColumnHighlighted = false;
+        s.isLastRowHighlighted = false; s.isLastColumnHighlighted = false;
+      } catch (e) { return Promise.resolve(); }
+      return context.sync().catch(function () { /* older hosts: the cell settings still apply */ });
     }
-    return cellsFrom(0).then(function () {
+    function group(g) {
+      var count = 0;
+      function from(r) {
+        for (; r < info.rows; r++) {
+          for (var c = 0; c < info.cols; c++) {
+            // Inside a merged area only the top left cell can be changed
+            if (info.merged[r + "," + c] && !info.anchors[r + "," + c]) continue;
+            g[1](info.table.getCellOrNullObject(r, c), props[r][c], fresh);
+            count++;
+          }
+          // Send big tables in pieces so each request stays small
+          if (count >= 60 && r < info.rows - 1) { count = 0; var next = r + 1; return context.sync().then(function () { return from(next); }); }
+        }
+        return context.sync();
+      }
+      return from(0).catch(function (e) {
+        if (window.console) console.error("Table " + g[0] + ":", e);
+        failed.push(g[0]);
+      });
+    }
+    var chain = settings();
+    GROUPS.forEach(function (g) { chain = chain.then(function () { return group(g); }); });
+    return chain.then(function () {
       info.shape.tags.add(TABLE_TAG, JSON.stringify({ s: style.id, r: normRoles(roles, info.cols).join("") }));
       return context.sync();
-    });
+    }).then(function () { return failed; });
+  }
+  function joinWords(list) { return list.length < 2 ? list.join("") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1]; }
+  function refusedNote(failed) {
+    return failed && failed.length ? " PowerPoint didn't accept the " + joinWords(failed) + " settings, so those were left as they were." : "";
   }
   function selectedTable(context) {
     var shapes = context.presentation.getSelectedShapes();
@@ -297,9 +338,9 @@
         if (!shape) { ST.toast("Select a table first, or use Insert table.", true); return; }
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? info.tag.r.split("") : (current && current.shapeId === shape.id ? current.roles : guessRoles(info.values));
-          return formatTable(context, info, style, roles).then(function () {
+          return formatTable(context, info, style, roles).then(function (failed) {
             if (!style.applied) { style.applied = clone(style.props); saveStyles(); }
-            ST.toast("Formatted the table with " + style.name + ".");
+            ST.toast("Formatted the table with " + style.name + "." + refusedNote(failed), failed.length > 0);
             refreshTable();
           });
         });
@@ -329,18 +370,37 @@
       slides.load("items/id");
       return context.sync().then(function () {
         if (!slides.items.length) { ST.toast("Go to a slide first.", true); return; }
-        var opts = { values: values, specificCellProperties: cellProps(values, roles, style.props, {}), style: "NoStyleNoGrid" };
-        if (g.valid) { opts.left = g.left * PT; opts.top = g.top * PT; opts.width = g.maxW * PT; }
-        var shape = slides.items[0].shapes.addTable(rows, cols, opts);
-        shape.load("id");
-        return context.sync().then(function () {
-          shape.tags.add(TABLE_TAG, JSON.stringify({ s: style.id, r: roles.join("") }));
-          if (ST.supports("1.5")) slides.items[0].setSelectedShapes([shape.id]);
-          return context.sync();
-        }).then(function () {
-          if (!style.applied) { style.applied = clone(style.props); saveStyles(); }
-          ST.toast("Added a " + rows + " x " + cols + " table" + (g.valid ? " at the Layout grid area." : "."));
-          refreshTable();
+        var slide = slides.items[0];
+        var where = g.valid ? { left: g.left * PT, top: g.top * PT, width: g.maxW * PT } : {};
+        // Adds the table, trying a simpler request if PowerPoint refuses the first one.
+        function add(attempts) {
+          var opts = attempts[0], shape = slide.shapes.addTable(rows, cols, opts);
+          shape.load("id");
+          return context.sync().then(function () { return { shape: shape, opts: opts }; }, function (e) {
+            if (window.console) console.error("addTable:", e);
+            if (attempts.length > 1) return add(attempts.slice(1));
+            throw e;
+          });
+        }
+        var attempts = [];
+        // Hosts that can't format cells afterwards get the formatting with the table itself
+        if (!canFormat()) attempts.push(Object.assign({ values: values, specificCellProperties: insertProps(values, roles, style.props), style: "NoStyleNoGrid" }, where));
+        attempts.push(Object.assign({ values: values }, where), { values: values });
+        return add(attempts).then(function (res) {
+          var shape = res.shape, formatted = !!res.opts.specificCellProperties;
+          var step = Promise.resolve([]);
+          if (canFormat()) step = readTable(context, shape).then(function (info) { formatted = true; return formatTable(context, info, style, roles, true); });
+          return step.then(function (failed) {
+            shape.tags.add(TABLE_TAG, JSON.stringify({ s: style.id, r: roles.join("") }));
+            if (ST.supports("1.5")) slide.setSelectedShapes([shape.id]);
+            return context.sync().then(function () {
+              if (!style.applied) { style.applied = clone(style.props); saveStyles(); }
+              var placed = res.opts.left !== undefined ? " at the Layout grid area." : ".";
+              if (!formatted) ST.toast("Added a " + rows + " x " + cols + " table" + placed + " This PowerPoint version couldn't format it.", true);
+              else ST.toast("Added a " + rows + " x " + cols + " table" + placed + refusedNote(failed), failed.length > 0);
+              refreshTable();
+            });
+          });
         });
       });
     }).then(function () { busy = false; });
@@ -365,8 +425,9 @@
             info.values = res.values;
             // A linked table is reformatted so group rules follow the new layout
             if (info.tag.s && byId(info.tag.s) && canFormat()) return formatTable(context, info, byId(info.tag.s), roles);
-          }).then(function () {
-            ST.toast("Stacked " + ST.plural(res.changed, "repeated label") + ".");
+            return [];
+          }).then(function (failed) {
+            ST.toast("Stacked " + ST.plural(res.changed, "repeated label") + "." + refusedNote(failed), failed.length > 0);
             refreshTable();
           });
         });
@@ -385,7 +446,7 @@
         if (!shape || shape.id !== id) return;
         return readTable(context, shape).then(function (info) {
           var style = byId(styleId);
-          if (style && canFormat()) return formatTable(context, info, style, roles);
+          if (style && canFormat()) return formatTable(context, info, style, roles).then(function (failed) { if (failed.length) ST.toast(refusedNote(failed).trim(), true); });
           shape.tags.add(TABLE_TAG, JSON.stringify({ s: styleId || 0, r: roles.join("") }));
           return context.sync();
         });
@@ -408,7 +469,7 @@
     if (!ST.needOffice() || busy) return;
     if (!canFormat()) { ST.toast("This PowerPoint version can't format existing tables.", true); return; }
     busy = true;
-    var done = 0;
+    var done = 0, refused = [];
     ST.run(function (context) {
       var slides = context.presentation.slides;
       slides.load("items/id");
@@ -426,7 +487,10 @@
             var style = byId(info.tag.s);
             if (!style) return next();
             done++;
-            return formatTable(context, info, style, info.tag.r ? info.tag.r.split("") : guessRoles(info.values)).then(next);
+            return formatTable(context, info, style, info.tag.r ? info.tag.r.split("") : guessRoles(info.values)).then(function (failed) {
+              failed.forEach(function (f) { if (refused.indexOf(f) < 0) refused.push(f); });
+              return next();
+            });
           });
         }
         return next();
@@ -434,7 +498,7 @@
         styles.forEach(function (s) { s.applied = clone(s.props); });
         return saveStyles();
       }).then(function () {
-        ST.toast(done ? "Updated " + ST.plural(done, "linked table") + "." : "No tables are linked to a table style yet.");
+        ST.toast(done ? "Updated " + ST.plural(done, "linked table") + "." + refusedNote(refused) : "No tables are linked to a table style yet.", refused.length > 0);
         refreshTable();
       });
     }).then(function () { busy = false; });
