@@ -2,6 +2,17 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.13.0] 2026-11-16
+
+### Added
+
+1. Tables: grid-based sizes. The table fills the Layout grid area in whole steps of the grid spacing g, category and data columns fit their text, label columns take the rest, and rows are 1g tall, growing in 1/4 g steps when text wraps. Adjustable or switchable in the style editor.
+2. Tables: Check lines, a one-time test that finds out how this PowerPoint shows table lines, remembered on this computer and repeatable from the More level.
+
+### Fixed
+
+1. Tables: on PowerPoint versions that apply table line transparency the opposite way round, lines meant to show were hidden and lines meant to be hidden showed as thin grey lines. Lines now follow the result of the line check.
+
 ## [2.12.1] 2026-11-16
 
 ### Fixed
