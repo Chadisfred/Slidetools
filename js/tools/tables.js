@@ -35,7 +35,8 @@
       lines: { header: line(1), bottom: line(1), group: line(1), total: line(1), row: line(0.25), vertical: line(0.25) },
       band: { on: true, color: "#F2F2F2" },
       pad: { all: 3.6, firstLeft: 0, lastRight: 0 },
-      totalPrefix: "Total"
+      totalPrefix: "Total",
+      size: { on: true, rowMin: 1, rowStep: 0.25, fitColumns: true }
     };
   }
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -203,6 +204,10 @@
         return context.sync().then(function () {
           var text = parts.map(function (t) { return t.isNullObject ? "" : t.value; }).join("");
           styles = text ? JSON.parse(text) : [];
+          styles.forEach(function (st) {
+            if (!st.props.size) st.props.size = defaultProps().size;
+            if (st.applied && !st.applied.size) st.applied.size = clone(st.props.size);
+          });
         });
       });
     }).catch(function () {
@@ -251,8 +256,69 @@
       return { table: table, shape: shape, rows: table.rowCount, cols: table.columnCount, values: table.values, merged: merged, anchors: anchors, tag: t };
     });
   }
+  // ---------- Line check ----------
+  // Some PowerPoint versions apply table line transparency the opposite way round, so a
+  // line meant to show is hidden and the other way round. A one-time check finds out.
+  var LINE_KEY = "slideToolsLineMode", lineModeMem = "", lineCheck = null;
+  function lineMode() { try { return localStorage.getItem(LINE_KEY) || lineModeMem; } catch (e) { return lineModeMem; } }
+  function setLineMode(m) { lineModeMem = m; try { localStorage.setItem(LINE_KEY, m); } catch (e) { /* remembered for this session only */ } }
+  function lineAlpha(t) { return lineMode() === "inverted" ? 1 - t : t; }
   function writeBorder(b, e) {
-    b.color = e.color; b.weight = e.weight; b.transparency = e.transparency; b.dashStyle = e.dashStyle;
+    b.color = e.color; b.weight = e.weight; b.transparency = lineAlpha(e.transparency); b.dashStyle = e.dashStyle;
+  }
+  // Runs task straight away when the line mode is known, otherwise after the line check.
+  function withLines(task) {
+    if (!canFormat() || lineMode()) { task(); return; }
+    startLineCheck(task);
+  }
+  function startLineCheck(then) {
+    if (!ST.needOffice() || busy) return;
+    if (!canFormat()) { ST.toast("This PowerPoint version doesn't need the line check.", false); return; }
+    busy = true;
+    ST.run(function (context) {
+      var slides = context.presentation.getSelectedSlides();
+      slides.load("items/id");
+      return context.sync().then(function () {
+        if (!slides.items.length) { ST.toast("Go to a slide first.", true); return; }
+        var slide = slides.items[0];
+        var shape = slide.shapes.addTable(1, 2, { values: [["A", "B"]], left: 36, top: 36, width: 216, style: "NoStyleNoGrid" });
+        shape.load("id");
+        return context.sync().then(function () {
+          var t = shape.getTable();
+          [[0, 0], [0, 1]].forEach(function (rc) {
+            var cell = t.getCellOrNullObject(rc[0], rc[1]), b = cell.borders.bottom;
+            b.color = "#000000"; b.weight = 4; b.dashStyle = "Solid"; b.transparency = rc[1] === 0 ? 0 : 1;
+            cell.font.size = 24; cell.font.color = "#000000";
+            cell.horizontalAlignment = "Center";
+          });
+          return context.sync();
+        }).then(function () {
+          lineCheck = { slideId: slide.id, shapeId: shape.id, then: then };
+          renderLineCheck();
+        });
+      });
+    }).then(function () { busy = false; });
+  }
+  function answerLineCheck(answer) {
+    var check = lineCheck;
+    if (!check) return;
+    lineCheck = null;
+    setLineMode(answer === "B" ? "inverted" : "normal");
+    renderLineCheck();
+    ST.run(function (context) {
+      context.presentation.slides.getItem(check.slideId).shapes.getItem(check.shapeId).delete();
+      return context.sync();
+    }).then(function () {
+      if (answer === "none") ST.toast("Lines will be set the standard way. If they look wrong, run Check lines again at the More level.", true);
+      else ST.toast(answer === "B" ? "Got it. Lines are set the other way round for this PowerPoint." : "Got it. Lines are set the standard way.");
+      if (check.then) check.then();
+    });
+  }
+  function renderLineCheck() {
+    var box = $("tblCheck");
+    if (!box) return;
+    box.hidden = !lineCheck;
+    if (lineCheck) box.querySelector(".check-q").textContent = "A small test table with cells A and B is on the slide. Which cell has a thick line under it?";
   }
   // Each kind of setting is sent to PowerPoint on its own, so if one is refused the others
   // still apply, and the panel can say which one it was.
@@ -275,6 +341,60 @@
     }],
     ["alignment", function (cell, p) { cell.horizontalAlignment = p.horizontalAlignment; cell.verticalAlignment = p.verticalAlignment; }]
   ];
+  // ---------- Grid-based sizes ----------
+  var measureCtx = null;
+  function textWidth(text, f) {
+    measureCtx = measureCtx || document.createElement("canvas").getContext("2d");
+    measureCtx.font = (f.italic ? "italic " : "") + (f.bold ? "bold " : "") + (f.size || 12) + 'pt "' + String(f.name || "Segoe UI").replace(/"/g, "") + '", "Segoe UI", sans-serif';
+    return String(text || "").split(/[\r\n\v\u000b]+/).reduce(function (m, line) { return Math.max(m, measureCtx.measureText(line).width * 0.75); }, 0);
+  }
+  // Column widths in whole steps of g that fill the grid area width. Returns null when the
+  // grid has no usable spacing.
+  function columnWidths(values, roles, P, merged) {
+    var grid = ST.calculate(), g = grid.spacing * PT;
+    if (!(g > 0) || !(grid.maxW > 0)) return null;
+    var R = values.length, C = R ? values[0].length : 0, props = cellProps(values, roles, P, merged);
+    roles = normRoles(roles, C);
+    var W = Math.floor(grid.maxW * PT / g + 1e-6) * g, widths = [], wider = false, c, r;
+    if (!P.size.fitColumns) {
+      var each = Math.max(g, Math.floor(W / C / g + 1e-6) * g);
+      for (c = 0; c < C; c++) widths.push(each);
+      widths[0] += Math.max(0, W - each * C);
+      return { widths: widths, W: W, g: g, wider: each * C > W + 0.01 };
+    }
+    var need = [];
+    for (c = 0; c < C; c++) {
+      need[c] = 0;
+      for (r = 0; r < R; r++) {
+        if (merged && merged[r + "," + c]) continue;
+        var p = props[r][c];
+        need[c] = Math.max(need[c], textWidth(values[r][c], p.font) + p.margins.left + p.margins.right + 2);
+      }
+      widths[c] = Math.max(g, Math.ceil(need[c] / g - 1e-6) * g);
+    }
+    var labels = [], datas = [], fixed = 0;
+    for (c = 0; c < C; c++) { if (roles[c] === "L") labels.push(c); else { fixed += widths[c]; if (roles[c] === "D") datas.push(c); } }
+    if (labels.length) {
+      // Label columns share whatever is left, in whole g
+      var unit = Math.floor((W - fixed) / labels.length / g + 1e-6) * g;
+      if (unit < g) { wider = true; labels.forEach(function (i) { widths[i] = g; }); }
+      else {
+        labels.forEach(function (i) { widths[i] = unit; });
+        widths[labels[0]] += Math.round((W - fixed - unit * labels.length) / g) * g;
+      }
+    } else {
+      // No label column: spread the spare room over the data columns (or the last column)
+      var share = datas.length ? datas : [C - 1], extra = W - fixed;
+      if (extra < 0) wider = true;
+      else {
+        var add = Math.floor(extra / share.length / g + 1e-6) * g;
+        share.forEach(function (i) { widths[i] += add; });
+        widths[share[0]] += Math.round((extra - add * share.length) / g) * g;
+      }
+    }
+    return { widths: widths, W: W, g: g, wider: wider };
+  }
+
   // Writes the style's rules into a table, cell by cell. Resolves to the list of setting
   // kinds PowerPoint refused (empty when everything applied). fresh: a table just inserted.
   function formatTable(context, info, style, roles, fresh) {
@@ -309,16 +429,40 @@
         failed.push(g[0]);
       });
     }
-    var chain = settings();
+    var size = style.props.size && style.props.size.on ? columnWidths(info.values, roles, style.props, info.merged) : null;
+    function widthsStep() {
+      if (!size) return Promise.resolve();
+      size.widths.forEach(function (w, c) { info.table.columns.getItemAt(c).width = w; });
+      return context.sync().catch(function (e) { if (window.console) console.error("Table column widths:", e); failed.push("column width"); });
+    }
+    function heightsStep() {
+      if (!size) return Promise.resolve();
+      var min = size.g * (Number(style.props.size.rowMin) || 1), step = size.g * (Number(style.props.size.rowStep) || 0.25), rows = [];
+      for (var r = 0; r < info.rows; r++) { var row = info.table.rows.getItemAt(r); row.height = min; rows.push(row); }
+      return context.sync().then(function () {
+        rows.forEach(function (row) { row.load("currentHeight"); });
+        return context.sync();
+      }).then(function () {
+        var changed = false;
+        rows.forEach(function (row) {
+          if (row.currentHeight > min + 0.5) { row.height = min + Math.ceil((row.currentHeight - min) / step - 1e-6) * step; changed = true; }
+        });
+        return changed ? context.sync() : null;
+      }).catch(function (e) { if (window.console) console.error("Table row heights:", e); failed.push("row height"); });
+    }
+    var chain = settings().then(widthsStep);
     GROUPS.forEach(function (g) { chain = chain.then(function () { return group(g); }); });
+    chain = chain.then(heightsStep);
     return chain.then(function () {
       info.shape.tags.add(TABLE_TAG, JSON.stringify({ s: style.id, r: normRoles(roles, info.cols).join("") }));
       return context.sync();
-    }).then(function () { return failed; });
+    }).then(function () { failed.wider = !!(size && size.wider); return failed; });
   }
   function joinWords(list) { return list.length < 2 ? list.join("") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1]; }
   function refusedNote(failed) {
-    return failed && failed.length ? " PowerPoint didn't accept the " + joinWords(failed) + " settings, so those were left as they were." : "";
+    var note = failed && failed.length ? " PowerPoint didn't accept the " + joinWords(failed) + " settings, so those were left as they were." : "";
+    if (failed && failed.wider) note += " The columns need more room than the grid area, so the table is wider.";
+    return note;
   }
   function selectedTable(context) {
     var shapes = context.presentation.getSelectedShapes();
@@ -332,6 +476,7 @@
   function apply(style) {
     if (!ST.needOffice() || busy) return;
     if (!canFormat()) { ST.toast("This PowerPoint version can't format existing tables. Use Insert table instead.", true); return; }
+    if (!lineMode()) { withLines(function () { apply(style); }); return; }
     busy = true;
     ST.run(function (context) {
       return selectedTable(context).then(function (shape) {
@@ -351,6 +496,7 @@
   function insert() {
     if (!ST.needOffice() || busy) return;
     if (!canInsert()) { ST.toast("This PowerPoint version can't add tables from the panel.", true); return; }
+    if (canFormat() && !lineMode()) { withLines(insert); return; }
     var rows = Math.max(2, Math.min(40, Math.round(ST.num(ST.state.tblRows)) || 6));
     var cols = Math.max(1, Math.min(20, Math.round(ST.num(ST.state.tblCols)) || 4));
     var style = styles.filter(function (s) { return s.id === Number($("tblInsertStyle").value); })[0] || styles[0];
@@ -384,7 +530,16 @@
         }
         var attempts = [];
         // Hosts that can't format cells afterwards get the formatting with the table itself
-        if (!canFormat()) attempts.push(Object.assign({ values: values, specificCellProperties: insertProps(values, roles, style.props), style: "NoStyleNoGrid" }, where));
+        if (!canFormat()) {
+          var oneShot = Object.assign({ values: values, specificCellProperties: insertProps(values, roles, style.props), style: "NoStyleNoGrid" }, where);
+          var sz = style.props.size && style.props.size.on ? columnWidths(values, roles, style.props, {}) : null;
+          if (sz) {
+            oneShot.columns = sz.widths.map(function (w) { return { columnWidth: w }; });
+            oneShot.rows = values.map(function () { return { rowHeight: sz.g * (Number(style.props.size.rowMin) || 1) }; });
+            delete oneShot.width;
+          }
+          attempts.push(oneShot);
+        }
         attempts.push(Object.assign({ values: values }, where), { values: values });
         return add(attempts).then(function (res) {
           var shape = res.shape, formatted = !!res.opts.specificCellProperties;
@@ -408,6 +563,7 @@
 
   function stackRepeats() {
     if (!ST.needOffice() || busy) return;
+    if (canFormat() && !lineMode()) { withLines(stackRepeats); return; }
     if (!canInsert()) { ST.toast("This PowerPoint version can't change table text from the panel.", true); return; }
     busy = true;
     ST.run(function (context) {
@@ -468,6 +624,7 @@
   function updateAll() {
     if (!ST.needOffice() || busy) return;
     if (!canFormat()) { ST.toast("This PowerPoint version can't format existing tables.", true); return; }
+    if (!lineMode()) { withLines(updateAll); return; }
     busy = true;
     var done = 0, refused = [];
     ST.run(function (context) {
@@ -638,6 +795,13 @@
       '<label>All sides<input type="text" id="tbPadAll" inputmode="decimal" value="' + esc(P.pad.all) + '"></label>' +
       '<label>First column, left<input type="text" id="tbPadFirst" inputmode="decimal" value="' + esc(P.pad.firstLeft) + '"></label>' +
       '<label>Last column, right<input type="text" id="tbPadLast" inputmode="decimal" value="' + esc(P.pad.lastRight) + '"></label></div>';
+    var Z = P.size || defaultProps().size;
+    html += '<div class="group-label">Sizes</div><div class="prop-grid">' +
+      '<label>Grid-based sizes' + onOff("tbSizeOn", Z.on) + '</label>' +
+      '<label>Fit column widths' + onOff("tbSizeFit", Z.fitColumns) + '</label>' +
+      '<label>Minimum row height (g)<input type="text" id="tbRowMin" inputmode="decimal" value="' + esc(Z.rowMin) + '"></label>' +
+      '<label>Row height step (g)<input type="text" id="tbRowStep" inputmode="decimal" value="' + esc(Z.rowStep) + '"></label></div>' +
+      '<div class="help">g is the Layout spacing. Columns are whole steps of g and the table fills the grid area width. Label columns take the room left after category and data columns fit their text.</div>';
     html += '<label class="field">Total rows start with<input type="text" id="tbTotal" value="' + esc(P.totalPrefix) + '"></label>';
     html += '<div class="btn-row"><button class="btn" id="tbCancel">Cancel</button><button class="btn primary" id="tbSave">Save</button></div>' +
       '<div class="btn-row"><button class="btn small" id="tbDup">Duplicate</button><button class="btn small danger" id="tbDel">Delete</button></div></div>';
@@ -688,6 +852,11 @@
     P.pad.firstLeft = num("tbPadFirst", P.pad.firstLeft);
     P.pad.lastRight = num("tbPadLast", P.pad.lastRight);
     P.totalPrefix = $("tbTotal").value.trim();
+    P.size = P.size || defaultProps().size;
+    P.size.on = $("tbSizeOn").value === "1";
+    P.size.fitColumns = $("tbSizeFit").value === "1";
+    P.size.rowMin = num("tbRowMin", P.size.rowMin) || 1;
+    P.size.rowStep = num("tbRowStep", P.size.rowStep) || 0.25;
     s.name = name; s.props = P; editing = null;
     saveStyles();
     ST.toast(s.applied && pending(s) ? "Saved. Click Update all to change the tables that use it." : "Saved " + s.name + ".");
@@ -705,6 +874,8 @@
       'Rules: a heavier line under the header, under the table, above each new group (from that category column to the right) and above total rows. Thin lines between rows, except inside a category group, and on the left of each data column. Every second column gets a light fill.<br><br>' +
       'Stack repeats blanks a category label that repeats the row above. Edit a style and click Update all to reformat every table that uses it. Formatting existing tables needs PowerPoint API 1.9.</span>' +
     '</span>' +
+    '<div class="line-check" id="tblCheck" hidden><div class="check-q"></div>' +
+      '<div class="check-btns"><button class="btn" data-ans="A">A</button><button class="btn" data-ans="B">B</button><button class="btn small" data-ans="none" title="Neither cell, or both cells, have a thick line">Not sure</button></div></div>' +
     '<div class="style-status" id="tblStatus" hidden></div>' +
     '<div class="sublabel">Columns</div>' +
     '<div class="mini-chips" id="tblRoles"></div>' +
@@ -712,6 +883,7 @@
     '<div class="group-label">Table styles</div>' +
     '<div class="style-list" id="tblList"></div>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="tblNew">New style</button><button class="btn small" id="tblUpdate" title="Reformat every table linked to a style">Update all</button></div>' +
+    '<button class="btn small" id="tblCheckBtn" data-min="2" title="Check how this PowerPoint shows table lines">Check lines</button>' +
     '<div class="group-label">Insert table</div>' +
     '<div class="row"><label class="field">Rows<input type="text" id="tblRows" inputmode="numeric"></label>' +
       '<label class="field">Columns<input type="text" id="tblCols" inputmode="numeric"></label></div>' +
@@ -723,6 +895,10 @@
     ST.bindField($("tblRows"), "tblRows", { number: true });
     ST.bindField($("tblCols"), "tblCols", { number: true });
     $("tblInsert").addEventListener("click", insert);
+    $("tblCheckBtn").addEventListener("click", function () { startLineCheck(null); });
+    Array.prototype.forEach.call(body.querySelectorAll("#tblCheck [data-ans]"), function (b) {
+      b.addEventListener("click", function () { answerLineCheck(b.getAttribute("data-ans")); });
+    });
     $("tblStack").addEventListener("click", stackRepeats);
     $("tblNew").addEventListener("click", newStyle);
     $("tblUpdate").addEventListener("click", updateAll);
@@ -743,6 +919,6 @@
   });
 
   // Exposed for testing only
-  ST._tables = { cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
+  ST._tables = { columnWidths: columnWidths, lineMode: lineMode, cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
     get: function () { return styles; }, current: function () { return current; } };
 })();

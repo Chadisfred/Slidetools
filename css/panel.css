@@ -452,3 +452,6 @@ select:focus { border-color: var(--accent); }
 .tbl-editor .sublabel { margin-top: 2px; font-weight: 600; color: var(--text); }
 .prop-grid .color-field { grid-template-columns: 26px 1fr; gap: 4px; }
 .prop-grid .color-field input[type=color] { width: 26px; }
+.line-check { display: grid; gap: 8px; border: 1px solid var(--accent-line); background: var(--accent-soft); border-radius: 10px; padding: 10px; font-size: 12px; line-height: 1.45; }
+.line-check[hidden] { display: none; }
+.check-btns { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; }

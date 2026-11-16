@@ -296,6 +296,15 @@ Tips:
 4. Edit a style, then Update all reformats every table on normal slides that uses it.
 5. Inserting needs PowerPoint API 1.8. Formatting an existing table needs 1.9. Only the top left cell of a merged area can be formatted.
 
+Grid-based sizes. With the Layout spacing as g:
+
+1. The table fills the Layout grid area width, rounded down to whole g.
+2. Category and data columns are as wide as their longest text needs, rounded up to whole g. Label columns share the rest, also in whole g. With no label column, the spare room goes to the data columns.
+3. Every row, header included, is 1g tall. A row whose text wraps grows in steps of 1/4 g.
+4. The style editor can switch this off, turn off fitting to text (equal columns instead), or change the minimum row height and the step.
+
+Check lines. Some PowerPoint versions show table lines the opposite way round, so lines that should show are hidden and the other way round. The first time a table is formatted, the panel adds a small test table with cells A and B and asks which one has a thick line under it. The answer is remembered on this computer and the test table is deleted. Run it again from Check lines at the More level after an Office update.
+
 ### Colours
 
 Your template's colours and your own, one click away.
