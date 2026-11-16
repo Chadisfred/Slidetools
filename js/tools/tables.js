@@ -36,6 +36,7 @@
       band: { on: true, color: "#F2F2F2" },
       pad: { all: 3.6, firstLeft: 0, lastRight: 0 },
       totalPrefix: "Total",
+      thinSingleGroups: true,
       size: { on: true, rowMin: 1, rowStep: 0.25, fitColumns: true }
     };
   }
@@ -84,6 +85,9 @@
     var R = values.length, C = R ? values[0].length : 0, L = P.lines, totals = totalColumns(values, P);
     roles = normRoles(roles, C);
     merged = merged || {};
+    // With a single category column, group lines use the thin row line (header, total and
+    // bottom rules stay heavy). Older styles without the setting get it on.
+    var singleCategory = P.thinSingleGroups !== false && roles.filter(function (x) { return x === "C"; }).length === 1;
     // The line above row r (r = 1..R, where R is the bottom edge of the table), per column.
     function hline(r) {
       var out = [], c;
@@ -91,7 +95,7 @@
       if (r === R) { for (c = 0; c < C; c++) out.push(L.bottom); return out; }
       var start = C, kind = null;
       if (totals[r] !== undefined) { start = totals[r]; kind = L.total; }
-      else for (c = 0; c < C; c++) if (roles[c] === "C" && !blank(values[r][c])) { start = c; kind = L.group; break; }
+      else for (c = 0; c < C; c++) if (roles[c] === "C" && !blank(values[r][c])) { start = c; kind = singleCategory ? L.row : L.group; break; }
       for (c = 0; c < C; c++) {
         if (c >= start) out.push(kind);
         else out.push(roles[c] === "C" ? null : L.row);
@@ -873,6 +877,7 @@
       '<label>Minimum row height (g)<input type="text" id="tbRowMin" inputmode="decimal" value="' + esc(Z.rowMin) + '"></label>' +
       '<label>Row height step (g)<input type="text" id="tbRowStep" inputmode="decimal" value="' + esc(Z.rowStep) + '"></label></div>' +
       '<div class="help">g is the Layout spacing. Columns are whole steps of g and the table fills the grid area width. Label columns take the room left after category and data columns fit their text.</div>';
+    html += '<label class="field">With one category column, thin lines between groups' + onOff("tbThinSingle", P.thinSingleGroups !== false) + '</label>';
     html += '<label class="field">Total rows start with<input type="text" id="tbTotal" value="' + esc(P.totalPrefix) + '"></label>';
     html += '<div class="btn-row"><button class="btn" id="tbCancel">Cancel</button><button class="btn primary" id="tbSave">Save</button></div>' +
       '<div class="btn-row"><button class="btn small" id="tbDup">Duplicate</button><button class="btn small danger" id="tbDel">Delete</button></div></div>';
@@ -923,6 +928,7 @@
     P.pad.firstLeft = num("tbPadFirst", P.pad.firstLeft);
     P.pad.lastRight = num("tbPadLast", P.pad.lastRight);
     P.totalPrefix = $("tbTotal").value.trim();
+    P.thinSingleGroups = $("tbThinSingle").value === "1";
     P.size = P.size || defaultProps().size;
     P.size.on = $("tbSizeOn").value === "1";
     P.size.fitColumns = $("tbSizeFit").value === "1";

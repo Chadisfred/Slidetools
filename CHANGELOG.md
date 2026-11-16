@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.14.0] 2026-11-16
+
+### Changed
+
+1. Tables: with only one category column, the lines between groups are 1/4 pt instead of 1 pt. The header, total and bottom rules stay 1 pt. A setting in the style editor turns this off.
+
 ## [2.13.2] 2026-11-16
 
 ### Fixed
