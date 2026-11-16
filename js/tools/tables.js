@@ -163,10 +163,11 @@
 
   // A first guess at each column's role from its contents.
   function guessRoles(values) {
-    var R = values.length, C = R ? values[0].length : 0, roles = [], num = /^[\s(\-−+]*[$€£]?\s*[\d.,]+\s*(%|[kKmMbB]n?)?\)?\s*$/;
+    var R = values.length, C = R ? values[0].length : 0, roles = [], totals = totalColumns(values, defaultProps()), num = /^[\s(\-−+]*[$€£]?\s*[\d.,]+\s*(%|[kKmMbB]n?)?\)?\s*$/;
     for (var c = 0; c < C; c++) {
       var filled = 0, numbers = 0, blanks = 0, seen = {}, repeats = 0;
       for (var r = 1; r < R; r++) {
+        if (totals[r] !== undefined) continue; // total rows often leave label cells empty
         var v = values[r][c];
         if (blank(v)) { blanks++; continue; }
         filled++;
@@ -472,39 +473,64 @@
   // only table on the slide.
   var lastTable = null, target = null;
   var NO_TABLE = "Click the table's border to select it, or put the cursor in one of its cells, then try again.";
+  // A table can be its own shape, or sit inside a content placeholder (the usual result of
+  // the table icon in a template's layout). Loads what's needed and returns the tables.
+  function tableShapes(context, list) {
+    var holders = list.filter(function (x) { return x.type === "Placeholder"; });
+    holders.forEach(function (x) { try { x.placeholderFormat.load("containedType"); } catch (e) { /* older host */ } });
+    var done = holders.length ? context.sync().catch(function () { /* placeholder details unavailable */ }) : Promise.resolve();
+    return done.then(function () { return list.filter(isTableShape); });
+  }
+  function isTableShape(x) {
+    if (x.type === "Table") return true;
+    if (x.type !== "Placeholder") return false;
+    try { return x.placeholderFormat.containedType === "Table"; } catch (e) { return false; }
+  }
+  function kindOf(x) {
+    if (x.type !== "Placeholder") return x.type;
+    var held = null;
+    try { held = x.placeholderFormat.containedType; } catch (e) { held = null; }
+    return held ? "Placeholder holding " + held : "Placeholder";
+  }
+  var lastFind = { report: "", other: null };
   function findTable(context) {
-    var shapes = context.presentation.getSelectedShapes(), slides = context.presentation.getSelectedSlides();
+    var shapes = context.presentation.getSelectedShapes(), slides = context.presentation.getSelectedSlides(), all = context.presentation.slides;
     shapes.load("items/id,items/type");
     slides.load("items/id");
+    all.load("items/id");
+    var selTables = [], slideTables = [], slide = null;
     return context.sync().then(function () {
-      var slide = slides.items[0] || null;
-      var sel = shapes.items.filter(function (x) { return x.type === "Table"; })[0];
-      if (sel) { if (slide) lastTable = { slideId: slide.id, shapeId: sel.id }; return sel; }
-      if (shapes.items.length || !slide) return null; // something else is selected
-      function onlyTable() {
-        slide.shapes.load("items/id,items/type");
-        return context.sync().then(function () {
-          var tables = slide.shapes.items.filter(function (x) { return x.type === "Table"; });
-          if (tables.length !== 1) return null;
-          lastTable = { slideId: slide.id, shapeId: tables[0].id };
-          return tables[0];
-        });
-      }
+      slide = slides.items[0] || null;
+      return tableShapes(context, shapes.items);
+    }).then(function (t) {
+      selTables = t;
+      if (!slide) return [];
+      slide.shapes.load("items/id,items/type");
+      return context.sync().then(function () { return tableShapes(context, slide.shapes.items); });
+    }).then(function (t) {
+      slideTables = t;
+      var n = shapes.items.length, index = slide ? all.items.map(function (x) { return x.id; }).indexOf(slide.id) : -1;
+      lastFind.report = "PowerPoint reports: " +
+        (n ? ST.plural(n, "selected shape") + " (" + shapes.items.map(kindOf).join(", ") + ")" : "no selected shape") +
+        (slide ? ", slide " + (index + 1) + ", " + ST.plural(slideTables.length, "table") + " on the slide." : ", no slide selected.");
+      lastFind.other = n && !selTables.length ? kindOf(shapes.items[0]) : null;
+      if (selTables.length) { if (slide) lastTable = { slideId: slide.id, shapeId: selTables[0].id }; return selTables[0]; }
+      if (n || !slide) return null; // something that isn't a table is selected
       var pin = target || lastTable;
-      if (!pin || pin.slideId !== slide.id || !slide.shapes.getItemOrNullObject) return onlyTable();
-      var shape = slide.shapes.getItemOrNullObject(pin.shapeId);
-      shape.load("id,type");
-      return context.sync().then(function () {
-        if (!shape.isNullObject && shape.type === "Table") { lastTable = pin; return shape; }
-        return onlyTable();
-      });
+      var pinned = pin && pin.slideId === slide.id ? slideTables.filter(function (x) { return x.id === pin.shapeId; })[0] : null;
+      if (pinned) { lastTable = pin; return pinned; }
+      if (slideTables.length === 1) { lastTable = { slideId: slide.id, shapeId: slideTables[0].id }; return slideTables[0]; }
+      return null;
     });
+  }
+  function noTableMessage() {
+    return (lastFind.other ? "The selected shape is a " + lastFind.other + ", not a table. " : "") + NO_TABLE;
   }
   // Resolves the table first, then runs the line check, so the check can't lose the table.
   function checkThen(task) {
     ST.run(function (context) {
       return findTable(context).then(function (shape) {
-        if (!shape) { ST.toast(NO_TABLE, true); return; }
+        if (!shape) { ST.toast(noTableMessage(), true); return; }
         target = lastTable;
       });
     }).then(function () { if (target) startLineCheck(task); });
@@ -518,7 +544,7 @@
     busy = true;
     ST.run(function (context) {
       return findTable(context).then(function (shape) {
-        if (!shape) { ST.toast(NO_TABLE + " Or use Insert table.", true); return; }
+        if (!shape) { ST.toast(noTableMessage() + " Or use Insert table.", true); return; }
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? info.tag.r.split("") : (current && current.shapeId === shape.id ? current.roles : guessRoles(info.values));
           return formatTable(context, info, style, roles).then(function (failed) {
@@ -606,7 +632,7 @@
     busy = true;
     ST.run(function (context) {
       return findTable(context).then(function (shape) {
-        if (!shape) { ST.toast(NO_TABLE, true); return; }
+        if (!shape) { ST.toast(noTableMessage(), true); return; }
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? info.tag.r.split("") : guessRoles(info.values);
           var style = byId(info.tag.s) || styles[0] || { props: defaultProps() };
@@ -672,8 +698,10 @@
         slides.items.forEach(function (sl) { sl.shapes.load("items/id,items/type"); });
         return context.sync();
       }).then(function () {
-        var tables = [];
-        slides.items.forEach(function (sl) { sl.shapes.items.forEach(function (sh) { if (sh.type === "Table") tables.push(sh); }); });
+        var everything = [];
+        slides.items.forEach(function (sl) { everything = everything.concat(sl.shapes.items); });
+        return tableShapes(context, everything);
+      }).then(function (tables) {
         var i = 0;
         function next() {
           if (i >= tables.length) return Promise.resolve();
@@ -706,18 +734,23 @@
       return findTable(context).then(function (shape) {
         if (!shape) { current = null; return; }
         return readTable(context, shape).then(function (info) {
-          var roles = info.tag.r ? normRoles(info.tag.r.split(""), info.cols) : guessRoles(info.values);
+          var roles = info.tag.r ? normRoles(info.tag.r.split(""), info.cols) : guessRoles(info.values || []);
+          if (roles.length !== info.cols) roles = normRoles(roles, info.cols);
           current = { shapeId: shape.id, cols: info.cols, values: info.values, roles: roles, styleId: info.tag.s || 0, saved: !!info.tag.r };
         });
       });
-    }).catch(function () { current = null; }).then(renderRoles);
+    }).catch(function (e) {
+      current = null;
+      lastFind.report += " Couldn't read the table: " + ST.reason(e) + ".";
+    }).then(renderRoles);
   }
 
   // ---------- Rendering ----------
   function colName(c) { var s = ""; c++; while (c > 0) { var m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; }
   function renderRoles() {
-    var box = $("tblRoles"), status = $("tblStatus");
+    var box = $("tblRoles"), status = $("tblStatus"), diag = $("tblDiag");
     if (!box) return;
+    if (diag) diag.textContent = ST.inOffice ? lastFind.report : "";
     if (!current) {
       box.innerHTML = '<div class="muted-note">Select a table to set which columns are categories, labels and data.</div>';
       status.hidden = true;
@@ -917,6 +950,7 @@
     '<div class="style-status" id="tblStatus" hidden></div>' +
     '<div class="sublabel">Columns</div>' +
     '<div class="mini-chips" id="tblRoles"></div>' +
+    '<div class="help tbl-diag" id="tblDiag" data-min="2"></div>' +
     '<button class="btn small" id="tblStack" title="Blank category labels that repeat the row above">Stack repeats</button>' +
     '<div class="group-label">Table styles</div>' +
     '<div class="style-list" id="tblList"></div>' +
