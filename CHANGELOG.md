@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.12.1] 2026-11-16
+
+### Fixed
+
+1. Tables: Insert table could fail with "PowerPoint didn't accept one of the values". It now adds a plain table first and then formats it, falling back to a simpler request if PowerPoint refuses the first one.
+2. Tables: formatting is sent in separate groups (lines, fill, fonts, padding, alignment). If PowerPoint refuses one group, the rest still apply, and the message names the group that was refused.
+
 ## [2.12.0] 2026-11-16
 
 ### Added
