@@ -1,6 +1,6 @@
 # Slide Tools
 
-A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners, selecting and matching similar shapes, and managing character and shape styles. It runs as an Office web add-in and is hosted on GitHub Pages:
+A PowerPoint side panel for laying out grids, resizing shapes with formulas, rounding corners, selecting and matching similar shapes, and managing character, shape and table styles. It runs as an Office web add-in and is hosted on GitHub Pages:
 
 https://chadisfred.github.io/Slidetools/taskpane.html
 
@@ -258,6 +258,44 @@ Limits:
 3. Lines, pictures, charts and tables aren't included.
 4. Only normal slides are changed, never masters or layouts.
 
+### Tables
+
+Inserts tables that are already formatted, or formats the selected table, using named table styles saved in the presentation.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Column roles for the selected table, Stack repeats, table styles, Insert table |
+| More | Style editor, New style, Update all, the style to insert with, which style the table uses and Unlink |
+
+Column roles. Select a table and each column appears as a chip. Click a chip to cycle its role:
+
+1. Category: stacked labels such as a year or a team, shown once per group. Left aligned.
+2. Label: row text that doesn't repeat, such as an item name. Left aligned.
+3. Data: numbers. Right aligned, with a thin line on the left of the column.
+
+The first column starts as a Category. Text columns next to it that repeat or leave blanks are guessed as Category, mostly numeric columns as Data, and the rest as Label. Roles are saved with the table.
+
+The default table style:
+
+1. A 1 pt black rule under the header row and under the table.
+2. A 1 pt rule above each new group. A new value in a category column draws the rule from that column to the right edge, so a new year runs the full width and a new sub-group starts at its own column.
+3. Total rows, found when the row's first filled cell starts with "Total", get Demi text and a 1 pt rule above, from the Total cell to the right edge.
+4. 1/4 pt black lines between rows in label and data columns. Category columns only get a line where a group starts.
+5. #F2F2F2 fill on the 2nd, 4th, 6th... columns, body rows only.
+6. Fonts: header Avenir Next LT Pro with Bold on, first column Avenir Next LT Pro Demi, body Avenir Next LT Pro, 12 pt black.
+7. Padding of 0.05 in (3.6 pt) on every side, except none on the first column's left and the last column's right, so text lines up with the table edges.
+8. The header row sits at the bottom of its cells, body rows in the middle, and merged cells at the top.
+
+Every part can be changed in the style editor: each part's font (or a text style from the Styles tool, which wins over the font settings), each line's weight, colour and visibility, the column fill, padding, and the word that marks total rows.
+
+Tips:
+
+1. Insert table adds a table at the Layout tool's grid area, at its full width, with header text and roles set (Category, Sub-category, Item, then Value columns).
+2. Clicking a style on a table that's already formatted reapplies it, keeping the table's roles. Changing a role reformats a linked table straight away.
+3. Stack repeats blanks a category label when it repeats the row above within the same group. It never touches label or data columns or total rows, and PowerPoint's Undo brings the labels back.
+4. Edit a style, then Update all reformats every table on normal slides that uses it.
+5. Inserting needs PowerPoint API 1.8. Formatting an existing table needs 1.9. Only the top left cell of a merged area can be formatted.
+
 ### Colours
 
 Your template's colours and your own, one click away.
@@ -316,7 +354,7 @@ Script and style links in `taskpane.html` end in `?v=` plus the version number. 
 | The panel shows an old version | Close PowerPoint, delete the contents of `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, reopen |
 | The panel is blank or shows an error | Check the web address above loads in a browser, then reopen the panel |
 | The Grid Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
-| A slide button says the version is too old | Update Office. Draw, Fit, Resize, Match and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Corners need 1.10 |
+| A slide button says the version is too old | Update Office. Draw, Fit, Resize, Match and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Inserting tables needs 1.8. Formatting existing tables needs 1.9. Corners need 1.10 |
 | Update all reports something you didn't expect | Click Cancel. Nothing changes until you click Update |
 
 ## Project layout
@@ -334,6 +372,7 @@ js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/match.js        Match tool (select similar, copy position and size)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
+js/tools/tables.js       Tables tool (table styles, insert and format)
 js/tools/colours.js      Colours tool (palette)
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons

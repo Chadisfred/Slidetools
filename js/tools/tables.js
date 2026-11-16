@@ -1,0 +1,684 @@
+/* Tables tool: named table styles saved in the presentation. Insert a table that is already
+   formatted, or format the selected table. Each table's columns have a role:
+     Category  stacked labels (shown once per group), left aligned
+     Label     row text that doesn't repeat, left aligned
+     Data      numbers, right aligned, with a thin line on their left
+   The rules (header and bottom rules, group rules, total rows, column bands, padding and
+   fonts) come from the style. Only normal slides are read or changed. */
+(function () {
+  "use strict";
+
+  var ST = window.ST, PT = ST.PT, $ = ST.$;
+  var STORE_KEY = "SLIDETOOLS_TABLESTYLES";
+  var TABLE_TAG = "SLIDETOOLS_TABLE";
+  var PART_SIZE = 2000;
+  var ROLE_NAMES = { C: "Category", L: "Label", D: "Data" };
+  var PARTS = [["header", "Header row"], ["first", "First column"], ["body", "Body"], ["total", "Total rows"]];
+  var LINES = [["header", "Rule under header"], ["bottom", "Rule under table"], ["group", "Rule above a new group"],
+               ["total", "Rule above total rows"], ["row", "Lines between rows"], ["vertical", "Lines left of data columns"]];
+
+  var defaults = { tblRows: "6", tblCols: "4" };
+  ST.addDefaults(defaults);
+
+  var ICON = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4.5h14" stroke-width="2"/><path d="M2 8.5h14M2 12h14" stroke-width="0.9"/><path d="M2 15.5h14" stroke-width="2"/><rect x="7" y="5.5" width="4" height="9.5" fill="currentColor" fill-opacity="0.22" stroke="none"/></svg>';
+  var EDIT_ICON = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 2.5l3 3L6 13H3v-3l7.5-7.5z"/></svg>';
+
+  var styles = [], stylesLoaded = false, editing = null, busy = false;
+  var current = null; // the selected table: { shapeId, slideId, cols, values, roles, styleId }
+
+  // ---------- Style model ----------
+  function font(name, bold) { return { ts: null, name: name, size: 12, color: "#000000", bold: !!bold, italic: false }; }
+  function line(w) { return { on: true, w: w, c: "#000000" }; }
+  function defaultProps() {
+    return {
+      fonts: { header: font("Avenir Next LT Pro", true), first: font("Avenir Next LT Pro Demi"), body: font("Avenir Next LT Pro"), total: font("Avenir Next LT Pro Demi") },
+      lines: { header: line(1), bottom: line(1), group: line(1), total: line(1), row: line(0.25), vertical: line(0.25) },
+      band: { on: true, color: "#F2F2F2" },
+      pad: { all: 3.6, firstLeft: 0, lastRight: 0 },
+      totalPrefix: "Total"
+    };
+  }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function byId(id) { return styles.filter(function (s) { return s.id === id; })[0]; }
+  function nextId() { var id = 1; while (byId(id)) id++; return id; }
+  function pending(s) { return JSON.stringify(s.props) !== JSON.stringify(s.applied); }
+  function esc(t) { return String(t === null || t === undefined ? "" : t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function seed() { if (!styles.length) styles.push({ id: 1, name: "Default table", props: defaultProps(), applied: null }); }
+
+  // ---------- The formatting rules (pure, shared by Insert and Format) ----------
+  function blank(v) { return !String(v === null || v === undefined ? "" : v).trim(); }
+  function normRoles(roles, cols) {
+    var out = [];
+    for (var c = 0; c < cols; c++) out.push(roles && /^[CLD]$/.test(roles[c]) ? roles[c] : (c === 0 ? "C" : "D"));
+    return out;
+  }
+  // For each body row that is a total row, the column where its "Total" text sits.
+  function totalColumns(values, P) {
+    var prefix = String(P.totalPrefix || "").trim().toLowerCase(), out = {};
+    if (!prefix) return out;
+    for (var r = 1; r < values.length; r++) {
+      for (var c = 0; c < values[r].length; c++) {
+        if (blank(values[r][c])) continue;
+        if (String(values[r][c]).trim().toLowerCase().indexOf(prefix) === 0) out[r] = c;
+        break;
+      }
+    }
+    return out;
+  }
+  function fontFor(part, P) {
+    var f = P.fonts[part], out = { name: f.name, size: f.size, color: f.color, bold: f.bold, italic: f.italic };
+    var t = f.ts && ST.textStyles ? ST.textStyles.byId(f.ts) : null;
+    if (t && t.font) ["name", "size", "color", "bold", "italic"].forEach(function (k) {
+      var v = t.font[k];
+      if (v !== null && v !== undefined && v !== "" && v !== "leave") out[k] = k === "color" && ST.styleCode ? ST.styleCode.base(v) : v;
+    });
+    Object.keys(out).forEach(function (k) { if (out[k] === null || out[k] === undefined || out[k] === "") delete out[k]; });
+    return out;
+  }
+  var NONE = { color: "#000000", weight: 0.25, transparency: 1, dashStyle: "Solid" };
+  function edge(spec) { return spec && spec.on ? { color: spec.c, weight: Number(spec.w), transparency: 0, dashStyle: "Solid" } : NONE; }
+
+  // values: 2D text (row 0 is the header). roles: array of C, L, D. merged: { "r,c": true }.
+  function cellProps(values, roles, P, merged) {
+    var R = values.length, C = R ? values[0].length : 0, L = P.lines, totals = totalColumns(values, P);
+    roles = normRoles(roles, C);
+    merged = merged || {};
+    // The line above row r (r = 1..R, where R is the bottom edge of the table), per column.
+    function hline(r) {
+      var out = [], c;
+      if (r === 1 && R > 1) { for (c = 0; c < C; c++) out.push(L.header); return out; }
+      if (r === R) { for (c = 0; c < C; c++) out.push(L.bottom); return out; }
+      var start = C, kind = null;
+      if (totals[r] !== undefined) { start = totals[r]; kind = L.total; }
+      else for (c = 0; c < C; c++) if (roles[c] === "C" && !blank(values[r][c])) { start = c; kind = L.group; break; }
+      for (c = 0; c < C; c++) {
+        if (c >= start) out.push(kind);
+        else out.push(roles[c] === "C" ? null : L.row);
+      }
+      return out;
+    }
+    function vline(c) { return c > 0 && c < C && roles[c] === "D" ? L.vertical : null; }
+    var lines = [];
+    for (var r = 1; r <= R; r++) lines[r] = hline(r);
+    var out = [];
+    for (var i = 0; i < R; i++) {
+      var row = [], total = totals[i] !== undefined;
+      for (var c = 0; c < C; c++) {
+        var part = i === 0 ? "header" : total ? "total" : c === 0 ? "first" : "body";
+        var cell = {
+          font: fontFor(part, P),
+          fill: i > 0 && P.band.on && (c + 1) % 2 === 0 ? { color: P.band.color, transparency: 0 } : { transparency: 1 },
+          margins: {
+            top: Number(P.pad.all), bottom: Number(P.pad.all),
+            left: c === 0 ? Number(P.pad.firstLeft) : Number(P.pad.all),
+            right: c === C - 1 ? Number(P.pad.lastRight) : Number(P.pad.all)
+          },
+          horizontalAlignment: roles[c] === "D" ? "Right" : "Left",
+          verticalAlignment: i === 0 ? "Bottom" : merged[i + "," + c] ? "Top" : "Middle",
+          borders: {
+            top: i === 0 ? NONE : edge(lines[i][c]),
+            bottom: edge(lines[i + 1][c]),
+            left: edge(vline(c)),
+            right: edge(vline(c + 1))
+          }
+        };
+        row.push(cell);
+      }
+      out.push(row);
+    }
+    return out;
+  }
+
+  // Blanks a category label when it repeats the row above within the same parent group.
+  function stackedValues(values, roles, P) {
+    var R = values.length, C = R ? values[0].length : 0, totals = totalColumns(values, P), out = clone(values), filled = [];
+    roles = normRoles(roles, C);
+    for (var r = 0; r < R; r++) {
+      filled[r] = [];
+      for (var c = 0; c < C; c++) filled[r][c] = !blank(values[r][c]) ? String(values[r][c]).trim() : (r > 1 && totals[r - 1] === undefined ? filled[r - 1][c] : "");
+    }
+    var changed = 0;
+    for (r = 2; r < R; r++) {
+      if (totals[r] !== undefined || totals[r - 1] !== undefined) continue;
+      for (c = 0; c < C; c++) {
+        if (roles[c] !== "C" || blank(values[r][c])) continue;
+        if (filled[r].slice(0, c + 1).join("\u0001") === filled[r - 1].slice(0, c + 1).join("\u0001")) { out[r][c] = ""; changed++; }
+      }
+    }
+    return { values: out, changed: changed };
+  }
+
+  // A first guess at each column's role from its contents.
+  function guessRoles(values) {
+    var R = values.length, C = R ? values[0].length : 0, roles = [], num = /^[\s(\-−+]*[$€£]?\s*[\d.,]+\s*(%|[kKmMbB]n?)?\)?\s*$/;
+    for (var c = 0; c < C; c++) {
+      var filled = 0, numbers = 0, blanks = 0, seen = {}, repeats = 0;
+      for (var r = 1; r < R; r++) {
+        var v = values[r][c];
+        if (blank(v)) { blanks++; continue; }
+        filled++;
+        if (num.test(String(v))) numbers++;
+        var k = String(v).trim().toLowerCase();
+        if (seen[k]) repeats++; seen[k] = 1;
+      }
+      var numeric = filled && numbers / filled >= 0.6;
+      var leading = roles.every(function (x) { return x === "C"; });
+      // Category columns sit at the left and repeat or leave blanks (years count too)
+      if (c === 0 || (leading && (blanks || repeats))) roles.push("C");
+      else if (numeric) roles.push("D");
+      else roles.push("L");
+    }
+    return roles;
+  }
+  function insertRoles(cols) {
+    if (cols <= 1) return ["L"];
+    if (cols === 2) return ["C", "D"];
+    if (cols === 3) return ["C", "L", "D"];
+    var r = ["C", "C", "L"];
+    while (r.length < cols) r.push("D");
+    return r;
+  }
+
+  // ---------- Saving styles in the presentation ----------
+  function loadStyles() {
+    if (!ST.inOffice || !ST.supports("1.3")) { seed(); stylesLoaded = true; render(); return; }
+    PowerPoint.run(function (context) {
+      var tags = context.presentation.tags, count = tags.getItemOrNullObject(STORE_KEY + "_N");
+      count.load("value");
+      return context.sync().then(function () {
+        var n = count.isNullObject ? 0 : parseInt(count.value, 10) || 0, parts = [];
+        for (var i = 0; i < n; i++) { var t = tags.getItemOrNullObject(STORE_KEY + "_" + i); t.load("value"); parts.push(t); }
+        return context.sync().then(function () {
+          var text = parts.map(function (t) { return t.isNullObject ? "" : t.value; }).join("");
+          styles = text ? JSON.parse(text) : [];
+        });
+      });
+    }).catch(function () {
+      styles = [];
+      ST.toast("Couldn't read the table styles saved in this presentation.", true);
+    }).then(function () { seed(); stylesLoaded = true; render(); refreshTable(); });
+  }
+  function saveStyles() {
+    render();
+    if (!ST.inOffice || !ST.supports("1.3")) return Promise.resolve();
+    var text = JSON.stringify(styles), parts = [];
+    for (var i = 0; i < text.length; i += PART_SIZE) parts.push(text.slice(i, i + PART_SIZE));
+    return PowerPoint.run(function (context) {
+      var tags = context.presentation.tags, old = tags.getItemOrNullObject(STORE_KEY + "_N");
+      old.load("value");
+      return context.sync().then(function () {
+        var oldN = old.isNullObject ? 0 : parseInt(old.value, 10) || 0;
+        parts.forEach(function (p, i) { tags.add(STORE_KEY + "_" + i, p); });
+        for (var j = parts.length; j < oldN; j++) tags.delete(STORE_KEY + "_" + j);
+        tags.add(STORE_KEY + "_N", String(parts.length));
+        return context.sync();
+      });
+    }).catch(function (e) { ST.toast("Couldn't save table styles: " + ST.reason(e), true); });
+  }
+
+  // ---------- Reading and writing tables ----------
+  function canInsert() { return ST.supports("1.8"); }
+  function canFormat() { return ST.supports("1.9"); }
+  function parseTag(v) { try { var o = JSON.parse(v || "null"); return o && typeof o === "object" ? o : {}; } catch (e) { return {}; } }
+
+  // Loads a table shape's text, size, merged areas and Slide Tools tag.
+  function readTable(context, shape) {
+    var table = shape.getTable(), tag = shape.tags.getItemOrNullObject(TABLE_TAG);
+    table.load("rowCount,columnCount,values");
+    tag.load("value");
+    var areas = table.getMergedAreas();
+    areas.load("items/rowIndex,items/columnIndex,items/rowCount,items/columnCount");
+    return context.sync().then(function () {
+      var merged = {}, anchors = {};
+      areas.items.forEach(function (a) {
+        anchors[a.rowIndex + "," + a.columnIndex] = true;
+        for (var r = a.rowIndex; r < a.rowIndex + a.rowCount; r++)
+          for (var c = a.columnIndex; c < a.columnIndex + a.columnCount; c++) merged[r + "," + c] = true;
+      });
+      var t = tag.isNullObject ? {} : parseTag(tag.value);
+      return { table: table, shape: shape, rows: table.rowCount, cols: table.columnCount, values: table.values, merged: merged, anchors: anchors, tag: t };
+    });
+  }
+  function writeBorder(b, e) {
+    b.color = e.color; b.weight = e.weight; b.transparency = e.transparency; b.dashStyle = e.dashStyle;
+  }
+  // Writes the style's rules into an existing table, cell by cell.
+  function formatTable(context, info, style, roles) {
+    var props = cellProps(info.values, roles, style.props, info.merged);
+    try {
+      var s = info.table.styleSettings;
+      s.style = "NoStyleNoGrid";
+      s.areRowsBanded = false; s.areColumnsBanded = false;
+      s.isFirstRowHighlighted = false; s.isFirstColumnHighlighted = false;
+      s.isLastRowHighlighted = false; s.isLastColumnHighlighted = false;
+    } catch (e) { /* older hosts: the cell settings below still apply */ }
+    var count = 0;
+    function cellsFrom(r) {
+      for (; r < info.rows; r++) {
+        for (var c = 0; c < info.cols; c++) {
+          // Inside a merged area only the top left cell can be changed
+          if (info.merged[r + "," + c] && !info.anchors[r + "," + c]) continue;
+          var p = props[r][c], cell = info.table.getCellOrNullObject(r, c);
+          writeBorder(cell.borders.top, p.borders.top); writeBorder(cell.borders.bottom, p.borders.bottom);
+          writeBorder(cell.borders.left, p.borders.left); writeBorder(cell.borders.right, p.borders.right);
+          if (p.fill.transparency === 1) cell.fill.clear(); else { cell.fill.setSolidColor(p.fill.color); cell.fill.transparency = 0; }
+          Object.keys(p.font).forEach(function (k) { cell.font[k] = p.font[k]; });
+          cell.margins.left = p.margins.left; cell.margins.right = p.margins.right;
+          cell.margins.top = p.margins.top; cell.margins.bottom = p.margins.bottom;
+          cell.horizontalAlignment = p.horizontalAlignment;
+          cell.verticalAlignment = p.verticalAlignment;
+          count++;
+        }
+        // Send big tables in pieces so each request stays small
+        if (count >= 60 && r < info.rows - 1) { count = 0; var next = r + 1; return context.sync().then(function () { return cellsFrom(next); }); }
+      }
+      return context.sync();
+    }
+    return cellsFrom(0).then(function () {
+      info.shape.tags.add(TABLE_TAG, JSON.stringify({ s: style.id, r: normRoles(roles, info.cols).join("") }));
+      return context.sync();
+    });
+  }
+  function selectedTable(context) {
+    var shapes = context.presentation.getSelectedShapes();
+    shapes.load("items/id,items/type");
+    return context.sync().then(function () {
+      return shapes.items.filter(function (s) { return s.type === "Table"; })[0] || null;
+    });
+  }
+
+  // ---------- Actions ----------
+  function apply(style) {
+    if (!ST.needOffice() || busy) return;
+    if (!canFormat()) { ST.toast("This PowerPoint version can't format existing tables. Use Insert table instead.", true); return; }
+    busy = true;
+    ST.run(function (context) {
+      return selectedTable(context).then(function (shape) {
+        if (!shape) { ST.toast("Select a table first, or use Insert table.", true); return; }
+        return readTable(context, shape).then(function (info) {
+          var roles = info.tag.r ? info.tag.r.split("") : (current && current.shapeId === shape.id ? current.roles : guessRoles(info.values));
+          return formatTable(context, info, style, roles).then(function () {
+            if (!style.applied) { style.applied = clone(style.props); saveStyles(); }
+            ST.toast("Formatted the table with " + style.name + ".");
+            refreshTable();
+          });
+        });
+      });
+    }).then(function () { busy = false; });
+  }
+
+  function insert() {
+    if (!ST.needOffice() || busy) return;
+    if (!canInsert()) { ST.toast("This PowerPoint version can't add tables from the panel.", true); return; }
+    var rows = Math.max(2, Math.min(40, Math.round(ST.num(ST.state.tblRows)) || 6));
+    var cols = Math.max(1, Math.min(20, Math.round(ST.num(ST.state.tblCols)) || 4));
+    var style = styles.filter(function (s) { return s.id === Number($("tblInsertStyle").value); })[0] || styles[0];
+    if (!style) return;
+    var roles = insertRoles(cols), cats = 0, datas = 0;
+    var header = roles.map(function (r) {
+      if (r === "C") { cats++; return cats === 1 ? "Category" : "Sub-category"; }
+      if (r === "L") return "Item";
+      datas++; return "Value " + datas;
+    });
+    var values = [header];
+    for (var i = 1; i < rows; i++) { var row = []; for (var c = 0; c < cols; c++) row.push(""); values.push(row); }
+    var g = ST.calculate();
+    busy = true;
+    ST.run(function (context) {
+      var slides = context.presentation.getSelectedSlides();
+      slides.load("items/id");
+      return context.sync().then(function () {
+        if (!slides.items.length) { ST.toast("Go to a slide first.", true); return; }
+        var opts = { values: values, specificCellProperties: cellProps(values, roles, style.props, {}), style: "NoStyleNoGrid" };
+        if (g.valid) { opts.left = g.left * PT; opts.top = g.top * PT; opts.width = g.maxW * PT; }
+        var shape = slides.items[0].shapes.addTable(rows, cols, opts);
+        shape.load("id");
+        return context.sync().then(function () {
+          shape.tags.add(TABLE_TAG, JSON.stringify({ s: style.id, r: roles.join("") }));
+          if (ST.supports("1.5")) slides.items[0].setSelectedShapes([shape.id]);
+          return context.sync();
+        }).then(function () {
+          if (!style.applied) { style.applied = clone(style.props); saveStyles(); }
+          ST.toast("Added a " + rows + " x " + cols + " table" + (g.valid ? " at the Layout grid area." : "."));
+          refreshTable();
+        });
+      });
+    }).then(function () { busy = false; });
+  }
+
+  function stackRepeats() {
+    if (!ST.needOffice() || busy) return;
+    if (!canInsert()) { ST.toast("This PowerPoint version can't change table text from the panel.", true); return; }
+    busy = true;
+    ST.run(function (context) {
+      return selectedTable(context).then(function (shape) {
+        if (!shape) { ST.toast("Select a table first.", true); return; }
+        return readTable(context, shape).then(function (info) {
+          var roles = info.tag.r ? info.tag.r.split("") : guessRoles(info.values);
+          var style = byId(info.tag.s) || styles[0] || { props: defaultProps() };
+          var res = stackedValues(info.values, roles, style.props);
+          if (!res.changed) { ST.toast("No repeated category labels to stack."); return; }
+          for (var r = 0; r < info.rows; r++) for (var c = 0; c < info.cols; c++) {
+            if (res.values[r][c] !== info.values[r][c]) info.table.getCellOrNullObject(r, c).text = res.values[r][c];
+          }
+          return context.sync().then(function () {
+            info.values = res.values;
+            // A linked table is reformatted so group rules follow the new layout
+            if (info.tag.s && byId(info.tag.s) && canFormat()) return formatTable(context, info, byId(info.tag.s), roles);
+          }).then(function () {
+            ST.toast("Stacked " + ST.plural(res.changed, "repeated label") + ".");
+            refreshTable();
+          });
+        });
+      });
+    }).then(function () { busy = false; });
+  }
+
+  function setRole(c) {
+    if (!current || busy) return;
+    var order = ["C", "L", "D"];
+    current.roles[c] = order[(order.indexOf(current.roles[c]) + 1) % 3];
+    renderRoles();
+    var id = current.shapeId, roles = current.roles.slice(), styleId = current.styleId;
+    ST.run(function (context) {
+      return selectedTable(context).then(function (shape) {
+        if (!shape || shape.id !== id) return;
+        return readTable(context, shape).then(function (info) {
+          var style = byId(styleId);
+          if (style && canFormat()) return formatTable(context, info, style, roles);
+          shape.tags.add(TABLE_TAG, JSON.stringify({ s: styleId || 0, r: roles.join("") }));
+          return context.sync();
+        });
+      });
+    });
+  }
+  function unlink() {
+    if (!current) return;
+    var id = current.shapeId;
+    ST.run(function (context) {
+      return selectedTable(context).then(function (shape) {
+        if (!shape || shape.id !== id) return;
+        shape.tags.add(TABLE_TAG, JSON.stringify({ s: 0, r: current.roles.join("") }));
+        return context.sync().then(function () { ST.toast("The table is no longer linked to a table style."); refreshTable(); });
+      });
+    });
+  }
+
+  function updateAll() {
+    if (!ST.needOffice() || busy) return;
+    if (!canFormat()) { ST.toast("This PowerPoint version can't format existing tables.", true); return; }
+    busy = true;
+    var done = 0;
+    ST.run(function (context) {
+      var slides = context.presentation.slides;
+      slides.load("items/id");
+      return context.sync().then(function () {
+        slides.items.forEach(function (sl) { sl.shapes.load("items/id,items/type"); });
+        return context.sync();
+      }).then(function () {
+        var tables = [];
+        slides.items.forEach(function (sl) { sl.shapes.items.forEach(function (sh) { if (sh.type === "Table") tables.push(sh); }); });
+        var i = 0;
+        function next() {
+          if (i >= tables.length) return Promise.resolve();
+          var shape = tables[i++];
+          return readTable(context, shape).then(function (info) {
+            var style = byId(info.tag.s);
+            if (!style) return next();
+            done++;
+            return formatTable(context, info, style, info.tag.r ? info.tag.r.split("") : guessRoles(info.values)).then(next);
+          });
+        }
+        return next();
+      }).then(function () {
+        styles.forEach(function (s) { s.applied = clone(s.props); });
+        return saveStyles();
+      }).then(function () {
+        ST.toast(done ? "Updated " + ST.plural(done, "linked table") + "." : "No tables are linked to a table style yet.");
+        refreshTable();
+      });
+    }).then(function () { busy = false; });
+  }
+
+  // Reads the selected table so the panel can show its column roles and style.
+  function refreshTable() {
+    if (!ST.inOffice || !canInsert()) { current = null; renderRoles(); return; }
+    PowerPoint.run(function (context) {
+      return selectedTable(context).then(function (shape) {
+        if (!shape) { current = null; return; }
+        return readTable(context, shape).then(function (info) {
+          var roles = info.tag.r ? normRoles(info.tag.r.split(""), info.cols) : guessRoles(info.values);
+          current = { shapeId: shape.id, cols: info.cols, values: info.values, roles: roles, styleId: info.tag.s || 0, saved: !!info.tag.r };
+        });
+      });
+    }).catch(function () { current = null; }).then(renderRoles);
+  }
+
+  // ---------- Rendering ----------
+  function colName(c) { var s = ""; c++; while (c > 0) { var m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; }
+  function renderRoles() {
+    var box = $("tblRoles"), status = $("tblStatus");
+    if (!box) return;
+    if (!current) {
+      box.innerHTML = '<div class="muted-note">Select a table to set which columns are categories, labels and data.</div>';
+      status.hidden = true;
+      return;
+    }
+    box.innerHTML = "";
+    current.roles.forEach(function (r, c) {
+      var b = document.createElement("button");
+      b.className = "mini-chip role-chip role-" + r;
+      var head = current.values && current.values[0] ? String(current.values[0][c] || "").trim() : "";
+      b.innerHTML = "<b>" + colName(c) + "</b> " + ROLE_NAMES[r];
+      b.title = (head ? head + ": " : "") + ROLE_NAMES[r] + ". Click to change.";
+      b.setAttribute("data-col", c);
+      b.addEventListener("click", function () { setRole(c); });
+      box.appendChild(b);
+    });
+    var st = byId(current.styleId);
+    status.hidden = false;
+    status.innerHTML = st ? "Table uses <b></b>" : "Table isn't linked to a table style.";
+    if (st) {
+      status.querySelector("b").textContent = st.name;
+      var u = document.createElement("button");
+      u.className = "link-btn"; u.textContent = "Unlink";
+      u.addEventListener("click", unlink);
+      status.appendChild(u);
+    }
+  }
+
+  function tile(P) {
+    var L = P.lines, w = 30, y = [4, 10, 15, 20, 25];
+    function ln(spec, y1, x1, x2) { return spec.on ? '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y1 + '" stroke="' + spec.c + '" stroke-width="' + Math.max(0.5, Math.min(2, spec.w * 1.4)) + '"/>' : ""; }
+    var band = P.band.on ? '<rect x="8" y="10" width="7" height="15" fill="' + P.band.color + '"/><rect x="22" y="10" width="7" height="15" fill="' + P.band.color + '"/>' : "";
+    return '<svg viewBox="0 0 ' + w + ' 28" width="34" height="30">' + band +
+      ln(L.header, y[1], 1, 29) + ln(L.row, y[2], 8, 29) + ln(L.group, y[3], 1, 29) + ln(L.bottom, y[4], 1, 29) +
+      (L.vertical.on ? '<line x1="22" y1="2" x2="22" y2="25" stroke="' + L.vertical.c + '" stroke-width="0.5"/>' : "") + "</svg>";
+  }
+  function summary(P) {
+    return [P.fonts.body.name || "Body font", P.band.on ? "bands " + P.band.color : "no bands", "padding " + P.pad.all + " pt"].join(", ");
+  }
+
+  function render() {
+    var list = $("tblList");
+    if (!list) return;
+    list.innerHTML = "";
+    if (!stylesLoaded && ST.inOffice) { list.innerHTML = '<div class="muted-note">Reading table styles from this presentation.</div>'; return; }
+    styles.forEach(function (s) {
+      var row = document.createElement("div");
+      row.className = "style-row";
+      row.innerHTML = '<button class="style-apply" title="Format the selected table with this style"><span class="shape-tile tbl-tile"></span>' +
+        '<span class="style-text"><span class="style-name"></span><span class="style-sum" data-min="2"></span></span>' +
+        (s.applied && pending(s) ? '<span class="badge" title="Edited since the last Update all">Edited</span>' : "") +
+        '</button><button class="icon-btn" data-min="2" title="Edit style" aria-label="Edit style">' + EDIT_ICON + "</button>";
+      row.querySelector(".tbl-tile").innerHTML = tile(s.props);
+      row.querySelector(".style-name").textContent = s.name;
+      row.querySelector(".style-sum").textContent = summary(s.props);
+      row.querySelector(".style-apply").addEventListener("click", function () { apply(s); });
+      row.querySelector(".icon-btn").addEventListener("click", function () { editing = editing === s.id ? null : s.id; render(); });
+      list.appendChild(row);
+      if (editing === s.id) {
+        var holder = document.createElement("div");
+        holder.innerHTML = editorMarkup(s);
+        list.appendChild(holder);
+        wireEditor(s);
+      }
+    });
+    var sel = $("tblInsertStyle"), keep = sel.value;
+    sel.innerHTML = styles.map(function (s) { return '<option value="' + s.id + '">' + esc(s.name) + "</option>"; }).join("");
+    if (keep && byId(Number(keep))) sel.value = keep;
+    var n = styles.filter(function (s) { return s.applied && pending(s); }).length;
+    $("tblUpdate").textContent = n ? "Update all (" + n + " edited)" : "Update all";
+    renderRoles();
+  }
+
+  // ---------- Editor ----------
+  function textStyleSelect(id, value) {
+    var list = ST.textStyles ? ST.textStyles.list() : [];
+    return '<select id="' + id + '"><option value="">Set below</option>' + list.map(function (t) {
+      return '<option value="' + t.id + '"' + (String(value) === String(t.id) ? " selected" : "") + ">" + esc(t.name) + "</option>";
+    }).join("") + "</select>";
+  }
+  function onOff(id, v) { return '<select id="' + id + '"><option value="1"' + (v ? " selected" : "") + '>On</option><option value="0"' + (v ? "" : " selected") + ">Off</option></select>"; }
+  function colorField(id, value) {
+    return '<div class="color-field"><input type="color" id="' + id + 'Pick" list="paletteList" value="' + esc(String(value || "#000000").toLowerCase()) + '"><input type="text" id="' + id + '" value="' + esc(value) + '"></div>';
+  }
+  function editorMarkup(s) {
+    var P = s.props, html = '<div class="style-editor tbl-editor">' +
+      '<label class="field">Style name<input type="text" id="tbName" maxlength="32" value="' + esc(s.name) + '"></label>';
+    html += '<div class="group-label">Fonts</div>';
+    PARTS.forEach(function (p) {
+      var f = P.fonts[p[0]], k = "tbF_" + p[0];
+      html += '<div class="sublabel">' + p[1] + '</div><div class="prop-grid">' +
+        '<label>Text style' + textStyleSelect(k + "_ts", f.ts) + '</label>' +
+        '<label>Font<input type="text" id="' + k + '_name" value="' + esc(f.name) + '" list="fontList"></label>' +
+        '<label>Size (pt)<input type="text" id="' + k + '_size" inputmode="decimal" value="' + esc(f.size) + '"></label>' +
+        '<label>Colour' + colorField(k + "_color", f.color) + '</label>' +
+        '<label>Bold' + onOff(k + "_bold", f.bold) + '</label>' +
+        '<label>Italic' + onOff(k + "_italic", f.italic) + '</label></div>';
+    });
+    html += '<div class="help">A chosen text style overrides the font settings under it.</div>';
+    html += '<div class="group-label">Lines</div>';
+    LINES.forEach(function (l) {
+      var v = P.lines[l[0]], k = "tbL_" + l[0];
+      html += '<div class="sublabel">' + l[1] + '</div><div class="prop-grid tbl-line">' +
+        '<label>Show' + onOff(k + "_on", v.on) + '</label>' +
+        '<label>Weight (pt)<input type="text" id="' + k + '_w" inputmode="decimal" value="' + esc(v.w) + '"></label>' +
+        '<label class="span2">Colour' + colorField(k + "_c", v.c) + '</label></div>';
+    });
+    html += '<div class="group-label">Column fill</div><div class="prop-grid">' +
+      '<label>Fill 2nd, 4th, 6th... columns' + onOff("tbBandOn", P.band.on) + '</label>' +
+      '<label>Colour' + colorField("tbBandC", P.band.color) + '</label></div>' +
+      '<div class="help">Body rows only, counted from the table\'s left edge.</div>';
+    html += '<div class="group-label">Padding inside cells (pt)</div><div class="prop-grid">' +
+      '<label>All sides<input type="text" id="tbPadAll" inputmode="decimal" value="' + esc(P.pad.all) + '"></label>' +
+      '<label>First column, left<input type="text" id="tbPadFirst" inputmode="decimal" value="' + esc(P.pad.firstLeft) + '"></label>' +
+      '<label>Last column, right<input type="text" id="tbPadLast" inputmode="decimal" value="' + esc(P.pad.lastRight) + '"></label></div>';
+    html += '<label class="field">Total rows start with<input type="text" id="tbTotal" value="' + esc(P.totalPrefix) + '"></label>';
+    html += '<div class="btn-row"><button class="btn" id="tbCancel">Cancel</button><button class="btn primary" id="tbSave">Save</button></div>' +
+      '<div class="btn-row"><button class="btn small" id="tbDup">Duplicate</button><button class="btn small danger" id="tbDel">Delete</button></div></div>';
+    return html;
+  }
+  function wireEditor(s) {
+    Array.prototype.forEach.call(document.querySelectorAll(".tbl-editor input[type=color]"), function (pick) {
+      var text = $(pick.id.replace(/Pick$/, ""));
+      pick.addEventListener("input", function () { text.value = pick.value.toUpperCase(); });
+      text.addEventListener("change", function () { if (/^#?[0-9a-f]{6}$/i.test(text.value.trim())) pick.value = ("#" + text.value.trim().replace("#", "")).toLowerCase(); });
+    });
+    $("tbCancel").addEventListener("click", function () { editing = null; render(); });
+    $("tbSave").addEventListener("click", function () { saveEditor(s); });
+    $("tbDup").addEventListener("click", function () {
+      var copy = { id: nextId(), name: (s.name + " copy").slice(0, 32), props: clone(s.props), applied: null };
+      styles.push(copy); editing = copy.id; saveStyles();
+    });
+    $("tbDel").addEventListener("click", function () {
+      if (styles.length === 1) { ST.toast("Keep at least one table style.", true); return; }
+      styles = styles.filter(function (x) { return x !== s; }); editing = null; saveStyles();
+      ST.toast("Deleted " + s.name + ". Tables that used it keep their formatting.");
+    });
+  }
+  function num(id, fallback) { var v = ST.evaluate($(id).value, null, null); return v === null || v < 0 ? fallback : Math.round(v * 100) / 100; }
+  function hex(id, fallback) { var v = $(id).value.trim(); return /^#?[0-9a-f]{6}$/i.test(v) ? ("#" + v.replace("#", "")).toUpperCase() : fallback; }
+  function saveEditor(s) {
+    var P = clone(s.props);
+    var name = $("tbName").value.trim();
+    if (!name) { ST.toast("Give the style a name.", true); return; }
+    PARTS.forEach(function (p) {
+      var k = "tbF_" + p[0], f = P.fonts[p[0]];
+      f.ts = Number($(k + "_ts").value) || null;
+      f.name = $(k + "_name").value.trim();
+      f.size = num(k + "_size", f.size);
+      f.color = hex(k + "_color", f.color);
+      f.bold = $(k + "_bold").value === "1";
+      f.italic = $(k + "_italic").value === "1";
+    });
+    LINES.forEach(function (l) {
+      var k = "tbL_" + l[0], v = P.lines[l[0]];
+      v.on = $(k + "_on").value === "1";
+      v.w = num(k + "_w", v.w) || 0.25;
+      v.c = hex(k + "_c", v.c);
+    });
+    P.band.on = $("tbBandOn").value === "1";
+    P.band.color = hex("tbBandC", P.band.color);
+    P.pad.all = num("tbPadAll", P.pad.all);
+    P.pad.firstLeft = num("tbPadFirst", P.pad.firstLeft);
+    P.pad.lastRight = num("tbPadLast", P.pad.lastRight);
+    P.totalPrefix = $("tbTotal").value.trim();
+    s.name = name; s.props = P; editing = null;
+    saveStyles();
+    ST.toast(s.applied && pending(s) ? "Saved. Click Update all to change the tables that use it." : "Saved " + s.name + ".");
+  }
+  function newStyle() {
+    var s = { id: nextId(), name: "Table style " + nextId(), props: defaultProps(), applied: null };
+    styles.push(s); editing = s.id; render();
+  }
+
+  // ---------- Build ----------
+  var MARKUP =
+    '<span class="info res-info" tabindex="0" role="button" aria-label="How tables work">i' +
+      '<span class="tip" role="tooltip">Click a table style to format the selected table, or use Insert table to add one that is already formatted at the Layout grid area.<br><br>' +
+      'Each column has a role. Category columns hold stacked labels such as a year or a team, Label columns hold row names, and Data columns hold numbers. Click a column chip to change its role.<br><br>' +
+      'Rules: a heavier line under the header, under the table, above each new group (from that category column to the right) and above total rows. Thin lines between rows, except inside a category group, and on the left of each data column. Every second column gets a light fill.<br><br>' +
+      'Stack repeats blanks a category label that repeats the row above. Edit a style and click Update all to reformat every table that uses it. Formatting existing tables needs PowerPoint API 1.9.</span>' +
+    '</span>' +
+    '<div class="style-status" id="tblStatus" hidden></div>' +
+    '<div class="sublabel">Columns</div>' +
+    '<div class="mini-chips" id="tblRoles"></div>' +
+    '<button class="btn small" id="tblStack" title="Blank category labels that repeat the row above">Stack repeats</button>' +
+    '<div class="group-label">Table styles</div>' +
+    '<div class="style-list" id="tblList"></div>' +
+    '<div class="btn-row" data-min="2"><button class="btn small" id="tblNew">New style</button><button class="btn small" id="tblUpdate" title="Reformat every table linked to a style">Update all</button></div>' +
+    '<div class="group-label">Insert table</div>' +
+    '<div class="row"><label class="field">Rows<input type="text" id="tblRows" inputmode="numeric"></label>' +
+      '<label class="field">Columns<input type="text" id="tblCols" inputmode="numeric"></label></div>' +
+    '<label class="field" data-min="2">Style<select id="tblInsertStyle"></select></label>' +
+    '<button class="btn primary" id="tblInsert">Insert table</button>';
+
+  function build(body) {
+    body.appendChild(ST.html(MARKUP));
+    ST.bindField($("tblRows"), "tblRows", { number: true });
+    ST.bindField($("tblCols"), "tblCols", { number: true });
+    $("tblInsert").addEventListener("click", insert);
+    $("tblStack").addEventListener("click", stackRepeats);
+    $("tblNew").addEventListener("click", newStyle);
+    $("tblUpdate").addEventListener("click", updateAll);
+    ST.on("ready", loadStyles);
+    ST.on("selection", refreshTable);
+    ST.on("textstyles", function () { if (!editing) render(); });
+    render();
+  }
+
+  ST.registerTool({
+    id: "tables",
+    title: "Tables",
+    icon: ICON,
+    levels: [1, 2],
+    defaultLevel: 1,
+    defaults: defaults,
+    build: build
+  });
+
+  // Exposed for testing only
+  ST._tables = { cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
+    get: function () { return styles; }, current: function () { return current; } };
+})();
