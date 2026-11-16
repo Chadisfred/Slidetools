@@ -2,6 +2,16 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.12.0] 2026-11-16
+
+### Added
+
+1. Tables tool: named table styles saved in the presentation. Insert a formatted table at the Layout grid area, or format the selected table with one click.
+2. Column roles per table (Category, Label, Data), guessed from the contents and changed with a click. Roles set alignment, which columns get group rules, and where the thin vertical lines go.
+3. Default table style: 1 pt rules under the header and the table, 1 pt rules above new groups and total rows, 1/4 pt row lines, banded 2nd, 4th, 6th... columns, Avenir Next LT Pro fonts, and 0.05 in padding with flush outer edges.
+4. Style editor for fonts (or text styles), every line's weight, colour and visibility, column fill, padding and the total row word. Update all reformats every linked table.
+5. Stack repeats: blanks category labels that repeat the row above within the same group.
+
 ## [2.11.0] 2026-11-16
 
 ### Added

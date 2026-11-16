@@ -440,3 +440,15 @@ select:focus { border-color: var(--accent); }
 /* Arrange: template guides report */
 .arr-guides { display: grid; gap: 8px; }
 .arr-guides.off { display: none; }
+
+/* ---------- Tables tool ---------- */
+.role-chip b { font-weight: 700; margin-right: 2px; }
+.role-chip.role-C { border-color: var(--accent-line); color: var(--accent); background: var(--accent-soft); }
+.role-chip.role-L { border-style: dashed; }
+.role-chip.role-D { color: var(--text); }
+.tbl-tile { background: #fff; background-image: none; }
+.tbl-tile svg { display: block; }
+.prop-grid .span2 { grid-column: 1 / -1; }
+.tbl-editor .sublabel { margin-top: 2px; font-weight: 600; color: var(--text); }
+.prop-grid .color-field { grid-template-columns: 26px 1fr; gap: 4px; }
+.prop-grid .color-field input[type=color] { width: 26px; }
