@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.17.0] 2026-11-17
+
+### Added
+
+1. Tables: spaces, tabs and line breaks at the start and end of each cell are trimmed before formatting, so text pasted from Excel wraps properly and column widths fit the real text. Spaces inside the text are kept, and only cells that change are rewritten. A style setting turns it off.
+2. Tables: a Trim spaces button for a one-off clean up of the selected table.
+
 ## [2.16.0] 2026-11-17
 
 ### Added
