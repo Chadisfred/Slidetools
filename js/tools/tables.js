@@ -37,6 +37,7 @@
       pad: { all: 3.6, firstLeft: 0, lastRight: 0 },
       totalPrefix: "Total",
       thinSingleGroups: true,
+      trimSpaces: true,
       size: { on: true, rowMin: 1, rowStep: 0.25, fitColumns: true }
     };
   }
@@ -147,6 +148,19 @@
   }
 
   // Blanks a category label when it repeats the row above within the same parent group.
+  // Removes spaces, tabs and line breaks at the start and end of each cell (text pasted from
+  // Excel often has them), leaving everything inside the text alone.
+  function trimmedValues(values) {
+    var out = values.map(function (row) { return row.slice(); }), changed = [];
+    values.forEach(function (row, r) {
+      row.forEach(function (v, c) {
+        var text = v === null || v === undefined ? "" : String(v), clean = text.trim();
+        if (clean !== text) { out[r][c] = clean; changed.push([r, c]); }
+      });
+    });
+    return { values: out, changed: changed };
+  }
+
   function stackedValues(values, roles, P) {
     var R = values.length, C = R ? values[0].length : 0, totals = totalColumns(values, P), out = clone(values), filled = [];
     roles = normRoles(roles, C);
@@ -402,9 +416,31 @@
     return { widths: widths, W: W, g: g, wider: wider };
   }
 
+  // Rewrites only the cells whose text has spaces at the start or end. Resolves to the count.
+  function trimCells(context, info) {
+    var res = trimmedValues(info.values), count = 0;
+    res.changed.forEach(function (rc) {
+      if (info.merged[rc[0] + "," + rc[1]] && !info.anchors[rc[0] + "," + rc[1]]) return;
+      info.table.getCellOrNullObject(rc[0], rc[1]).text = res.values[rc[0]][rc[1]];
+      count++;
+    });
+    if (!count) return Promise.resolve(0);
+    return context.sync().then(function () { info.values = res.values; return count; });
+  }
+
   // Writes the style's rules into a table, cell by cell. Resolves to the list of setting
   // kinds PowerPoint refused (empty when everything applied). fresh: a table just inserted.
+  // Unless the style says otherwise, spaces at the start and end of cells are trimmed first,
+  // so column widths and wrapping are worked out on the clean text.
   function formatTable(context, info, style, roles, fresh) {
+    var refused = [];
+    var first = style.props.trimSpaces !== false && !fresh
+      ? trimCells(context, info).catch(function (e) { if (window.console) console.error("Table spaces:", e); refused.push("trim spaces"); })
+      : Promise.resolve();
+    return first.then(function () { return formatRules(context, info, style, roles, fresh); })
+      .then(function (failed) { refused.forEach(function (f) { failed.unshift(f); }); return failed; });
+  }
+  function formatRules(context, info, style, roles, fresh) {
     var props = cellProps(info.values, roles, style.props, info.merged), failed = [];
     function settings() {
       try {
@@ -659,6 +695,30 @@
     }).then(function () { busy = false; target = null; });
   }
 
+  function trimNow() {
+    if (!ST.needOffice() || busy) return;
+    if (canFormat() && !lineMode()) { checkThen(trimNow); return; }
+    if (!canInsert()) { ST.toast("This PowerPoint version can't change table text from the panel.", true); return; }
+    busy = true;
+    ST.run(function (context) {
+      return findTable(context).then(function (shape) {
+        if (!shape) { ST.toast(noTableMessage(), true); return; }
+        return readTable(context, shape).then(function (info) {
+          return trimCells(context, info).then(function (count) {
+            if (!count) { ST.toast("No extra spaces at the start or end of cells."); return; }
+            var style = byId(info.tag.s);
+            // A linked table is reformatted so sizes follow the cleaner text
+            var step = style && canFormat() ? formatTable(context, info, style, info.tag.r ? info.tag.r.split("") : guessRoles(info.values)) : Promise.resolve([]);
+            return step.then(function (failed) {
+              ST.toast("Trimmed spaces in " + ST.plural(count, "cell") + "." + refusedNote(failed), failed.length > 0);
+              refreshTable();
+            });
+          });
+        });
+      });
+    }).then(function () { busy = false; target = null; });
+  }
+
   function setRole(c) {
     if (!current || busy) return;
     var order = ["C", "L", "D"];
@@ -875,6 +935,7 @@
       '<label>Minimum row height (g)<input type="text" id="tbRowMin" inputmode="decimal" value="' + esc(Z.rowMin) + '"></label>' +
       '<label>Row height step (g)<input type="text" id="tbRowStep" inputmode="decimal" value="' + esc(Z.rowStep) + '"></label></div>';
     html += '<label class="field">With one category column, thin lines between groups' + onOff("tbThinSingle", P.thinSingleGroups !== false) + '</label>';
+    html += '<label class="field">Trim spaces at the start and end of cells' + onOff("tbTrim", P.trimSpaces !== false) + '</label>';
     html += '<label class="field">Total rows start with<input type="text" id="tbTotal" value="' + esc(P.totalPrefix) + '"></label>';
     html += '<div class="btn-row"><button class="btn" id="tbCancel">Cancel</button><button class="btn primary" id="tbSave">Save</button></div>' +
       '<div class="btn-row"><button class="btn small" id="tbDup">Duplicate</button><button class="btn small danger" id="tbDel">Delete</button></div></div>';
@@ -926,6 +987,7 @@
     P.pad.lastRight = num("tbPadLast", P.pad.lastRight);
     P.totalPrefix = $("tbTotal").value.trim();
     P.thinSingleGroups = $("tbThinSingle").value === "1";
+    P.trimSpaces = $("tbTrim").value === "1";
     P.size = P.size || defaultProps().size;
     P.size.on = $("tbSizeOn").value === "1";
     P.size.fitColumns = $("tbSizeFit").value === "1";
@@ -948,7 +1010,8 @@
     '<div class="sublabel label-row">Columns' + ST.info("Click a chip to switch it. <b>Category</b> stacked labels such as a year. <b>Label</b> row names. <b>Data</b> numbers, right aligned.", "About column roles") + '</div>' +
     '<div class="mini-chips" id="tblRoles"></div>' +
     '<div class="help tbl-diag" id="tblDiag" data-min="2"></div>' +
-    '<button class="btn small" id="tblStack" title="Blank category labels that repeat the row above">Stack repeats</button>' +
+    '<div class="btn-row"><button class="btn small" id="tblStack" title="Blank category labels that repeat the row above">Stack repeats</button>' +
+      '<button class="btn small" id="tblTrim" title="Remove spaces at the start and end of every cell">Trim spaces</button></div>' +
     '<div class="group-label">Table styles</div>' +
     '<div class="style-list" id="tblList"></div>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="tblNew">New style</button><button class="btn small" id="tblUpdate" title="Reformat every table linked to a style">Update all</button></div>' +
@@ -969,6 +1032,7 @@
       b.addEventListener("click", function () { answerLineCheck(b.getAttribute("data-ans")); });
     });
     $("tblStack").addEventListener("click", stackRepeats);
+    $("tblTrim").addEventListener("click", trimNow);
     $("tblNew").addEventListener("click", newStyle);
     $("tblUpdate").addEventListener("click", updateAll);
     ST.on("ready", loadStyles);
@@ -989,6 +1053,6 @@
   });
 
   // Exposed for testing only
-  ST._tables = { columnWidths: columnWidths, lineMode: lineMode, cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
+  ST._tables = { trimmedValues: trimmedValues, columnWidths: columnWidths, lineMode: lineMode, cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
     get: function () { return styles; }, current: function () { return current; } };
 })();

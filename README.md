@@ -295,6 +295,7 @@ Tips:
 1. Insert table adds a table at the Layout tool's grid area, at its full width, with header text and roles set (Category, Sub-category, Item, then Value columns).
 2. Clicking a style on a table that's already formatted reapplies it, keeping the table's roles. Changing a role reformats a linked table straight away.
 3. Stack repeats blanks a category label when it repeats the row above within the same group. It never touches label or data columns or total rows, and PowerPoint's Undo brings the labels back.
+4. Spaces, tabs and line breaks at the start and end of cells, common in text pasted from Excel, are trimmed before formatting so wrapping and column widths use the clean text. Only cells that change are rewritten. Turn it off in the style editor, or click Trim spaces for a one-off clean up.
 4. Edit a style, then Update all reformats every table on normal slides that uses it.
 5. Inserting needs PowerPoint API 1.8. Formatting an existing table needs 1.9. Only the top left cell of a merged area can be formatted.
 6. Tables inside content placeholders (made with the table icon in a layout) work the same as other tables.
