@@ -12,12 +12,11 @@
 
   var MARKUP =
     '<div class="inline">' +
-      '<label class="field">Radius (pt)<input type="text" id="radius" inputmode="decimal"></label>' +
+      '<label class="field"><span class="label-row">Radius (pt)' + ST.info("Works on rounded rectangles only. Square rectangles can't be rounded from the panel.", "About corners") + '</span><input type="text" id="radius" inputmode="decimal"></label>' +
       '<button class="btn" id="round">Round selection</button>' +
     '</div>' +
     '<div class="mini-chips" id="radiusChips" data-min="3"></div>' +
-    '<button class="btn small" id="readRadius" data-min="3" title="Set the radius box from the selected rounded rectangle">Read radius from selection</button>' +
-    '<div class="help" data-min="3">Works on rounded rectangles. Square rectangles can\'t be converted from the panel, so draw them rounded or use Round in your VBA Slide Tools.</div>';
+    '<button class="btn small" id="readRadius" data-min="3" title="Set the radius box from the selected rounded rectangle">Read radius from selection</button>';
 
   function renderChips() {
     var el = $("radiusChips");
@@ -91,6 +90,7 @@
     levels: [1, 3],
     defaultLevel: 1,
     defaults: defaults,
+    tip: { what: "Gives rounded rectangles an exact corner radius.", steps: ["Select rounded rectangles.", "Type the radius in points.", "Click Round selection."] },
     build: build
   });
 })();

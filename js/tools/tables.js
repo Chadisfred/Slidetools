@@ -756,7 +756,7 @@
     if (!box) return;
     if (diag) diag.textContent = ST.inOffice ? lastFind.report : "";
     if (!current) {
-      box.innerHTML = '<div class="muted-note">Select a table to set which columns are categories, labels and data.</div>';
+      box.innerHTML = '<div class="muted-note">Select a table to see its columns.</div>';
       status.hidden = true;
       return;
     }
@@ -842,7 +842,7 @@
   function editorMarkup(s) {
     var P = s.props, html = '<div class="style-editor tbl-editor">' +
       '<label class="field">Style name<input type="text" id="tbName" maxlength="32" value="' + esc(s.name) + '"></label>';
-    html += '<div class="group-label">Fonts</div>';
+    html += '<div class="group-label label-row">Fonts' + ST.info("A chosen text style overrides the font settings under it.", "About table fonts") + '</div>';
     PARTS.forEach(function (p) {
       var f = P.fonts[p[0]], k = "tbF_" + p[0];
       html += '<div class="sublabel">' + p[1] + '</div><div class="prop-grid">' +
@@ -853,7 +853,6 @@
         '<label>Bold' + onOff(k + "_bold", f.bold) + '</label>' +
         '<label>Italic' + onOff(k + "_italic", f.italic) + '</label></div>';
     });
-    html += '<div class="help">A chosen text style overrides the font settings under it.</div>';
     html += '<div class="group-label">Lines</div>';
     LINES.forEach(function (l) {
       var v = P.lines[l[0]], k = "tbL_" + l[0];
@@ -862,21 +861,19 @@
         '<label>Weight (pt)<input type="text" id="' + k + '_w" inputmode="decimal" value="' + esc(v.w) + '"></label>' +
         '<label class="span2">Colour' + colorField(k + "_c", v.c) + '</label></div>';
     });
-    html += '<div class="group-label">Column fill</div><div class="prop-grid">' +
+    html += '<div class="group-label label-row">Column fill' + ST.info("Body rows only, counted from the table's left edge.", "About column fill") + '</div><div class="prop-grid">' +
       '<label>Fill 2nd, 4th, 6th... columns' + onOff("tbBandOn", P.band.on) + '</label>' +
-      '<label>Colour' + colorField("tbBandC", P.band.color) + '</label></div>' +
-      '<div class="help">Body rows only, counted from the table\'s left edge.</div>';
+      '<label>Colour' + colorField("tbBandC", P.band.color) + '</label></div>';
     html += '<div class="group-label">Padding inside cells (pt)</div><div class="prop-grid">' +
       '<label>All sides<input type="text" id="tbPadAll" inputmode="decimal" value="' + esc(P.pad.all) + '"></label>' +
       '<label>First column, left<input type="text" id="tbPadFirst" inputmode="decimal" value="' + esc(P.pad.firstLeft) + '"></label>' +
       '<label>Last column, right<input type="text" id="tbPadLast" inputmode="decimal" value="' + esc(P.pad.lastRight) + '"></label></div>';
     var Z = P.size || defaultProps().size;
-    html += '<div class="group-label">Sizes</div><div class="prop-grid">' +
+    html += '<div class="group-label label-row">Sizes' + ST.info("g is the Layout spacing. Columns are whole steps of g and the table fills the grid area. Label columns get the room left over.", "About table sizes") + '</div><div class="prop-grid">' +
       '<label>Grid-based sizes' + onOff("tbSizeOn", Z.on) + '</label>' +
       '<label>Fit column widths' + onOff("tbSizeFit", Z.fitColumns) + '</label>' +
       '<label>Minimum row height (g)<input type="text" id="tbRowMin" inputmode="decimal" value="' + esc(Z.rowMin) + '"></label>' +
-      '<label>Row height step (g)<input type="text" id="tbRowStep" inputmode="decimal" value="' + esc(Z.rowStep) + '"></label></div>' +
-      '<div class="help">g is the Layout spacing. Columns are whole steps of g and the table fills the grid area width. Label columns take the room left after category and data columns fit their text.</div>';
+      '<label>Row height step (g)<input type="text" id="tbRowStep" inputmode="decimal" value="' + esc(Z.rowStep) + '"></label></div>';
     html += '<label class="field">With one category column, thin lines between groups' + onOff("tbThinSingle", P.thinSingleGroups !== false) + '</label>';
     html += '<label class="field">Total rows start with<input type="text" id="tbTotal" value="' + esc(P.totalPrefix) + '"></label>';
     html += '<div class="btn-row"><button class="btn" id="tbCancel">Cancel</button><button class="btn primary" id="tbSave">Save</button></div>' +
@@ -945,16 +942,10 @@
 
   // ---------- Build ----------
   var MARKUP =
-    '<span class="info res-info" tabindex="0" role="button" aria-label="How tables work">i' +
-      '<span class="tip" role="tooltip">Click a table style to format the selected table, or use Insert table to add one that is already formatted at the Layout grid area.<br><br>' +
-      'Each column has a role. Category columns hold stacked labels such as a year or a team, Label columns hold row names, and Data columns hold numbers. Click a column chip to change its role.<br><br>' +
-      'Rules: a heavier line under the header, under the table, above each new group (from that category column to the right) and above total rows. Thin lines between rows, except inside a category group, and on the left of each data column. Every second column gets a light fill.<br><br>' +
-      'Stack repeats blanks a category label that repeats the row above. Edit a style and click Update all to reformat every table that uses it. Formatting existing tables needs PowerPoint API 1.9.</span>' +
-    '</span>' +
     '<div class="line-check" id="tblCheck" hidden><div class="check-q"></div>' +
       '<div class="check-btns"><button class="btn" data-ans="A">A</button><button class="btn" data-ans="B">B</button><button class="btn small" data-ans="none" title="Neither cell, or both cells, have a thick line">Not sure</button></div></div>' +
     '<div class="style-status" id="tblStatus" hidden></div>' +
-    '<div class="sublabel">Columns</div>' +
+    '<div class="sublabel label-row">Columns' + ST.info("Click a chip to switch it. <b>Category</b> stacked labels such as a year. <b>Label</b> row names. <b>Data</b> numbers, right aligned.", "About column roles") + '</div>' +
     '<div class="mini-chips" id="tblRoles"></div>' +
     '<div class="help tbl-diag" id="tblDiag" data-min="2"></div>' +
     '<button class="btn small" id="tblStack" title="Blank category labels that repeat the row above">Stack repeats</button>' +
@@ -993,6 +984,7 @@
     levels: [1, 2],
     defaultLevel: 1,
     defaults: defaults,
+    tip: { what: "Formats a table in one click.", steps: ["Select a table.", "Check the column chips.", "Click a style, or use Insert table."] },
     build: build
   });
 

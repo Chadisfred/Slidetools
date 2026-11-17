@@ -20,24 +20,17 @@
   ];
 
   var MARKUP =
-    '<span class="info res-info" tabindex="0" role="button" aria-label="How Arrange works">i' +
-      '<span class="tip" role="tooltip">Align lines shapes up with the selection, the Layout grid area, or the largest selected shape.<br><br>' +
-      'Distribute places shapes one after another with an exact gap. The gap box takes numbers or formulas such as <code>g</code>, <code>0.5g</code> or <code>gap</code>.<br><br>' +
-      'Snap moves each shape\'s top left corner to the nearest line. Guides uses the guides built into your template, read from the slide\'s layout and master. Columns uses the corners of the Layout tool\'s columns and rows. Steps uses every <code>g</code> from the grid area\'s top left.<br><br>' +
-      'Measurements can be typed in inches, or with pt, cm or mm, for example <code>30pt</code>.</span>' +
-    '</span>' +
     '<div class="group-label">Align</div>' +
     '<div class="icon-row" id="arrAlign"></div>' +
     '<div data-min="2"><div class="sublabel">Align to</div></div>' +
     '<div class="seg seg3" id="arrAlignTo" data-min="2"></div>' +
-    '<div class="group-label">Distribute</div>' +
+    '<div class="group-label label-row">Distribute' + ST.info("Across and Down place shapes one after another with exactly this gap. Even gaps keeps the outer shapes still and shares the space.", "About distribute") + '</div>' +
     '<div class="inline"><label class="field">Gap between shapes<input type="text" id="arrGap" placeholder="e.g. g"></label>' +
       '<div class="pair"><button class="btn small" id="arrDistH" title="Place shapes left to right with this gap">Across</button><button class="btn small" id="arrDistV" title="Place shapes top to bottom with this gap">Down</button></div></div>' +
     '<div class="calc" id="arrGapCalc" data-min="2"></div>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="arrSpreadH" title="Equal gaps, keeping the outer shapes where they are">Even gaps across</button><button class="btn small" id="arrSpreadV" title="Equal gaps, keeping the outer shapes where they are">Even gaps down</button></div>' +
-    '<div class="group-label">Snap</div>' +
+    '<div class="group-label label-row">Snap' + ST.info("Moves each shape's top left corner to the nearest line.<br><b>Guides</b> the guides on your slide.<br><b>Columns</b> the Layout grid's column and row corners.<br><b>Steps</b> every g from the grid area's top left.", "About snap") + '</div>' +
     '<div class="seg seg3" id="arrSnapMode"></div>' +
-    '<div class="help" id="arrSnapNote"></div>' +
     '<div class="toggle arr-cells" data-min="2">Resize to the cells it covers<label class="switch"><input type="checkbox" id="arrSnapResize"><span></span></label></div>' +
     '<div class="toggle arr-edges" data-min="2">Snap all four edges<label class="switch"><input type="checkbox" id="arrSnapEdges"><span></span></label></div>' +
     '<div class="arr-guides" data-min="2"><div class="help" id="arrGuideInfo"></div>' +
@@ -519,6 +512,7 @@
     levels: [1, 2, 3],
     defaultLevel: 1,
     defaults: defaults,
+    tip: { what: "Lines up, spaces and snaps shapes.", steps: ["Select shapes.", "Click an align button, Across or Down, or Snap."] },
     build: build
   });
 })();

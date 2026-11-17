@@ -14,13 +14,8 @@
   var ICON = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="8" height="8" rx="1.5"/><rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" fill-opacity="0.25"/></svg>';
 
   var MARKUP =
-    '<span class="info res-info" tabindex="0" role="button" aria-label="How Match works">i' +
-      '<span class="tip" role="tooltip">Select similar uses the first selected shape as the example and selects every shape on the slide that matches it on the ticked settings.<br><br>' +
-      'PowerPoint can only select shapes on one slide at a time, so Next slide and Previous slide jump to the next slide with matches and select them there. Masters and layouts are never searched.<br><br>' +
-      'Copy remembers the first selected shape\'s position and size until you close the panel. Paste puts every selected shape in the same spot, the same size, or both. Paste from chooses which point lines up when the sizes differ.</span>' +
-    '</span>' +
     '<div class="group-label">Select similar</div>' +
-    '<div class="sublabel">Match by</div>' +
+    '<div class="sublabel label-row">Match by' + ST.info("Shapes must match on every chip that's on. Size allows half a point of difference. Pictures and tables only match by Type and Size.", "About match by") + '</div>' +
     '<div class="mini-chips" id="matchBy"></div>' +
     '<button class="btn primary" id="matchSelect">Select similar on slide</button>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="matchPrev" title="Go to the previous slide with matches and select them">Previous slide</button><button class="btn small" id="matchNext" title="Go to the next slide with matches and select them">Next slide</button></div>' +
@@ -28,7 +23,7 @@
     '<div class="group-label">Position and size</div>' +
     '<div class="btn-row"><button class="btn small" id="posCopy" title="Remember the first selected shape\'s position and size">Copy</button><button class="btn small" id="posPaste" title="Apply the copied position and size to the selected shapes" disabled>Paste</button></div>' +
     '<div class="seg seg3" id="pasteWhat"></div>' +
-    '<div class="anchor-row" data-min="2"><span>Paste from <b id="pasteAnchorName"></b></span><div class="anchor" id="pasteAnchor"></div></div>' +
+    '<div class="anchor-row" data-min="2"><span class="label-row">Paste from&nbsp;<b id="pasteAnchorName"></b>' + ST.info("The point that lines up with the copied shape when sizes differ.", "About paste from") + '</span><div class="anchor" id="pasteAnchor"></div></div>' +
     '<div class="help" id="posCopied">Nothing copied yet.</div>';
 
   // ---------- State kept for this session only ----------
@@ -288,6 +283,7 @@
     levels: [1, 2],
     defaultLevel: 1,
     defaults: defaults,
+    tip: { what: "Selects shapes like the one you pick, and copies position and size.", steps: ["Select an example shape.", "Choose what to match.", "Click Select similar."] },
     build: build
   });
 

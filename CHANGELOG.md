@@ -2,6 +2,19 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.15.0] 2026-11-17
+
+### Added
+
+1. User manual at `manual.html`: getting started, then a section per tool with quick start steps, a before and after example, panel screenshots, what each level shows, and tips. Light and dark, and readable on a phone.
+2. How to use in every tool's ... menu, opening that tool's section of the manual.
+
+### Changed
+
+1. Every tool's i tip is now one line saying what the tool does, followed by up to three steps. Layout and Corners have one for the first time.
+2. Explanations that sat under controls moved into small i icons next to the setting they describe (grid spacing, gaps, formulas, corners, distribute, snap modes, match by, paste from, table columns, table fonts, column fill and sizes).
+3. Shorter empty states and clearer button hover text.
+
 ## [2.14.0] 2026-11-16
 
 ### Changed

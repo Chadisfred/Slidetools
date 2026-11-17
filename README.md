@@ -8,6 +8,8 @@ Open that address in a browser to try the panel in preview mode. The calculator 
 
 Note the capital S in `Slidetools`. The address doesn't work with a lowercase s.
 
+New to the tools? The [user manual](https://chadisfred.github.io/Slidetools/manual.html) explains each one with steps, examples and screenshots. In the panel, each tool's ... menu has How to use, which opens its section.
+
 ## Contents
 
 1. [Installing](#installing)
@@ -410,10 +412,11 @@ There is no build step. GitHub Pages serves the files as they are.
        levels: [1, 2, 3],         // any of 1 Basic, 2 More, 3 Full
        defaultLevel: 1,
        defaults: defaults,        // what "Reset to defaults" restores
+       tip: { what: "One line saying what the tool does.", steps: ["First step.", "Second step."] },
        build: function (body) {
          body.appendChild(ST.html(
-           '<label class="field">My value<input type="text" id="myValue"></label>' +
-           '<div class="help" data-min="3">Only shown at Full.</div>'));
+           '<label class="field"><span class="label-row">My value' + ST.info("One short sentence about this setting.") + '</span>' +
+           '<input type="text" id="myValue"></label>'));
          ST.bindField(ST.$("myValue"), "myValue", { number: true });
        }
      });
@@ -433,6 +436,16 @@ There is no build step. GitHub Pages serves the files as they are.
 
 4. Useful helpers on `window.ST`: `state`, `changed()`, `on("change" | "selection" | "reset" | "layout", fn)`, `selection`, `withSelection(props, task)`, `run(task)`, `toast(message, isBad)`, `supports(version)`, `evaluate(text, vars)`.
 
+5. Add a section for the tool to `manual.html`, with an anchor that matches the tool's `id`, so How to use in the tool's menu opens it.
+
 New tools appear at the bottom of the stack for anyone who already has a saved arrangement.
+
+### Writing panel text
+
+1. No paragraphs in the panel. Any explanation goes behind an i icon (`ST.info(text)`).
+2. The header tip (`tip`) is one line saying what the tool does, then up to 3 short steps, about 40 words at most.
+3. Inline tips cover one setting each, in one or two short sentences.
+4. Visible text is only labels, buttons and live status, such as "3 matches on slide 4". Empty states are one short line saying what to do.
+5. Buttons start with a verb. Hover titles are 3 to 8 words. Use the same terms everywhere: grid area, g, category, label, data.
 
 See [CHANGELOG.md](CHANGELOG.md) for the history of changes.

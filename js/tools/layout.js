@@ -41,7 +41,7 @@
       '<label class="field">Columns<div class="stepper"><input type="text" id="cols" inputmode="numeric"><button data-step="cols:-1" title="Fewer columns">&minus;</button><button data-step="cols:1" title="More columns">+</button></div></label>' +
       '<label class="field">Rows<div class="stepper"><input type="text" id="rows" inputmode="numeric"><button data-step="rows:-1" title="Fewer rows">&minus;</button><button data-step="rows:1" title="More rows">+</button></div></label>' +
     '</div>' +
-    '<label class="field" data-min="2">Grid spacing (g)<input type="text" id="spacing" inputmode="decimal"></label>' +
+    '<label class="field" data-min="2"><span class="label-row">Grid spacing (g)' + ST.info("The basic step for the whole panel. Gaps, snapping and table sizes are measured in g. Type 30pt to match a 30 pt guide grid.", "About grid spacing") + '</span><input type="text" id="spacing" inputmode="decimal"></label>' +
     '<div class="row" data-min="2">' +
       '<label class="field">Area width<input type="text" id="maxW" inputmode="decimal"></label>' +
       '<label class="field">Area height<input type="text" id="maxH" inputmode="decimal"></label>' +
@@ -50,10 +50,10 @@
       '<label class="field">Left<input type="text" id="left" inputmode="decimal"></label>' +
       '<label class="field">Top<input type="text" id="top" inputmode="decimal"></label>' +
     '</div>' +
-    '<button class="btn small" id="useArea" data-min="2" title="Take the position and size of the selected shapes as the grid area">Use selection as area</button>' +
-    '<div class="sublabel" data-min="2">Horizontal gap</div>' +
+    '<button class="btn small" id="useArea" data-min="2" title="Set the grid area from the selected shapes">Use selection as area</button>' +
+    '<div class="sublabel label-row" data-min="2">Gap between columns' + ST.info("A fraction of g. 1/2 means the gap is half the grid spacing.", "About the gap") + '</div>' +
     '<div class="seg" id="segH" data-min="2"></div>' +
-    '<div class="sublabel" data-min="2">Vertical gap</div>' +
+    '<div class="sublabel" data-min="2">Gap between rows</div>' +
     '<div class="seg" id="segV" data-min="2"></div>' +
     '<div class="toggle" data-min="3">Draw with rounded corners<label class="switch"><input type="checkbox" id="drawRounded"><span></span></label></div>' +
     '<div class="toggle" data-min="3">Group shapes after drawing<label class="switch"><input type="checkbox" id="groupDrawn"><span></span></label></div>' +
@@ -402,6 +402,7 @@
     levels: [1, 2, 3],
     defaultLevel: 2,
     defaults: defaults,
+    tip: { what: "Plans columns and rows and draws them on the slide.", steps: ["Set columns, rows and spacing.", "Check the preview.", "Click Draw on slide, or select shapes and click Fit selection."] },
     build: build
   });
 })();
