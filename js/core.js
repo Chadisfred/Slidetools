@@ -284,9 +284,10 @@
       '<span class="tip" role="tooltip">' + text + "</span></span>";
   };
   // Opens the user manual at a section, in the system browser where Office allows it.
-  ST.MANUAL_URL = "https://chadisfred.github.io/Slidetools/manual.html";
-  ST.openHelp = function (anchor) {
-    var url = ST.MANUAL_URL + (anchor ? "#" + anchor : "");
+  ST.SITE_URL = "https://chadisfred.github.io/Slidetools/";
+  // Each tool has its own manual page, named after the tool's id.
+  ST.openHelp = function (page) {
+    var url = ST.SITE_URL + (page ? "manual/" + page + ".html" : "manual.html");
     try {
       if (window.Office && Office.context && Office.context.ui && Office.context.ui.openBrowserWindow) { Office.context.ui.openBrowserWindow(url); return; }
     } catch (e) { /* fall back to a normal window */ }
