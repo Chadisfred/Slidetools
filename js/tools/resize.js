@@ -5,7 +5,7 @@
   var ST = window.ST, PT = ST.PT, $ = ST.$;
   var MAX_RECENT = 6;
 
-  var defaults = { resW: "", resH: "", lockAspect: false, anchor: 0 };
+  var defaults = { resW: "", resH: "", lockAspect: false, anchor: 0, cropPictures: true };
   ST.addDefaults(defaults);
   ST.addDefaults({ recentFormulas: [] });
 
@@ -19,6 +19,7 @@
     '</div>' +
     '<div class="calc" id="calc" data-min="2"></div>' +
     '<div class="toggle" data-min="2">Lock aspect ratio<label class="switch"><input type="checkbox" id="lockAspect"><span></span></label></div>' +
+    '<div class="toggle" data-min="2"><span class="label-row">Crop pictures to fit' + ST.info("When a picture's frame changes shape, the picture is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. Slide comments may not carry over, and Undo takes more than one step. Turn this off to keep pictures in proportion instead.", "About cropping pictures") + '</span><label class="switch"><input type="checkbox" id="cropPictures"><span></span></label></div>' +
     '<div class="anchor-row" data-min="2"><span>Resize from <b id="anchorName"></b></span><div class="anchor" id="anchor"></div></div>' +
     '<div class="btn-row res-actions">' +
       '<button class="btn" id="useSel" data-min="2" title="Copy the selected shape\'s size into the boxes">Use selection</button>' +
@@ -44,14 +45,55 @@
     if (nh !== null) { s.top = s.top + (s.height - nh) * f.y; s.height = nh; }
   }
 
+  // A line has no area: its type says so, or one side is 0.
+  function isLine(s) { return s.type === "Line" || s.width === 0 || s.height === 0; }
+  function lengthOf(s) { return Math.sqrt(s.width * s.width + s.height * s.height); }
+  // New width and height that give a line this length, keeping its direction.
+  function lineSize(s, len) { var now = lengthOf(s); return [s.width * len / now, s.height * len / now]; }
+  // The frame a resize would give, without touching the shape.
+  function frameFor(s, nw, nh) { var b = { left: s.left, top: s.top, width: s.width, height: s.height }; applySize(b, nw, nh); return b; }
+  function sameShape(w1, h1, w2, h2) { return Math.abs(w1 * h2 - w2 * h1) <= 0.002 * Math.max(w1 * h2, w2 * h1); }
+
+  // Runs after plain resizes have synced: crops pictures whose frame changes shape,
+  // or keeps them in proportion when cropping is off or unavailable.
+  // plans: [{ shape, nw, nh }] in points. Resolves { cropped, kept, missed, note }.
+  function finishPictures(context, plans) {
+    var out = { resized: 0, cropped: 0, kept: 0, missed: [], note: "" };
+    if (!plans.length) return Promise.resolve(out);
+    var jobs = [];
+    var crop = ST.state.cropPictures !== false && ST.crop.canCrop();
+    if (ST.state.cropPictures !== false && !ST.crop.canCrop()) out.note = " This version of PowerPoint can't crop pictures, so they kept their proportions.";
+    plans.forEach(function (p) {
+      var s = p.shape, nw = p.nw === null ? s.width : p.nw, nh = p.nh === null ? s.height : p.nh;
+      if (sameShape(s.width, s.height, nw, nh)) { applySize(s, nw, nh); out.resized++; return; }
+      if (crop) { jobs.push({ shape: s, frame: frameFor(s, nw, nh), anchor: anchorFactors() }); return; }
+      // Keep proportions, led by the box that was typed
+      if (p.nw !== null) nh = s.height * nw / s.width; else nw = s.width * nh / s.height;
+      applySize(s, nw, nh); out.kept++;
+    });
+    return context.sync().then(function () {
+      if (!jobs.length) return out;
+      return ST.crop.apply(context, jobs).then(function (r) { out.cropped = r.cropped; out.missed = r.missed; return out; });
+    });
+  }
+  function pictureMessage(r) {
+    return (r.cropped ? " Cropped " + ST.plural(r.cropped, "picture") + " to fit." : "") +
+      (r.kept ? " " + ST.plural(r.kept, "picture") + " kept " + (r.kept === 1 ? "its" : "their") + " proportions." : "") +
+      (r.missed.length ? " Couldn't find " + r.missed.join(", ") + " in the slide, so it wasn't cropped." : "") + r.note;
+  }
+  function failText(e) {
+    return "Couldn't crop the pictures. " + (ST.errorText ? ST.errorText(e) : "");
+  }
+
   function updateCalc() {
     var parts = [], bad = false, sel = ST.selection;
     [["resW", "Width", "w"], ["resH", "Height", "h"]].forEach(function (f) {
       var text = ST.state[f[0]];
       if (!text || !String(text).trim()) return;
-      var v = ST.evaluate(text, ST.formulaVars(sel.count ? sel.w : undefined, sel.count ? sel.h : undefined), f[2]);
+      var line = sel.count && sel.line ? Math.sqrt(sel.w * sel.w + sel.h * sel.h) : 0;
+      var v = ST.evaluate(text, line ? ST.formulaVars(line, line) : ST.formulaVars(sel.count ? sel.w : undefined, sel.count ? sel.h : undefined), f[2]);
       if (v === null || v <= 0) { parts.push(f[1] + ": check the formula"); bad = true; }
-      else parts.push(f[1] + " = " + ST.nice(v) + " in");
+      else parts.push((line ? "Length" : f[1]) + " = " + ST.nice(v) + " in");
     });
     var calc = $("calc");
     calc.textContent = parts.join("     ");
@@ -105,7 +147,9 @@
   function useSelection() {
     if (!ST.needOffice()) return;
     if (!ST.selection.count) { ST.toast("Select a shape first.", true); return; }
-    ST.state.resW = ST.nice(ST.selection.w); ST.state.resH = ST.nice(ST.selection.h);
+    var sw = ST.selection.w, sh = ST.selection.h;
+    if (ST.selection.line) { ST.state.resW = ST.nice(Math.sqrt(sw * sw + sh * sh)); ST.state.resH = ""; } // a line: its length
+    else { ST.state.resW = ST.nice(sw); ST.state.resH = ST.nice(sh); }
     $("resW").value = ST.state.resW; $("resH").value = ST.state.resH;
     ST.changed();
   }
@@ -119,50 +163,87 @@
     doH = doH && !!hText;
     if (lock && doW && doH) doH = false; // width leads when the lock is on
     if (!doW && !doH) { ST.toast("Type a width or height first.", true); return; }
-    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
-      var updates = [];
-      for (var i = 0; i < items.length; i++) {
-        var s = items[i], vars = ST.formulaVars(s.width / PT, s.height / PT);
-        var nw = doW ? ST.evaluate(wText, vars, "w") : null;
-        var nh = doH ? ST.evaluate(hText, vars, "h") : null;
-        if ((doW && !(nw > 0)) || (doH && !(nh > 0))) { ST.toast("That formula couldn't be worked out.", true); return; }
-        if (nw !== null) nw *= PT;
-        if (nh !== null) nh *= PT;
-        // Lines have no width or height, so they can't keep a ratio
-        var canLock = lock && s.width > 0 && s.height > 0;
-        if (canLock && nw !== null) nh = s.height * nw / s.width;
-        if (canLock && nh !== null && nw === null) nw = s.width * nh / s.height;
-        updates.push([s, nw, nh]);
-      }
-      updates.forEach(function (u) { applySize(u[0], u[1], u[2]); });
-      return context.sync().then(function () {
-        remember(doW ? wText : "", doH ? hText : "");
-        var first = updates[0];
-        if (doW) { ST.state.resW = ST.nice(first[1] / PT); $("resW").value = ST.state.resW; }
-        if (doH) { ST.state.resH = ST.nice(first[2] / PT); $("resH").value = ST.state.resH; }
-        ST.changed();
-        ST.toast("Resized " + ST.plural(updates.length, "shape") + ".");
-        ST.refreshSelection();
+    var lineText = doW ? wText : hText; // a line's length comes from whichever box is used
+    ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
+      return ST.crop.pictureFlags(context, items).then(function (isPic) {
+        var updates = [], pics = [], lines = 0, skipped = 0, firstW = null, firstH = null;
+        for (var i = 0; i < items.length; i++) {
+          var s = items[i];
+          if (isLine(s) && !isPic[i]) {
+            var len = lengthOf(s);
+            if (!(len > 0)) { skipped++; continue; }
+            var L = ST.evaluate(lineText, ST.formulaVars(len / PT, len / PT), "w");
+            if (!(L > 0)) { ST.toast("That formula couldn't be worked out.", true); return; }
+            var ls = lineSize(s, L * PT);
+            updates.push([s, ls[0], ls[1]]); lines++;
+            if (firstW === null) firstW = L;
+            continue;
+          }
+          var vars = ST.formulaVars(s.width / PT, s.height / PT);
+          var nw = doW ? ST.evaluate(wText, vars, "w") : null;
+          var nh = doH ? ST.evaluate(hText, vars, "h") : null;
+          if ((doW && !(nw > 0)) || (doH && !(nh > 0))) { ST.toast("That formula couldn't be worked out.", true); return; }
+          if (nw !== null) nw *= PT;
+          if (nh !== null) nh *= PT;
+          if (lock && nw !== null) nh = s.height * nw / s.width;
+          if (lock && nh !== null && nw === null) nw = s.width * nh / s.height;
+          if (firstW === null && firstH === null) { firstW = doW ? nw / PT : null; firstH = doH ? nh / PT : null; }
+          if (isPic[i]) pics.push({ shape: s, nw: nw, nh: nh });
+          else updates.push([s, nw, nh]);
+        }
+        if (!updates.length && !pics.length) { ST.toast(skipped ? "Those lines have no length to scale." : "Select the shapes on your slide first.", true); return; }
+        updates.forEach(function (u) { applySize(u[0], u[1], u[2]); });
+        return context.sync().then(function () {
+          return finishPictures(context, pics).catch(function (e) { return { resized: 0, cropped: 0, kept: 0, missed: [], note: " " + failText(e), failed: true }; });
+        }).then(function (r) {
+          remember(doW ? wText : "", doH ? hText : "");
+          if (doW && firstW !== null) { ST.state.resW = ST.nice(firstW); $("resW").value = ST.state.resW; }
+          if (doH && firstH !== null) { ST.state.resH = ST.nice(firstH); $("resH").value = ST.state.resH; }
+          ST.changed();
+          var plain = updates.length + r.resized;
+          var msg = (plain ? "Resized " + ST.plural(plain, "shape") + (lines ? " (" + ST.plural(lines, "line") + " by length)" : "") + "." : "") + pictureMessage(r);
+          if (skipped) msg += " Skipped " + ST.plural(skipped, "line") + " with no length.";
+          ST.toast(msg.trim(), !!r.failed);
+          ST.refreshSelection();
+        });
       });
     });
   }
 
   function matchSize(largest) {
-    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
+    ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
       if (items.length < 2) { ST.toast("Select at least two shapes to match.", true); return; }
-      var target = items.reduce(function (best, s) {
-        var a = s.width * s.height, b = best.width * best.height;
-        return (largest ? a > b : a < b) ? s : best;
-      });
-      var tw = target.width, th = target.height, changed = 0;
-      items.forEach(function (s) {
-        if (s === target) return;
-        applySize(s, tw, th);
-        changed++;
-      });
-      return context.sync().then(function () {
-        ST.toast("Matched " + ST.plural(changed, "shape") + " to " + ST.nice(tw / PT) + " x " + ST.nice(th / PT) + " in.");
-        ST.refreshSelection();
+      return ST.crop.pictureFlags(context, items).then(function (isPic) {
+        var lineItems = [], others = [];
+        items.forEach(function (s, i) { if (isLine(s) && !isPic[i]) { if (lengthOf(s) > 0) lineItems.push(s); } else others.push({ s: s, pic: isPic[i] }); });
+        if (lineItems.length < 2 && others.length < 2) { ST.toast("Select at least two shapes, or two lines, to match.", true); return; }
+        var parts = [], pics = [], changed = 0;
+        if (lineItems.length >= 2) {
+          var lt = lineItems.reduce(function (best, s) { return (largest ? lengthOf(s) > lengthOf(best) : lengthOf(s) < lengthOf(best)) ? s : best; });
+          var L = lengthOf(lt), n = 0;
+          lineItems.forEach(function (s) { if (s === lt) return; var ls = lineSize(s, L); applySize(s, ls[0], ls[1]); n++; });
+          parts.push("Matched " + ST.plural(n, "line") + " to " + ST.nice(L / PT) + " in long.");
+        }
+        var tw, th;
+        if (others.length >= 2) {
+          var target = others.reduce(function (best, o) {
+            var a = o.s.width * o.s.height, b = best.s.width * best.s.height;
+            return (largest ? a > b : a < b) ? o : best;
+          }).s;
+          tw = target.width; th = target.height;
+          others.forEach(function (o) {
+            if (o.s === target) return;
+            if (o.pic) pics.push({ shape: o.s, nw: tw, nh: th }); else { applySize(o.s, tw, th); changed++; }
+          });
+        }
+        return context.sync().then(function () {
+          return finishPictures(context, pics).catch(function (e) { return { resized: 0, cropped: 0, kept: 0, missed: [], note: " " + failText(e), failed: true }; });
+        }).then(function (r) {
+          changed += r.resized + r.kept;
+          if (others.length >= 2 && (changed || !pics.length)) parts.unshift("Matched " + ST.plural(changed, "shape") + " to " + ST.nice(tw / PT) + " x " + ST.nice(th / PT) + " in.");
+          ST.toast((parts.join(" ") + pictureMessage(r)).trim(), !!r.failed);
+          ST.refreshSelection();
+        });
       });
     });
   }
@@ -176,6 +257,9 @@
     var lock = $("lockAspect");
     lock.checked = !!ST.state.lockAspect;
     lock.addEventListener("change", function () { ST.state.lockAspect = lock.checked; ST.save(); });
+    var crop = $("cropPictures");
+    crop.checked = ST.state.cropPictures !== false;
+    crop.addEventListener("change", function () { ST.state.cropPictures = crop.checked; ST.save(); });
     $("useSel").addEventListener("click", useSelection);
     $("resize").addEventListener("click", function () { resizeSelection(true, true); });
     $("matchLarge").addEventListener("click", function () { matchSize(true); });
@@ -184,7 +268,7 @@
     renderRecent();
     ST.on("change", updateCalc);
     ST.on("selection", updateCalc);
-    ST.on("reset", function () { lock.checked = !!ST.state.lockAspect; renderAnchor(); });
+    ST.on("reset", function () { lock.checked = !!ST.state.lockAspect; crop.checked = ST.state.cropPictures !== false; renderAnchor(); });
   }
 
   ST.registerTool({

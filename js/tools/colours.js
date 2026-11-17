@@ -97,7 +97,7 @@
       var start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
       var data = bytes.subarray(start, start + csize);
       jobs.push((method === 8 ? inflate(data) : Promise.resolve(data)).then((function (nm) {
-        return function (raw) { return { name: nm, text: dec.decode(raw) }; };
+        return function (raw) { return { name: nm, bytes: raw, get text() { return dec.decode(raw); } }; };
       })(name)));
     }
     return Promise.all(jobs);

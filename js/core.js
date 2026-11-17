@@ -11,8 +11,9 @@
     PT: PT,
     MAX_COLS: 12,
     MAX_ROWS: 8,
-    FRACTIONS: [0.125, 0.25, 0.5, 0.75, 1],
-    FRACTION_LABELS: ["1/8", "1/4", "1/2", "3/4", "1"],
+    FRACTIONS: [0.125, 0.25, 0.5, 0.75, 1, 0],
+    FRACTION_ORDER: [5, 0, 1, 2, 3, 4], // None first; indexes stay stable for saved settings
+    FRACTION_LABELS: ["1/8", "1/4", "1/2", "3/4", "1", "None"],
     state: {},
     defaults: {},
     grid: {},
@@ -125,8 +126,8 @@
     var maxW = num(s.maxW), maxH = num(s.maxH);
     var cols = Math.min(ST.MAX_COLS, Math.max(1, Math.floor(num(s.cols)) || 1));
     var rows = Math.min(ST.MAX_ROWS, Math.max(1, Math.floor(num(s.rows)) || 1));
-    var gapH = spacing * ST.FRACTIONS[s.hIdx];
-    var gapV = spacing * ST.FRACTIONS[s.vIdx];
+    var gapH = spacing * (ST.FRACTIONS[s.hIdx] || 0);
+    var gapV = spacing * (ST.FRACTIONS[s.vIdx] || 0);
     var available = maxW - (cols - 1) * gapH;
     var cellH = (maxH - (rows - 1) * gapV) / rows;
     var preset = ST.presetById(s.preset);
@@ -220,14 +221,14 @@
     if (!ST.inOffice) return;
     PowerPoint.run(function (context) {
       var shapes = context.presentation.getSelectedShapes();
-      shapes.load("items/left,items/top,items/width,items/height");
+      shapes.load("items/left,items/top,items/width,items/height,items/type");
       return context.sync().then(function () {
         var sel = ST.selection;
         sel.items = shapes.items.map(function (s) {
-          return { left: s.left / PT, top: s.top / PT, w: s.width / PT, h: s.height / PT };
+          return { left: s.left / PT, top: s.top / PT, w: s.width / PT, h: s.height / PT, line: s.type === "Line" || s.width === 0 || s.height === 0 };
         });
         sel.count = sel.items.length;
-        if (sel.count) { sel.w = sel.items[0].w; sel.h = sel.items[0].h; }
+        if (sel.count) { sel.w = sel.items[0].w; sel.h = sel.items[0].h; sel.line = sel.items[0].line; }
         ST.emit("selection");
       });
     }).catch(function () {

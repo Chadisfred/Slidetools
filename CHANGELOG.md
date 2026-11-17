@@ -2,6 +2,19 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.18.0] 2026-11-17
+
+### Added
+
+1. Layout: None in both gap rows, so cells sit edge to edge.
+2. Resize: lines are resized by their length from either box, keeping their direction. Horizontal, vertical and diagonal lines all work, and the result line shows the length.
+3. Resize: Crop pictures to fit. When a picture's frame changes shape, the picture is cropped to fill it instead of being stretched. The picture keeps its scale and the Resize from point stays still, and it grows only when the frame would run past its edges. The crop is written to a copy of the slide in memory, which replaces the original. Masters and layouts are never edited, and nothing leaves the panel.
+
+### Changed
+
+1. Resize: Match size compares lines by length and matches them to each other, separately from other shapes.
+2. Resize: Use selection puts a line's length in Width.
+
 ## [2.17.0] 2026-11-17
 
 ### Added

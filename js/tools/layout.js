@@ -51,7 +51,7 @@
       '<label class="field">Top<input type="text" id="top" inputmode="decimal"></label>' +
     '</div>' +
     '<button class="btn small" id="useArea" data-min="2" title="Set the grid area from the selected shapes">Use selection as area</button>' +
-    '<div class="sublabel label-row" data-min="2">Gap between columns' + ST.info("A fraction of g. 1/2 means the gap is half the grid spacing.", "About the gap") + '</div>' +
+    '<div class="sublabel label-row" data-min="2">Gap between columns' + ST.info("A fraction of g. 1/2 means the gap is half the grid spacing. None puts cells edge to edge.", "About the gap") + '</div>' +
     '<div class="seg" id="segH" data-min="2"></div>' +
     '<div class="sublabel" data-min="2">Gap between rows</div>' +
     '<div class="seg" id="segV" data-min="2"></div>' +
@@ -148,9 +148,10 @@
   function renderSeg(id, selected) {
     var el = $(id);
     if (!el.children.length) {
-      ST.FRACTION_LABELS.forEach(function (label, i) {
+      ST.FRACTION_ORDER.forEach(function (i) {
         var b = document.createElement("button");
-        b.textContent = label;
+        b.textContent = ST.FRACTION_LABELS[i];
+        b.setAttribute("data-i", i);
         b.addEventListener("click", function () {
           if (id === "segH") ST.state.hIdx = i; else ST.state.vIdx = i;
           markCustom("hIdx");
@@ -159,7 +160,7 @@
         el.appendChild(b);
       });
     }
-    Array.prototype.forEach.call(el.children, function (b, i) { b.classList.toggle("on", i === selected); });
+    Array.prototype.forEach.call(el.children, function (b) { b.classList.toggle("on", +b.getAttribute("data-i") === selected); });
   }
 
   function chipIcon(p) {
