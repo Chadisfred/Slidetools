@@ -676,7 +676,7 @@
       '</div>' +
       '<datalist id="fontList"></datalist>' +
       '<div class="weight-note" id="sWarn" hidden></div>' +
-      (isNew && draft && draft.link ? '<div class="muted-note">Saving links the sampled text to this style.</div>' : "") +
+      (isNew && draft && draft.link ? '' : "") +
       '<div class="btn-row">' +
         '<button class="btn" id="sCancel">Cancel</button>' +
         '<button class="btn primary" id="sSave">' + (isNew ? "Save style" : "Save changes") + '</button>' +
@@ -785,7 +785,7 @@
     list.innerHTML = "";
     if (!stylesLoaded && ST.inOffice) { list.innerHTML = '<div class="muted-note">Reading styles from this presentation.</div>'; return; }
     if (!styles.length && editing !== "new") {
-      list.innerHTML = '<div class="muted-note">No styles yet. Select some text and click Sample to make one from it.</div>';
+      list.innerHTML = '<div class="muted-note">No styles yet. Select text, then click Sample.</div>';
     }
     styles.forEach(function (s) {
       var row = document.createElement("div");
@@ -928,12 +928,6 @@
 
   // ---------- Build ----------
   var MARKUP =
-    '<span class="info res-info" tabindex="0" role="button" aria-label="How styles work">i' +
-      '<span class="tip" role="tooltip">Select text and click Sample to save its look as a character style. Click a style to apply it to selected text.<br><br>' +
-      'Edit a style, then click Update all to change every piece of text that uses it. Settings you changed by hand on linked text are kept.<br><br>' +
-      'The link is hidden in a tiny, invisible shift of the text colour. If you recolour styled text from the ribbon, Update all offers it as a lookalike, and you can choose to keep its colour.<br><br>' +
-      'Styles are saved in this presentation. Only normal slides are changed, never masters or layouts.</span>' +
-    '</span>' +
     '<div class="style-status" id="styleStatus" data-min="2" hidden></div>' +
     '<div id="styleForm"></div>' +
     '<div class="style-list" id="styleList"></div>' +
@@ -941,7 +935,7 @@
     '<div id="styleActions">' +
       '<div class="btn-row">' +
         '<button class="btn" id="sampleStyle" title="Make a style from the selected text">Sample</button>' +
-        '<button class="btn" id="updateAll" title="Push style edits to every slide">Update all</button>' +
+        '<button class="btn" id="updateAll" title="Apply style edits to every slide, keeping hand changes">Update all</button>' +
       '</div>' +
       '<button class="btn small new-style" id="newStyle" data-min="2">New blank style</button>' +
     '</div>';
@@ -964,6 +958,7 @@
     levels: [1, 2],
     defaultLevel: 2,
     defaults: {},
+    tip: { what: "Saves text formatting as reusable styles.", steps: ["Select text and click Sample.", "Name it and click Save.", "Click a style to apply it."] },
     build: build
   });
 

@@ -455,3 +455,13 @@ select:focus { border-color: var(--accent); }
 .line-check { display: grid; gap: 8px; border: 1px solid var(--accent-line); background: var(--accent-soft); border-radius: 10px; padding: 10px; font-size: 12px; line-height: 1.45; }
 .line-check[hidden] { display: none; }
 .check-btns { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 6px; }
+
+/* Inline i next to a label or control, and the header tip's layout */
+.info.inline { display: inline-block; width: 14px; height: 14px; font-size: 9px; line-height: 11.5px; vertical-align: 1px; margin-left: 4px; flex: none; }
+.label-row { display: flex; align-items: center; gap: 2px; }
+.tip-what { display: block; font-weight: 600; margin-bottom: 4px; }
+.tip-steps { margin: 0; padding-left: 16px; }
+.tip-steps li { margin: 1px 0; }
+.tip-steps:empty { display: none; }
+.info { text-transform: none; letter-spacing: 0; }
+.field .label-row { display: flex; align-items: center; }

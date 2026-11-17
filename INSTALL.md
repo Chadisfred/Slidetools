@@ -68,4 +68,4 @@ reg delete "HKCU\Software\Microsoft\Office\16.0\WEF\Developer" /v SlideTools /f
 | A message says add-ins are blocked by your organisation | Your IT team controls add-ins. Ask them to deploy `slidetools-manifest.xml` from the Microsoft 365 admin center, under Integrated apps. |
 | A slide button says PowerPoint is too old | Update Office from File, Account, Update Options. |
 
-For a full guide to the tools, see the [README](README.md).
+To learn the tools, see the [user manual](https://chadisfred.github.io/Slidetools/manual.html), or choose How to use in any tool's ... menu in the panel.

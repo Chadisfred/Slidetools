@@ -58,7 +58,15 @@
     var body = card.querySelector(".tool-body");
     ST.$("stack").appendChild(card); // tools look up their boxes by id, so attach first
     t.build(body, card);
-    // A tool's i tip lives in its header, so it never covers the tool's first row.
+    // A tool's i tip lives in its header, so it never covers the tool's first row. Tools
+    // describe it as { what: "one line", steps: ["...", "..."] }.
+    if (t.tip && !body.querySelector(".res-info")) {
+      body.insertAdjacentHTML("afterbegin", '<span class="info res-info" tabindex="0" role="button" aria-label="What ' + t.title + ' does">i' +
+        '<span class="tip" role="tooltip"><b class="tip-what"></b><ol class="tip-steps"></ol></span></span>');
+      var tipBox = body.querySelector(".res-info .tip");
+      tipBox.querySelector(".tip-what").textContent = t.tip.what;
+      (t.tip.steps || []).forEach(function (step) { var li = document.createElement("li"); li.textContent = step; tipBox.querySelector(".tip-steps").appendChild(li); });
+    }
     var info = body.querySelector(".res-info");
     if (info) {
       var head = card.querySelector(".tool-head");
@@ -162,6 +170,8 @@
     var visible = layout.order.filter(function (x) { return !layout.hidden[x]; });
     var i = visible.indexOf(id), t = tool(id);
     showMenu(anchor, [
+      { label: "How to use " + t.title, action: function () { ST.openHelp(t.help || t.id); } },
+      "sep",
       { label: "Move up", disabled: i <= 0, action: function () { move(id, -1); } },
       { label: "Move down", disabled: i >= visible.length - 1, action: function () { move(id, 1); } },
       "sep",

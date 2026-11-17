@@ -394,7 +394,7 @@
     $("colThemeWrap").hidden = tab !== "theme";
     $("colTemplateWrap").hidden = tab !== "template";
     $("colMineWrap").hidden = tab !== "mine";
-    if (!palette.length) mine.innerHTML = '<div class="muted-note">' + (loaded || !ST.inOffice ? "No colours yet. Add one below, or take one from the selection." : "Reading colours from this presentation.") + "</div>";
+    if (!palette.length) mine.innerHTML = '<div class="muted-note">' + (loaded || !ST.inOffice ? "No colours yet. Add one below." : "Reading colours from this presentation.") + "</div>";
     palette.forEach(function (c, i) { mine.appendChild(swatch(c, i)); });
     palette.forEach(function (c, i) {
       var row = document.createElement("div");
@@ -416,12 +416,6 @@
   }
 
   var MARKUP =
-    '<span class="info res-info" tabindex="0" role="button" aria-label="How Colours works">i' +
-      '<span class="tip" role="tooltip">Pick what to colour, then click a swatch to apply it to the selected shapes or text.<br><br>' +
-      'Theme colours, with the same tints and shades as PowerPoint\'s colour menu, and the template\'s custom colours come from this presentation\'s theme. They can\'t be changed here. Your colours are saved in the presentation.<br><br>' +
-      'Colouring styled text here keeps it linked to its text style, unlike the ribbon\'s font colour button. Shapes keep their shape style link either way.<br><br>' +
-      'The colour pickers in the style editors suggest these colours too.</span>' +
-    '</span>' +
     '<div class="seg seg3" id="colTarget"></div>' +
     '<div class="seg col-tabs" id="colTabs"><button data-v="theme">Theme</button><button data-v="template">Template</button><button data-v="mine">Yours</button></div>' +
     '<div id="colThemeWrap" class="col-pane"><div class="theme-grid" id="colTheme"></div><div class="theme-grid tints" id="colTints"></div></div>' +
@@ -468,6 +462,7 @@
     levels: [1, 2],
     defaultLevel: 1,
     defaults: defaults,
+    tip: { what: "Applies theme, template and your own colours.", steps: ["Choose Fill, Outline or Text.", "Select shapes or text.", "Click a swatch."] },
     build: build
   });
 

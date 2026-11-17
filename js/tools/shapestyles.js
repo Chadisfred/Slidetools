@@ -511,7 +511,7 @@
       '<label class="field">Autofit' + sel("ssAuto", AUTOSIZES, p.autoSize) + '</label>' +
       '<label class="field">Text style for the text inside' + textStyleOptions(p.textStyleId) + '</label>' +
 
-      (isNew && draft && draft.linkIds ? '<div class="muted-note">Saving links the sampled shape to this style.</div>' : "") +
+      (isNew && draft && draft.linkIds ? '' : "") +
       '<div class="btn-row"><button class="btn" id="ssCancel">Cancel</button><button class="btn primary" id="ssSave">' + (isNew ? "Save style" : "Save changes") + '</button></div>' +
       (isNew ? "" : '<button class="btn small danger" id="ssDelete">Delete style</button>') +
     '</div>';
@@ -650,7 +650,7 @@
     if (editing === "new") { form.innerHTML = editorMarkup("", draft.props, true); wireEditor(); }
     list.innerHTML = "";
     if (!stylesLoaded && ST.inOffice) { list.innerHTML = '<div class="muted-note">Reading shape styles from this presentation.</div>'; return; }
-    if (!styles.length && editing !== "new") list.innerHTML = '<div class="muted-note">No shape styles yet. Select a shape and click Sample to make one from it.</div>';
+    if (!styles.length && editing !== "new") list.innerHTML = '<div class="muted-note">No shape styles yet. Select a shape, then click Sample.</div>';
     styles.forEach(function (s) {
       var row = document.createElement("div");
       row.className = "style-row";
@@ -729,19 +729,13 @@
 
   // ---------- Build ----------
   var MARKUP =
-    '<span class="info res-info" tabindex="0" role="button" aria-label="How shape styles work">i' +
-      '<span class="tip" role="tooltip">Select a shape and click Sample to save its fill, outline, corners and text box settings as a shape style. Click a style to apply it to the selected shapes.<br><br>' +
-      'A shape style can also apply one of your text styles to the text inside.<br><br>' +
-      'Edit a style, then click Update all to change every shape that uses it. Settings you changed by hand on linked shapes are kept. Shapes that look like a style but aren\'t linked are offered too.<br><br>' +
-      'Styles are saved in this presentation. Only normal slides are changed, never masters or layouts. Gradients, shadows and other effects can\'t be set by add-ins.</span>' +
-    '</span>' +
     '<div class="style-status" id="ssStatus" data-min="2" hidden></div>' +
     '<div id="ssForm"></div>' +
     '<div class="style-list" id="ssList"></div>' +
     '<div id="ssReview" class="ss-review" hidden></div>' +
     '<div id="ssActions" class="ss-actions">' +
       '<div class="btn-row"><button class="btn" id="ssSample" title="Make a style from the selected shape">Sample</button>' +
-      '<button class="btn" id="ssUpdate" title="Push style edits to every slide">Update all</button></div>' +
+      '<button class="btn" id="ssUpdate" title="Apply style edits to every slide, keeping hand changes">Update all</button></div>' +
       '<button class="btn small" id="ssNew" data-min="2">New blank style</button>' +
     '</div>';
 
@@ -768,6 +762,7 @@
     levels: [1, 2],
     defaultLevel: 2,
     defaults: {},
+    tip: { what: "Saves a shape's look as a reusable style.", steps: ["Select a shape and click Sample.", "Name it and click Save.", "Click a style to apply it."] },
     build: build
   });
 
