@@ -2,6 +2,19 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.16.0] 2026-11-17
+
+### Added
+
+1. A full manual page for every tool in `manual/`: overview and quick start, an annotated screenshot with a numbered marker on each control, a reference table covering every button, box, switch and chip (level, what it does, values and defaults, notes), how it works, recipes, limits and edge cases, messages and what to do, and related tools.
+2. Reference pages: Formulas and units, Glossary, and Expert tips.
+3. A new manual home page with panel basics, what is saved where, PowerPoint requirements and troubleshooting.
+4. Shared navigation on every page: top bar, a sidebar of all pages, an "On this page" list, and Previous and Next links. Light and dark themes, and readable on a phone.
+
+### Changed
+
+1. How to use in each tool's menu now opens that tool's own manual page.
+
 ## [2.15.0] 2026-11-17
 
 ### Added

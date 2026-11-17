@@ -8,7 +8,7 @@ Open that address in a browser to try the panel in preview mode. The calculator 
 
 Note the capital S in `Slidetools`. The address doesn't work with a lowercase s.
 
-New to the tools? The [user manual](https://chadisfred.github.io/Slidetools/manual.html) explains each one with steps, examples and screenshots. In the panel, each tool's ... menu has How to use, which opens its section.
+New to the tools? The [user manual](https://chadisfred.github.io/Slidetools/manual.html) has a full page for every tool: an annotated screenshot with a reference entry for every control, how it works, recipes for real tasks, limits and messages. It also has reference pages for [formulas and units](https://chadisfred.github.io/Slidetools/manual/formulas.html), a [glossary](https://chadisfred.github.io/Slidetools/manual/glossary.html) and [expert tips](https://chadisfred.github.io/Slidetools/manual/tips.html). In the panel, How to use in each tool's ... menu opens that tool's page.
 
 ## Contents
 
@@ -436,7 +436,7 @@ There is no build step. GitHub Pages serves the files as they are.
 
 4. Useful helpers on `window.ST`: `state`, `changed()`, `on("change" | "selection" | "reset" | "layout", fn)`, `selection`, `withSelection(props, task)`, `run(task)`, `toast(message, isBad)`, `supports(version)`, `evaluate(text, vars)`.
 
-5. Add a section for the tool to `manual.html`, with an anchor that matches the tool's `id`, so How to use in the tool's menu opens it.
+5. Add a manual page `manual/<id>.html` named after the tool's `id`, so How to use in the tool's menu opens it. Follow the other tool pages: overview, annotated panel with a reference row (`data-control`) for every control, how it works, recipes, limits, messages and related tools. Link it from `manual.html` and the sidebar on every page.
 
 New tools appear at the bottom of the stack for anyone who already has a saved arrangement.
 

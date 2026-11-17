@@ -40,7 +40,7 @@
     '<div class="group-label" data-min="3">Move</div>' +
     '<div class="nudge-row" data-min="3">' +
       '<label class="field">Nudge by<input type="text" id="arrNudge" placeholder="e.g. g"></label>' +
-      '<div class="nudge-pad"><button class="btn small" data-nudge="-1,0" title="Left">&larr;</button><button class="btn small" data-nudge="0,-1" title="Up">&uarr;</button><button class="btn small" data-nudge="0,1" title="Down">&darr;</button><button class="btn small" data-nudge="1,0" title="Right">&rarr;</button></div>' +
+      '<div class="nudge-pad" id="arrNudgePad"><button class="btn small" data-nudge="-1,0" title="Left">&larr;</button><button class="btn small" data-nudge="0,-1" title="Up">&uarr;</button><button class="btn small" data-nudge="0,1" title="Down">&darr;</button><button class="btn small" data-nudge="1,0" title="Right">&rarr;</button></div>' +
     '</div>' +
     '<button class="btn small" id="arrSwap" data-min="3" title="Swap the positions of two selected shapes">Swap two shapes</button>';
 
