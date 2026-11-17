@@ -98,6 +98,7 @@ Tips:
 3. Fit places shapes in reading order: top to bottom, then left to right.
 4. Your own presets appear after the built in ones. Hover a preset and click the small cross to delete it. Resetting the tool doesn't delete them.
 5. After drawing, the new shapes are selected. With Group shapes after drawing on, they're grouped first. Both need a recent version of PowerPoint.
+6. Choose None for a gap to put cells edge to edge.
 
 ### Resize
 
@@ -106,7 +107,7 @@ Sets the width and height of every selected shape, using plain numbers or formul
 | Level | Shows |
 | --- | --- |
 | Basic | Width, Height, Resize |
-| More | Live result, lock aspect ratio, resize from point (anchor), Use selection, match to largest or smallest |
+| More | Live result, lock aspect ratio, crop pictures to fit, resize from point (anchor), Use selection, match to largest or smallest |
 | Full | Recent formulas |
 
 Hover over the small i in the tool's header, or tab to it, to read how formulas work.
@@ -116,8 +117,10 @@ Tips:
 1. Press Enter in Width or Height to apply just that one.
 2. With Lock aspect ratio on, the other side follows. If both boxes are filled, Resize uses Width.
 3. Resize from sets which point stays still: a corner, an edge or the centre.
-4. Match makes every selected shape the size of the largest or smallest one by area.
+4. Match makes every selected shape the size of the largest or smallest one by area. Lines are matched to each other by length.
 5. Recent formulas keeps your last six. Click one to put it back in the boxes.
+6. Lines are resized by length, whichever box you type in. Horizontal, vertical and diagonal lines keep their direction.
+7. With Crop pictures to fit on, a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
 
 ### Corners
 
