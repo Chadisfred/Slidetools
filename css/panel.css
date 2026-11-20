@@ -465,3 +465,13 @@ select:focus { border-color: var(--accent); }
 .tip-steps:empty { display: none; }
 .info { text-transform: none; letter-spacing: 0; }
 .field .label-row { display: flex; align-items: center; }
+
+/* Layout gap rows have six choices */
+#segH, #segV { grid-template-columns: repeat(6, 1fr); }
+/* Transform copies preview */
+.cp-preview svg { display: block; width: 100%; height: auto; background: var(--page); border-radius: 9px; }
+.cp-preview:empty { display: none; }
+.cp-orig { fill: var(--accent); fill-opacity: .18; stroke: var(--accent); stroke-width: 1.4; }
+.cp-copy { fill: none; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 2; }
+.cp-ref { fill: var(--accent); }
+.anchor-text { display: flex; flex-direction: column; gap: 2px; }

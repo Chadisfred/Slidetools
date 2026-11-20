@@ -100,15 +100,15 @@ Tips:
 5. After drawing, the new shapes are selected. With Group shapes after drawing on, they're grouped first. Both need a recent version of PowerPoint.
 6. Choose None for a gap to put cells edge to edge.
 
-### Resize
+### Transform
 
-Sets the width and height of every selected shape, using plain numbers or formulas.
+Sets the width and height of every selected shape, using plain numbers or formulas, and makes spaced copies in one step, like Illustrator's Transform effect.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Width, Height, Resize |
-| More | Live result, lock aspect ratio, crop pictures to fit, resize from point (anchor), Use selection, match to largest or smallest |
-| Full | Recent formulas |
+| Basic | Width, Height, Resize, Copies, Move across and down, Make copies |
+| More | Live result, lock aspect ratio, crop pictures to fit, reference point, Use selection, match to largest or smallest, Space by, scale, rotate, copies preview |
+| Full | Reflect X and Y, recent formulas |
 
 Hover over the small i in the tool's header, or tab to it, to read how formulas work.
 
@@ -116,11 +116,13 @@ Tips:
 
 1. Press Enter in Width or Height to apply just that one.
 2. With Lock aspect ratio on, the other side follows. If both boxes are filled, Resize uses Width.
-3. Resize from sets which point stays still: a corner, an edge or the centre.
+3. The reference point sets which point stays still: a corner, an edge or the centre. Copies also scale, rotate and reflect around it.
 4. Match makes every selected shape the size of the largest or smallest one by area. Lines are matched to each other by length.
 5. Recent formulas keeps your last six. Click one to put it back in the boxes.
 6. Lines are resized by length, whichever box you type in. Horizontal, vertical and diagonal lines keep their direction.
 7. With Crop pictures to fit on, a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
+8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way.
+9. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
 
 ### Corners
 
@@ -338,7 +340,7 @@ Notes:
 
 ## Formulas
 
-Every number box accepts maths, for example `12.5-2*0.42`. Values are in inches unless you add a unit: `30pt`, `1.5cm` or `12mm`. Boxes keep five decimal places, so `30pt` becomes 0.41667. The Resize boxes also understand these names:
+Every number box accepts maths, for example `12.5-2*0.42`. Values are in inches unless you add a unit: `30pt`, `1.5cm` or `12mm`. Boxes keep five decimal places, so `30pt` becomes 0.41667. The Transform boxes also understand these names:
 
 | Name | Meaning |
 | --- | --- |
@@ -383,7 +385,10 @@ css/panel.css            All styling, light and dark themes, detail level rules
 js/core.js               Shared state, saved settings, formula evaluator, grid maths, PowerPoint helpers
 js/panels.js             Panel framework: headers, detail levels, folding, drag to reorder, menus
 js/tools/layout.js       Layout tool
-js/tools/resize.js       Resize tool
+js/tools/resize.js       Transform tool (resize, lines, crop, copies)
+js/rebuild.js            In-memory slide rebuild used to crop pictures and make copies
+js/crop.js               Picture cropping for Transform
+js/clone.js              Copies for Transform
 js/tools/corners.js      Corners tool
 js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/match.js        Match tool (select similar, copy position and size)
