@@ -2,6 +2,22 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.19.0] 2026-11-20
+
+### Added
+
+1. Transform: Copies, working like Illustrator's Transform effect. Set a number of copies, Move across and down, Scale across and down, Rotate and Reflect X and Y, around the reference point. Each copy is transformed from the one before. Space by Distance or Gap. All boxes take formulas such as `w+gap`, and a live preview shows the result. Copies are exact, including text, formatting, pictures, groups and tables, and are selected afterwards.
+
+### Changed
+
+1. Resize is now called Transform. Saved settings, order and levels carry over.
+2. Resize from is now Reference point, shared by resizing, matching, cropping and copies.
+3. Picture cropping and copies share one in-memory slide rebuild. Only the slide is edited, never masters or layouts, and nothing leaves the panel.
+
+### Fixed
+
+1. Layout: the gap rows show all six choices on one line.
+
 ## [2.18.0] 2026-11-17
 
 ### Added
