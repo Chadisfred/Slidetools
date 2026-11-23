@@ -816,7 +816,7 @@
     if (!box) return;
     if (diag) diag.textContent = ST.inOffice ? lastFind.report : "";
     if (!current) {
-      box.innerHTML = '<div class="muted-note">Select a table to see its columns.</div>';
+      box.innerHTML = '<div class="muted-note">Select a table to see its columns</div>';
       status.hidden = true;
       return;
     }

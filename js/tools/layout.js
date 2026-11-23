@@ -32,10 +32,10 @@
     '<div class="stage" id="stage" data-min="2"></div>' +
     '<div class="result" id="result" data-min="2"></div>' +
     '<div class="tiles" data-min="3">' +
-      '<div class="tile"><span>H GAP</span><b id="tGapH"></b></div>' +
-      '<div class="tile"><span>V GAP</span><b id="tGapV"></b></div>' +
-      '<div class="tile"><span>GRID</span><b id="tGrid"></b></div>' +
-      '<div class="tile"><span>TOTAL</span><b id="tTotal"></b></div>' +
+      '<div class="tile"><span>Across</span><b id="tGapH"></b></div>' +
+      '<div class="tile"><span>Down</span><b id="tGapV"></b></div>' +
+      '<div class="tile"><span>Grid</span><b id="tGrid"></b></div>' +
+      '<div class="tile"><span>Cells</span><b id="tTotal"></b></div>' +
     '</div>' +
     '<div class="row">' +
       '<label class="field">Columns<div class="stepper"><input type="text" id="cols" inputmode="numeric"><button data-step="cols:-1" title="Fewer columns">&minus;</button><button data-step="cols:1" title="More columns">+</button></div></label>' +
@@ -110,6 +110,11 @@
     }
     var scale = Math.min((W - 2 * pad) / grid.maxW, (H - 2 * pad) / grid.maxH);
     var ox = (W - grid.maxW * scale) / 2, oy = (H - grid.maxH * scale) / 2;
+    // The grid area, drawn as a slide with a dashed guide just outside it
+    var area = stage.querySelector(".area");
+    if (!area) { area = document.createElement("div"); area.className = "area"; stage.insertBefore(area, stage.firstChild); }
+    area.style.left = (ox - 4) + "px"; area.style.top = (oy - 4) + "px";
+    area.style.width = (grid.maxW * scale + 8) + "px"; area.style.height = (grid.maxH * scale + 8) + "px";
     var i = 0, y = oy;
     for (var r = 0; r < grid.rows; r++) {
       var x = ox;

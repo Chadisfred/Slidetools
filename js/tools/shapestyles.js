@@ -327,7 +327,7 @@
       text.querySelector("b").textContent = c.style.name;
       addButton(el, "Link, keep colours", function () { apply(c.style, { keepColors: true, message: "Linked to " + c.style.name + ", keeping its colours." }); });
     } else {
-      text.textContent = "No shape style.";
+      text.textContent = "No shape style";
     }
   }
   function addButton(el, label, fn) {
