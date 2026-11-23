@@ -5,7 +5,7 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>3fdacb2e-ca13-4e60-b6d9-4472e2e81fdc</Id>
-  <Version>1.0.0.5</Version>
+  <Version>1.0.0.6</Version>
   <ProviderName>Slide Tools</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Slide Tools Panel"/>
@@ -20,7 +20,7 @@
     <Host Name="Presentation"/>
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html"/>
+    <SourceLocation DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html?install=6"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -74,7 +74,7 @@
         <bt:Image id="Icon.80" DefaultValue="https://chadisfred.github.io/Slidetools/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html?install=6"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GetStarted.Title" DefaultValue="Slide Tools Panel is ready"/>

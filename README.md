@@ -392,6 +392,13 @@ Only changes to the ribbon button (its name, group or icons), the runtime or `sh
 
 Script and style links in `taskpane.html` end in `?v=` plus the version number. Raise that number with each release so PowerPoint doesn't keep old copies.
 
+The panel reads its own version from the `?v=` on `js/update.js`, and its install version from `?install=` on the panel address in the manifest. `version.json` says what's current:
+
+1. Each release sets `"panel"` to the new version, matching the `?v=` numbers.
+2. A release that changes the manifest raises `"install"`, the `?install=` number on both panel addresses in the manifest and the manifest `<Version>`, and can say why in `"installNote"`.
+
+The panel checks `version.json` when it opens. When it's out of date, a dot appears on the settings button, and the top of the settings menu offers Update panel (a reload) or Download installer, with What's new taken from this changelog.
+
 ## Troubleshooting
 
 | Problem | Fix |
@@ -408,6 +415,7 @@ Script and style links in `taskpane.html` end in `?v=` plus the version number. 
 taskpane.html            Page shell: top bar, tool stack, script order
 slidetools-manifest.xml  Office install file (ribbon button, panel address, shared runtime)
 shortcuts.json           Keyboard shortcut keys, linked from the manifest
+version.json             The current panel and install versions, read by the panel to offer updates
 css/panel.css            All styling, light and dark themes, detail level rules
 js/core.js               Shared state, saved settings, formula evaluator, grid maths, PowerPoint helpers
 js/panels.js             Panel framework: headers, detail levels, folding, drag to reorder, menus
@@ -417,6 +425,7 @@ js/rebuild.js            In-memory slide rebuild used to crop pictures and make 
 js/crop.js               Picture cropping for Transform
 js/clone.js              Copies for Transform
 js/shortcuts.js          Keyboard shortcuts: names each action and connects it to the tools
+js/update.js             Versions and updates in the settings menu
 js/tools/corners.js      Corners tool
 js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/match.js        Match tool (select similar, copy position and size)

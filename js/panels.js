@@ -180,7 +180,8 @@
     ]);
   }
   function showSettingsMenu(anchor) {
-    var items = [{ title: "Show tools" }];
+    var items = ST.update ? ST.update.menuItems().concat(["sep"]) : [];
+    items.push({ title: "Show tools" });
     layout.order.forEach(function (id) {
       var t = tool(id);
       items.push({ label: t.title, checked: !layout.hidden[id], action: function () { setHidden(id, !layout.hidden[id]); } });
