@@ -525,7 +525,7 @@ select:focus { border-color: var(--accent); }
 .paste-info[hidden] { display: none; }
 input[type=text]:disabled { opacity: 0.6; }
 
-/* Transform: picture fill drop zone */
+/* Images: paste drop zone */
 .pic-drop { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 14px 12px; border: 1px dashed var(--field-line); border-radius: 8px; background: var(--field); font-size: 12px; color: var(--muted); cursor: pointer; }
 .pic-drop b { font-weight: 500; color: var(--text); }
 .pic-drop a { color: var(--accent); }

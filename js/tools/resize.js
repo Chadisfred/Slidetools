@@ -7,7 +7,7 @@
   var MAX_RECENT = 6;
 
   var defaults = { resW: "", resH: "", lockAspect: false, anchor: 0, cropPictures: true,
-    cpCount: "3", cpRows: "1", cpMoveH: "w+gap", cpMoveV: "", cpMode: "distance", cpScaleH: "100", cpScaleV: "100", cpUniform: true, cpRotate: "0", cpReflectX: false, cpReflectY: false, pfMode: "fill" };
+    cpCount: "3", cpRows: "1", cpMoveH: "w+gap", cpMoveV: "", cpMode: "distance", cpScaleH: "100", cpScaleV: "100", cpUniform: true, cpRotate: "0", cpReflectX: false, cpReflectY: false };
   ST.addDefaults(defaults);
   ST.addDefaults({ recentFormulas: [] });
 
@@ -21,7 +21,6 @@
     '</div>' +
     '<div class="calc" id="calc" data-min="2"></div>' +
     '<div class="toggle" data-min="2">Lock aspect ratio<label class="switch"><input type="checkbox" id="lockAspect"><span></span></label></div>' +
-    '<div class="toggle" data-min="2"><span class="label-row">Crop pictures to fit' + ST.info("When a picture's frame changes shape, the picture is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. Slide comments may not carry over, and Undo takes more than one step. Turn this off to keep pictures in proportion instead.", "About cropping pictures") + '</span><label class="switch"><input type="checkbox" id="cropPictures"><span></span></label></div>' +
     '<div class="anchor-row" data-min="2"><span class="anchor-text"><span class="label-row">Reference point' + ST.info("The point that stays still when shapes are resized, matched or scaled, and the point copies rotate and reflect around.", "About the reference point") + '</span><b id="anchorName"></b></span><div class="anchor" id="anchor"></div></div>' +
     '<div class="btn-row res-actions">' +
       '<button class="btn" id="useSel" data-min="2" title="Copy the selected shape\'s size into the boxes">Use selection</button>' +
@@ -53,10 +52,6 @@
     '<div class="cp-preview" id="cpPreview" data-min="2"></div>' +
     '<div class="calc" id="cpCalc" data-min="2"></div>' +
     '<button class="btn primary" id="cpGo">Make copies</button>' +
-    '<div class="group-label label-row">Picture fill' + ST.info("Fills the selected shapes with a picture, like a picture placeholder. Fill and crop fills the whole shape and crops the picture to its proportions, so nothing is stretched, with the crop following the reference point. Fit inside shows the whole picture. The picture stays on this computer: it is cropped inside the panel, then placed in the shape. Paste again to swap it. After resizing a filled shape, paste again to crop it to the new size.", "About picture fill") + '</div>' +
-    '<div class="pic-drop" id="pfDrop" tabindex="0" role="button" aria-label="Paste or drop a picture to fill the selected shapes"><b>Click here and press Ctrl+V</b><span>or drop a picture, or <a href="#" id="pfChoose">choose a file</a></span></div>' +
-    '<input type="file" id="pfFile" accept="image/*" hidden>' +
-    '<div class="field" data-min="2">Picture<div class="seg seg2" id="pfMode"><button data-v="fill" title="Fill the shape and crop the picture to fit">Fill and crop</button><button data-v="fit" title="Show the whole picture inside the shape">Fit inside</button></div></div>' +
     '<div class="group-label" data-min="3">Recent formulas</div>' +
     '<div class="mini-chips" id="recent" data-min="3"></div>';
 
@@ -379,78 +374,6 @@
     });
   }
 
-  // ---------- Picture fill ----------
-  var PF_TYPES = ["GeometricShape", "TextBox", "Placeholder", "Callout", "Freeform"];
-  var PF_MAX = 2400; // longest side in pixels, plenty for a slide
-  function loadImage(file) {
-    return new Promise(function (resolve, reject) {
-      var url = URL.createObjectURL(file), img = new Image();
-      img.onload = function () { resolve(img); };
-      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("unreadable")); };
-      img.src = url;
-    });
-  }
-  // Draws img for a frame of w x h (any units): "fill" crops to the frame's proportions with the
-  // crop placed by the reference point, "fit" letterboxes it on a clear background.
-  // Returns base64 without the data: prefix.
-  function framedImage(img, w, h, mode, f, jpeg) {
-    var iw = img.naturalWidth, ih = img.naturalHeight, r = w / h, sx = 0, sy = 0, sw = iw, sh = ih, cw, ch;
-    if (mode === "fit") {
-      cw = iw / ih > r ? iw : ih * r; ch = cw / r;
-    } else {
-      if (iw / ih > r) { sw = ih * r; sx = (iw - sw) * f.x; } else { sh = iw / r; sy = (ih - sh) * f.y; }
-      cw = sw; ch = sh;
-    }
-    var k = Math.min(1, PF_MAX / Math.max(cw, ch)), c = document.createElement("canvas");
-    c.width = Math.max(1, Math.round(cw * k)); c.height = Math.max(1, Math.round(ch * k));
-    var g = c.getContext("2d");
-    if (mode === "fit") {
-      var dw = iw * k, dh = ih * k;
-      g.drawImage(img, (c.width - dw) * f.x, (c.height - dh) * f.y, dw, dh);
-    } else g.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
-    var url = jpeg && mode !== "fit" ? c.toDataURL("image/jpeg", 0.92) : c.toDataURL("image/png");
-    return url.slice(url.indexOf(",") + 1);
-  }
-  function fillPicture(file) {
-    if (!file || !/^image\//.test(file.type || "")) { ST.toast("That isn't a picture. Paste or drop a PNG, JPEG, GIF or similar.", true); return; }
-    if (!ST.needOffice()) return;
-    if (!ST.supports("1.8")) { ST.toast("This version of PowerPoint can't fill shapes with pictures. It needs PowerPoint API 1.8.", true); return; }
-    var mode = ST.state.pfMode === "fit" ? "fit" : "fill", f = anchorFactors(), jpeg = /jpe?g/i.test(file.type);
-    loadImage(file).then(function (img) {
-      ST.withSelection(["type", "width", "height"], function (context, items) {
-        var list = items.filter(function (s) { return PF_TYPES.indexOf(s.type) >= 0 && s.width > 0 && s.height > 0; });
-        if (!list.length) { ST.toast("Select a shape to fill. Pictures, groups, tables and lines can't take a picture fill.", true); return; }
-        list.forEach(function (s) { s.fill.setImage(framedImage(img, s.width, s.height, mode, f, jpeg)); });
-        return context.sync().then(function () {
-          var skipped = items.length - list.length;
-          ST.toast("Filled " + ST.plural(list.length, "shape") + " with the picture" + (mode === "fit" ? ", fitted inside." : ", cropped to fit.") + (skipped ? " " + ST.plural(skipped, "item") + " can't take a picture fill." : ""));
-        });
-      });
-    }, function () { ST.toast("Couldn't read that picture. Try saving it as PNG or JPEG.", true); });
-  }
-  function renderPfMode() { Array.prototype.forEach.call($("pfMode").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === (ST.state.pfMode || "fill")); }); }
-  function bindPictureFill() {
-    var drop = $("pfDrop"), input = $("pfFile");
-    drop.addEventListener("paste", function (e) {
-      var items = (e.clipboardData && e.clipboardData.items) || [], file = null;
-      for (var i = 0; i < items.length && !file; i++) if (items[i].kind === "file" && /^image\//.test(items[i].type)) file = items[i].getAsFile();
-      e.preventDefault();
-      if (file) fillPicture(file); else ST.toast("The clipboard has no picture. Copy a picture, then press Ctrl+V here.", true);
-    });
-    drop.addEventListener("click", function (e) { if (e.target.id !== "pfChoose") drop.focus(); });
-    drop.addEventListener("dragover", function (e) { e.preventDefault(); drop.classList.add("over"); });
-    drop.addEventListener("dragleave", function () { drop.classList.remove("over"); });
-    drop.addEventListener("drop", function (e) { e.preventDefault(); drop.classList.remove("over"); var fl = e.dataTransfer && e.dataTransfer.files; fillPicture(fl && fl[0]); });
-    $("pfChoose").addEventListener("click", function (e) { e.preventDefault(); input.click(); });
-    input.addEventListener("change", function () { if (input.files[0]) fillPicture(input.files[0]); input.value = ""; });
-    Array.prototype.forEach.call($("pfMode").children, function (b) {
-      b.addEventListener("click", function () { ST.state.pfMode = b.getAttribute("data-v"); ST.save(); renderPfMode(); });
-    });
-    renderPfMode();
-  }
-
-  ST._picfill = { framedImage: framedImage, fill: fillPicture };
-
   function build(body) {
     body.appendChild(ST.html(MARKUP));
     ST.bindField($("resW"), "resW");
@@ -460,9 +383,6 @@
     var lock = $("lockAspect");
     lock.checked = !!ST.state.lockAspect;
     lock.addEventListener("change", function () { ST.state.lockAspect = lock.checked; ST.save(); });
-    var crop = $("cropPictures");
-    crop.checked = ST.state.cropPictures !== false;
-    crop.addEventListener("change", function () { ST.state.cropPictures = crop.checked; ST.save(); });
     $("useSel").addEventListener("click", useSelection);
     $("resize").addEventListener("click", function () { resizeSelection(true, true); });
     $("matchLarge").addEventListener("click", function () { matchSize(true); });
@@ -479,7 +399,6 @@
     var switches = ["cpUniform", "cpReflectX", "cpReflectY"];
     switches.forEach(function (k) { var el = $(k); el.checked = !!ST.state[k]; el.addEventListener("change", function () { ST.state[k] = el.checked; if (k === "cpUniform") syncUniform(); ST.changed(); }); });
     $("cpGo").addEventListener("click", function () { makeCopies(); });
-    bindPictureFill();
     renderMode(); syncUniform();
     renderAnchor();
     renderRecent();
@@ -489,10 +408,10 @@
     ST.on("selection", updateCopies);
     updateCopies();
     ST.on("reset", function () {
-      lock.checked = !!ST.state.lockAspect; crop.checked = ST.state.cropPictures !== false;
+      lock.checked = !!ST.state.lockAspect;
       switches.forEach(function (k) { $(k).checked = !!ST.state[k]; });
       ["cpCount", "cpRows", "cpMoveH", "cpMoveV", "cpScaleH", "cpScaleV", "cpRotate"].forEach(function (k) { $(k).value = ST.state[k]; });
-      renderMode(); syncUniform(); renderAnchor(); updateCopies(); renderPfMode();
+      renderMode(); syncUniform(); renderAnchor(); updateCopies();
     });
   }
 

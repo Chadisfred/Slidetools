@@ -112,6 +112,51 @@
     });
   }
 
+  function serialize(doc) {
+    var xml = new XMLSerializer().serializeToString(doc);
+    return /^<\?xml/.test(xml) ? xml : '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + xml;
+  }
+  // Lets an edit add a picture to the exported slide: the image goes into ppt/media, the
+  // slide gets a relationship to it, and the content types list its extension.
+  var NS_REL = "http://schemas.openxmlformats.org/package/2006/relationships";
+  var NS_CT = "http://schemas.openxmlformats.org/package/2006/content-types";
+  var IMAGE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+  var TYPES = { png: "image/png", jpeg: "image/jpeg", gif: "image/gif", bmp: "image/bmp" };
+  function mediaHelper(files, slideName) {
+    var relsName = slideName.replace(/slides\/(slide\d+\.xml)$/, "slides/_rels/$1.rels"), docs = {}, added = [], n = 0;
+    function open(name, fallback) {
+      if (docs[name]) return docs[name];
+      var f = files.filter(function (x) { return x.name === name; })[0];
+      docs[name] = new DOMParser().parseFromString(f ? f.text : fallback, "application/xml");
+      return docs[name];
+    }
+    return {
+      // bytes: Uint8Array, ext: png, jpeg, gif or bmp. Returns the relationship id.
+      addImage: function (bytes, ext) {
+        var names = files.map(function (f) { return f.name; }).concat(added.map(function (f) { return f.name; }));
+        var name; do { n++; name = "ppt/media/slidetools" + n + "." + ext; } while (names.indexOf(name) >= 0);
+        added.push({ name: name, bytes: bytes });
+        var rels = open(relsName, '<Relationships xmlns="' + NS_REL + '"/>'), root = rels.documentElement, ids = {};
+        Array.prototype.forEach.call(root.getElementsByTagNameNS(NS_REL, "Relationship"), function (r) { ids[r.getAttribute("Id")] = 1; });
+        var id, k = 0; do { k++; id = "rIdST" + k; } while (ids[id]);
+        var rel = rels.createElementNS(NS_REL, "Relationship");
+        rel.setAttribute("Id", id); rel.setAttribute("Type", IMAGE_REL); rel.setAttribute("Target", "../media/" + name.split("/").pop());
+        root.appendChild(rel);
+        var ct = open("[Content_Types].xml", '<Types xmlns="' + NS_CT + '"/>'), types = ct.documentElement;
+        var has = Array.prototype.some.call(types.getElementsByTagNameNS(NS_CT, "Default"), function (d) { return String(d.getAttribute("Extension")).toLowerCase() === ext; });
+        if (!has) { var d = ct.createElementNS(NS_CT, "Default"); d.setAttribute("Extension", ext); d.setAttribute("ContentType", TYPES[ext]); types.insertBefore(d, types.firstChild); }
+        return id;
+      },
+      changed: function () { var out = {}, enc = new TextEncoder(); Object.keys(docs).forEach(function (k) { out[k] = enc.encode(serialize(docs[k])); }); return out; },
+      added: function () {
+        // A rels file that didn't exist in the export is new
+        var have = files.map(function (f) { return f.name; }), out = added.slice(), enc = new TextEncoder();
+        Object.keys(docs).forEach(function (k) { if (have.indexOf(k) < 0) out.push({ name: k, bytes: enc.encode(serialize(docs[k])) }); });
+        return out;
+      }
+    };
+  }
+
   function supported() { return ST.inOffice && ST.supports("1.8") && typeof DecompressionStream === "function" && typeof TextEncoder === "function" && !!ST.zip; }
 
   // Exports the selected slide, lets editFn change its XML document, then swaps the copy in.
@@ -133,12 +178,13 @@
       var slideFiles = files.filter(function (f) { return /^ppt\/slides\/slide\d+\.xml$/.test(f.name); });
       if (slideFiles.length !== 1) throw new Error("Unexpected export");
       var part = slideFiles[0], doc = new DOMParser().parseFromString(part.text, "application/xml");
-      result = editFn(doc) || { count: 0 };
+      var media = mediaHelper(files, part.name);
+      result = editFn(doc, { addImage: media.addImage }) || { count: 0 };
       if (!result.count) return result;
-      var xml = new XMLSerializer().serializeToString(doc);
-      if (!/^<\?xml/.test(xml)) xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' + xml;
-      var enc = new TextEncoder();
-      var b64 = bytesToB64(writeZip(files.map(function (f) { return { name: f.name, bytes: f === part ? enc.encode(xml) : f.bytes }; })));
+      var enc = new TextEncoder(), changed = media.changed();
+      changed[part.name] = enc.encode(serialize(doc));
+      var list = files.map(function (f) { return { name: f.name, bytes: changed[f.name] || f.bytes }; }).concat(media.added());
+      var b64 = bytesToB64(writeZip(list));
       var index = deck.items.map(function (s) { return s.id; }).indexOf(slide.id);
       context.presentation.insertSlidesFromBase64(b64, { formatting: "UseDestinationTheme", targetSlideId: slide.id });
       b64 = null;
@@ -159,5 +205,5 @@
 
   ST.rebuild = { NS_P: NS_P, NS_A: NS_A, EMU: EMU, crc32: crc32, writeZip: writeZip, bytesToB64: bytesToB64,
                  kids: kids, kid: kid, make: make, cNvPr: cNvPr, xfrmOf: xfrmOf, readBox: readBox, writeBox: writeBox,
-                 matchShapes: matchShapes, supported: supported, edit: edit };
+                 matchShapes: matchShapes, supported: supported, edit: edit, _mediaHelper: mediaHelper };
 })();
