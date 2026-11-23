@@ -220,11 +220,11 @@ Tips:
 2. The font list starts with the theme's heading and body fonts, then fonts used on the slide. Type a name and press Enter, or pick one.
 3. Every points box takes formulas with the grid names in points: `2g` in Size makes text two grid steps tall, `g/2` in a margin gives half a step, and `g` in Line spacing puts lines on the grid. Size also takes `+2` or `*1.5`, worked out from each text's own size. A box that can't be read turns red and says why.
 4. The colour button shows the text colour and opens Colours with the target set to Text, keeping Typography pinned beside it.
-5. Fill in only the spacing you want to change. Empty boxes are left as each shape has them.
+5. Fill in only the spacing you want to change. Empty boxes are left as each shape has them. Each spacing box shows the value in use now, read from the shape or its template, and minus and plus step from it so the preview shows the result before you click Apply spacing.
 6. Line spacing in points keeps the same distance whatever the font size, which helps text in different boxes line up.
 7. Margins, autofit and wrap apply straight away. Spacing, kerning and baseline swap the slide for an identical copy, in memory, because add-ins can't set them directly, so Undo takes more than one step.
 8. Read from selection copies a shape's settings into the boxes, ready to apply to others.
-9. The live preview shows a scaled copy of the first selected text box with the values in the boxes, so you can see line breaks before applying. The dashed line marks the shape's height. A shape with no text shows no preview.
+9. The live preview shows a scaled copy of the first selected text box with the values in the boxes, so you can see line breaks before applying. The dashed line marks the shape's height. A shape with no text shows no preview. Text that shrinks to fit is shrunk the same way in the preview. Fonts the panel can't use, such as Office cloud fonts, show as a similar font with a note.
 
 ### Corners
 
