@@ -114,8 +114,8 @@ Sets the width and height of every selected shape, using plain numbers or formul
 
 | Level | Shows |
 | --- | --- |
-| Basic | Width, Height, Resize, Copies, Move across and down, Make copies, Picture fill |
-| More | Live result, lock aspect ratio, crop pictures to fit, reference point, Use selection, match to largest or smallest, Space by, scale, rotate, copies preview |
+| Basic | Width, Height, Resize, Copies, Move across and down, Make copies |
+| More | Live result, lock aspect ratio, reference point, Use selection, match to largest or smallest, Space by, scale, rotate, copies preview |
 | Full | Reflect X and Y, recent formulas |
 
 Hover over the small i in the tool's header, or tab to it, to read how formulas work.
@@ -128,11 +128,26 @@ Tips:
 4. Match makes every selected shape the size of the largest or smallest one by area. Lines are matched to each other by length.
 5. Recent formulas keeps your last six. Click one to put it back in the boxes.
 6. Lines are resized by length, whichever box you type in. Horizontal, vertical and diagonal lines keep their direction.
-7. With Crop pictures to fit on, a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
+7. With Crop pictures to fit on (in Images), a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
 8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way. If a box can't be read, such as `h+` with nothing after the plus, it turns red and the message says what to change.
 9. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
 10. Rows turns copies into a grid. With 3 copies and 3 rows you get 4 across by 3 down. Move down is the step between rows, and left empty it is the shape's height plus the row gap.
-11. Picture fill turns any shape into a picture frame. Select the shape, click the Picture fill box and press Ctrl+V, drop a picture on it, or choose a file. The picture is cropped to the shape's proportions inside the panel, so it never stretches, and the crop follows the reference point. Fit inside (More) shows the whole picture instead. Paste again to swap the picture, or after resizing the shape.
+
+### Images
+
+Puts pictures into shapes like a picture placeholder, and moves or resets their crop.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Paste into shape, Crop position, Reset crop |
+| More | Crop pictures to fit (used by Transform and Match) |
+
+Tips:
+
+1. Select a shape, such as a rounded card, click the paste box and press Ctrl+V. You can also drop a picture on the box or choose a file. The shape becomes a real picture with the same position, size, corners and outline, cropped to fill it without stretching.
+2. The whole picture is kept, so PowerPoint's Crop button can pan or zoom it afterwards. Pasting onto a picture swaps its image and keeps its frame.
+3. Crop position sets which part of the picture stays in view. With pictures selected, clicking a point moves their crop there. Reset crop shows the whole picture again.
+4. The slide is swapped for an identical copy, in memory, to place or crop pictures, so slide comments may not carry over and Undo takes more than one step. Text in a shape is removed when a picture is placed in it.
 
 ### Corners
 
@@ -421,6 +436,7 @@ js/core.js               Shared state, saved settings, formula evaluator, grid m
 js/panels.js             Panel framework: headers, detail levels, folding, drag to reorder, menus
 js/tools/layout.js       Layout tool
 js/tools/resize.js       Transform tool (resize, lines, crop, copies)
+js/tools/images.js       Images tool (paste into shape, crop position, reset crop)
 js/rebuild.js            In-memory slide rebuild used to crop pictures and make copies
 js/crop.js               Picture cropping for Transform
 js/clone.js              Copies for Transform

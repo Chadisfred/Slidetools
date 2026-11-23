@@ -2,6 +2,21 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.29.0] 2026-11-23
+
+### Added
+
+1. Images, a new tool. Paste into shape turns the selected shapes into real pictures with the same position, size, corners and outline, cropped to fill without stretching. The whole picture is kept, so PowerPoint's Crop button can pan and zoom it afterwards. Pasting onto a picture swaps its image, and an empty picture placeholder stays a placeholder.
+2. Images: Crop position moves the crop of selected pictures to any of nine points, keeping how much is cropped, and sets where new pictures are cropped from. Reset crop shows the whole picture again.
+
+### Changed
+
+1. Crop pictures to fit moves from Transform to Images.
+
+### Removed
+
+1. Transform: Picture fill, replaced by Images, since a filled shape's crop couldn't be adjusted afterwards.
+
 ## [2.28.0] 2026-11-23
 
 ### Added
