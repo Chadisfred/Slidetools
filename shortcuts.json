@@ -44,46 +44,6 @@
       "id": "RepeatLast",
       "type": "ExecuteFunction",
       "name": "Repeat the last action"
-    },
-    {
-      "id": "AlignLeft",
-      "type": "ExecuteFunction",
-      "name": "Align left"
-    },
-    {
-      "id": "AlignCentre",
-      "type": "ExecuteFunction",
-      "name": "Align centre"
-    },
-    {
-      "id": "AlignRight",
-      "type": "ExecuteFunction",
-      "name": "Align right"
-    },
-    {
-      "id": "AlignTop",
-      "type": "ExecuteFunction",
-      "name": "Align top"
-    },
-    {
-      "id": "AlignMiddle",
-      "type": "ExecuteFunction",
-      "name": "Align middle"
-    },
-    {
-      "id": "AlignBottom",
-      "type": "ExecuteFunction",
-      "name": "Align bottom"
-    },
-    {
-      "id": "DistributeAcross",
-      "type": "ExecuteFunction",
-      "name": "Distribute across with the gap"
-    },
-    {
-      "id": "DistributeDown",
-      "type": "ExecuteFunction",
-      "name": "Distribute down with the gap"
     }
   ],
   "shortcuts": [
@@ -126,37 +86,37 @@
     {
       "action": "GrowWidth",
       "key": {
-        "default": "Alt+Shift+Right",
-        "windows": "Alt+Shift+Right",
-        "mac": "Option+Shift+Right",
-        "web": "Alt+Shift+Right"
+        "default": "Ctrl+Alt+Shift+L",
+        "windows": "Ctrl+Alt+Shift+L",
+        "mac": "Command+Option+Shift+L",
+        "web": "Ctrl+Alt+Shift+L"
       }
     },
     {
       "action": "ShrinkWidth",
       "key": {
-        "default": "Alt+Shift+Left",
-        "windows": "Alt+Shift+Left",
-        "mac": "Option+Shift+Left",
-        "web": "Alt+Shift+Left"
+        "default": "Ctrl+Alt+Shift+J",
+        "windows": "Ctrl+Alt+Shift+J",
+        "mac": "Command+Option+Shift+J",
+        "web": "Ctrl+Alt+Shift+J"
       }
     },
     {
       "action": "GrowHeight",
       "key": {
-        "default": "Alt+Shift+Down",
-        "windows": "Alt+Shift+Down",
-        "mac": "Option+Shift+Down",
-        "web": "Alt+Shift+Down"
+        "default": "Ctrl+Alt+Shift+K",
+        "windows": "Ctrl+Alt+Shift+K",
+        "mac": "Command+Option+Shift+K",
+        "web": "Ctrl+Alt+Shift+K"
       }
     },
     {
       "action": "ShrinkHeight",
       "key": {
-        "default": "Alt+Shift+Up",
-        "windows": "Alt+Shift+Up",
-        "mac": "Option+Shift+Up",
-        "web": "Alt+Shift+Up"
+        "default": "Ctrl+Alt+Shift+I",
+        "windows": "Ctrl+Alt+Shift+I",
+        "mac": "Command+Option+Shift+I",
+        "web": "Ctrl+Alt+Shift+I"
       }
     },
     {
@@ -166,78 +126,6 @@
         "windows": "Ctrl+Alt+Shift+D",
         "mac": "Command+Option+Shift+D",
         "web": "Ctrl+Alt+Shift+D"
-      }
-    },
-    {
-      "action": "AlignLeft",
-      "key": {
-        "default": "Ctrl+Alt+Shift+L",
-        "windows": "Ctrl+Alt+Shift+L",
-        "mac": "Command+Option+Shift+L",
-        "web": "Ctrl+Alt+Shift+L"
-      }
-    },
-    {
-      "action": "AlignCentre",
-      "key": {
-        "default": "Ctrl+Alt+Shift+C",
-        "windows": "Ctrl+Alt+Shift+C",
-        "mac": "Command+Option+Shift+C",
-        "web": "Ctrl+Alt+Shift+C"
-      }
-    },
-    {
-      "action": "AlignRight",
-      "key": {
-        "default": "Ctrl+Alt+Shift+R",
-        "windows": "Ctrl+Alt+Shift+R",
-        "mac": "Command+Option+Shift+R",
-        "web": "Ctrl+Alt+Shift+R"
-      }
-    },
-    {
-      "action": "AlignTop",
-      "key": {
-        "default": "Ctrl+Alt+Shift+T",
-        "windows": "Ctrl+Alt+Shift+T",
-        "mac": "Command+Option+Shift+T",
-        "web": "Ctrl+Alt+Shift+T"
-      }
-    },
-    {
-      "action": "AlignMiddle",
-      "key": {
-        "default": "Ctrl+Alt+Shift+M",
-        "windows": "Ctrl+Alt+Shift+M",
-        "mac": "Command+Option+Shift+M",
-        "web": "Ctrl+Alt+Shift+M"
-      }
-    },
-    {
-      "action": "AlignBottom",
-      "key": {
-        "default": "Ctrl+Alt+Shift+B",
-        "windows": "Ctrl+Alt+Shift+B",
-        "mac": "Command+Option+Shift+B",
-        "web": "Ctrl+Alt+Shift+B"
-      }
-    },
-    {
-      "action": "DistributeAcross",
-      "key": {
-        "default": "Ctrl+Alt+Shift+H",
-        "windows": "Ctrl+Alt+Shift+H",
-        "mac": "Command+Option+Shift+H",
-        "web": "Ctrl+Alt+Shift+H"
-      }
-    },
-    {
-      "action": "DistributeDown",
-      "key": {
-        "default": "Ctrl+Alt+Shift+V",
-        "windows": "Ctrl+Alt+Shift+V",
-        "mac": "Command+Option+Shift+V",
-        "web": "Ctrl+Alt+Shift+V"
       }
     }
   ]
