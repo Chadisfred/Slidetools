@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.27.2] 2026-11-23
+
+### Changed
+
+1. Size shortcuts: Ctrl+Alt+Shift+I now makes the selection taller and K makes it shorter.
+
 ## [2.27.1] 2026-11-23
 
 ### Fixed

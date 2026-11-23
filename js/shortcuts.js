@@ -15,8 +15,10 @@
     ["NudgeRight", "Nudge right", "Right", function () { arr().nudge(1, 0); }],
     ["GrowWidth", "Wider", "L", function () { arr().resizeBy(1, 0); }],
     ["ShrinkWidth", "Narrower", "J", function () { arr().resizeBy(-1, 0); }],
-    ["GrowHeight", "Taller", "K", function () { arr().resizeBy(0, 1); }],
-    ["ShrinkHeight", "Shorter", "I", function () { arr().resizeBy(0, -1); }],
+    // I is up so it makes things taller, K is down so it makes things shorter. The action ids
+    // keep their first names so the installed key list doesn't need fetching again.
+    ["ShrinkHeight", "Taller", "I", function () { arr().resizeBy(0, 1); }],
+    ["GrowHeight", "Shorter", "K", function () { arr().resizeBy(0, -1); }],
     ["RepeatLast", "Repeat last action", "D", function () { ST.runRepeat(); }],
   ];
   function arr() { return ST._arrange; }

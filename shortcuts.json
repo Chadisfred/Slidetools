@@ -33,12 +33,12 @@
     {
       "id": "GrowHeight",
       "type": "ExecuteFunction",
-      "name": "Make the selection taller by the nudge amount"
+      "name": "Make the selection shorter by the nudge amount"
     },
     {
       "id": "ShrinkHeight",
       "type": "ExecuteFunction",
-      "name": "Make the selection shorter by the nudge amount"
+      "name": "Make the selection taller by the nudge amount"
     },
     {
       "id": "RepeatLast",

@@ -357,7 +357,7 @@ These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of C
 | Action | Keys |
 | --- | --- |
 | Nudge left, up, down, right | Ctrl+Alt+Shift+Left, Up, Down, Right |
-| Wider, narrower, taller, shorter | Ctrl+Alt+Shift+L, J, K, I |
+| Wider, narrower, taller, shorter | Ctrl+Alt+Shift+L, J, I, K |
 | Repeat last action | Ctrl+Alt+Shift+D |
 
 Nudge and the size keys step by Arrange's Nudge by amount, and sizes change around Transform's reference point. I, J, K and L are laid out like the arrow keys. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
