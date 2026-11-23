@@ -150,7 +150,7 @@ Lines shapes up and spaces them exactly, using the same grid as Layout.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps, Nudge by an amount. Nudge, Align and Distribute have [keyboard shortcuts](#keyboard-shortcuts) |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps, Nudge by an amount. Nudge has [keyboard shortcuts](#keyboard-shortcuts) |
 | More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap options, template guide report |
 | Full | Swap two shapes |
 
@@ -356,13 +356,10 @@ These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of C
 | Action | Keys |
 | --- | --- |
 | Nudge left, up, down, right | Ctrl+Alt+Shift+Left, Up, Down, Right |
-| Wider, narrower, taller, shorter | Alt+Shift+Right, Left, Down, Up |
+| Wider, narrower, taller, shorter | Ctrl+Alt+Shift+L, J, K, I |
 | Repeat last action | Ctrl+Alt+Shift+D |
-| Align left, centres, right | Ctrl+Alt+Shift+L, C, R |
-| Align top, middles, bottom | Ctrl+Alt+Shift+T, M, B |
-| Distribute across, down | Ctrl+Alt+Shift+H, V |
 
-Nudge and the size keys step by Arrange's Nudge by amount, and sizes change around Transform's reference point (Option+Shift on a Mac). Align, Distribute and Repeat use Arrange's current settings. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
+Nudge and the size keys step by Arrange's Nudge by amount, and sizes change around Transform's reference point. I, J, K and L are laid out like the arrow keys. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
 
 The keys are declared in `shortcuts.json`, which the manifest links with `ExtendedOverrides`, and connected to the tools in `js/shortcuts.js`. Shortcuts need the shared runtime set in the manifest. Keep the two files in step when adding one.
 

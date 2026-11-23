@@ -27,7 +27,7 @@
     '<div class="seg seg3" id="arrAlignTo" data-min="2"></div>' +
     '<div class="group-label label-row">Distribute' + ST.info("Across and Down place shapes one after another with exactly this gap. Even gaps keeps the outer shapes still and shares the space.", "About distribute") + '</div>' +
     '<div class="inline"><label class="field">Gap between shapes<input type="text" id="arrGap" placeholder="e.g. g"></label>' +
-      '<div class="pair"><button class="btn small" id="arrDistH" title="Place shapes left to right with this gap' + hint("DistributeAcross") + '">Across</button><button class="btn small" id="arrDistV" title="Place shapes top to bottom with this gap' + hint("DistributeDown") + '">Down</button></div></div>' +
+      '<div class="pair"><button class="btn small" id="arrDistH" title="Place shapes left to right with this gap">Across</button><button class="btn small" id="arrDistV" title="Place shapes top to bottom with this gap">Down</button></div></div>' +
     '<div class="calc" id="arrGapCalc" data-min="2"></div>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="arrSpreadH" title="Equal gaps, keeping the outer shapes where they are">Even gaps across</button><button class="btn small" id="arrSpreadV" title="Equal gaps, keeping the outer shapes where they are">Even gaps down</button></div>' +
     '<div class="group-label label-row">Snap' + ST.info("Moves each shape's top left corner to the nearest line.<br><b>Guides</b> the guides on your slide.<br><b>Columns</b> the Layout grid's column and row corners.<br><b>Steps</b> every g from the grid area's top left.", "About snap") + '</div>' +
@@ -492,7 +492,7 @@
     var row = $("arrAlign");
     ALIGN.forEach(function (a) {
       var b = document.createElement("button");
-      b.className = "tool-btn"; b.title = a[1] + (ST.shortcuts ? ST.shortcuts.hint("Align" + a[0].charAt(0).toUpperCase() + a[0].slice(1)) : ""); b.setAttribute("aria-label", a[1]); b.innerHTML = a[2];
+      b.className = "tool-btn"; b.title = a[1]; b.setAttribute("aria-label", a[1]); b.innerHTML = a[2];
       b.addEventListener("click", function () { ST.setRepeat(a[1], function () { align(a[0]); }); align(a[0]); });
       row.appendChild(b);
     });
@@ -526,12 +526,10 @@
     renderGuideInfo();
   }
 
-  // Used by keyboard shortcuts (js/shortcuts.js). Align and distribute also set Repeat, like their buttons.
+  // Used by keyboard shortcuts (js/shortcuts.js)
   ST._arrange = {
     nudge: nudge,
-    resizeBy: resizeBy,
-    alignKey: function (edge) { var a = ALIGN.filter(function (x) { return x[0] === edge; })[0]; ST.setRepeat(a[1], function () { align(edge); }); align(edge); },
-    distributeKey: function (across) { var label = across ? "Distribute across" : "Distribute down"; ST.setRepeat(label, function () { distribute(across); }); distribute(across); }
+    resizeBy: resizeBy
   };
 
   ST.registerTool({

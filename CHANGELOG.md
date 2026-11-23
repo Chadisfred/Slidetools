@@ -2,6 +2,16 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.26.1] 2026-11-23
+
+### Changed
+
+1. The size shortcuts move to Ctrl+Alt+Shift+I, J, K and L, laid out like the arrow keys (L wider, J narrower, K taller, I shorter, Cmd+Option+Shift on a Mac), because PowerPoint keeps Alt+Shift with the arrows for moving text.
+
+### Removed
+
+1. The align and distribute shortcuts, to free the keys. The Align and Distribute buttons in Arrange are unchanged.
+
 ## [2.26.0] 2026-11-23
 
 ### Added
