@@ -181,6 +181,7 @@ svg { display: block; }
   transition: opacity 0.2s var(--ease);
 }
 .result { text-align: center; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 500; color: var(--text); }
+.result.long { font-size: 12px; }
 .result.bad { color: var(--danger); font-size: 13px; font-family: inherit; }
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .tile { background: var(--page); border-radius: 8px; padding: 8px 4px; text-align: center; }

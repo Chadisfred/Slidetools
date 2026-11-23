@@ -120,28 +120,37 @@
     var all = ST.PRESETS.concat(ST.state.customPresets || []);
     return all.filter(function (p) { return p.id === id; })[0];
   };
+  // "2:1:1" (or "2 1 1", "2,1,1") becomes [2, 1, 1]. Empty gives [], anything else null.
+  ST.parseRatio = function (text, max) {
+    var t = String(text || "").trim();
+    if (!t) return [];
+    var parts = t.split(/[\s:,;\/]+/).filter(Boolean).map(function (x) { return ST.evaluate(x, null, null); });
+    if (parts.length < 1 || parts.length > max || parts.some(function (v) { return !(v > 0); })) return null;
+    return parts;
+  };
+  function share(total, parts) { var sum = parts.reduce(function (a, b) { return a + b; }, 0); return parts.map(function (p) { return total * p / sum; }); }
   ST.calculate = function () {
     var s = ST.state, num = ST.num;
     var spacing = num(s.spacing);
     var maxW = num(s.maxW), maxH = num(s.maxH);
-    var cols = Math.min(ST.MAX_COLS, Math.max(1, Math.floor(num(s.cols)) || 1));
-    var rows = Math.min(ST.MAX_ROWS, Math.max(1, Math.floor(num(s.rows)) || 1));
+    var colParts = ST.parseRatio(s.colRatio, ST.MAX_COLS), rowParts = ST.parseRatio(s.rowRatio, ST.MAX_ROWS);
+    var cols = colParts && colParts.length ? colParts.length : Math.min(ST.MAX_COLS, Math.max(1, Math.floor(num(s.cols)) || 1));
+    var rows = rowParts && rowParts.length ? rowParts.length : Math.min(ST.MAX_ROWS, Math.max(1, Math.floor(num(s.rows)) || 1));
     var gapH = spacing * (ST.FRACTIONS[s.hIdx] || 0);
     var gapV = spacing * (ST.FRACTIONS[s.vIdx] || 0);
-    var available = maxW - (cols - 1) * gapH;
-    var cellH = (maxH - (rows - 1) * gapV) / rows;
+    var available = maxW - (cols - 1) * gapH, availableH = maxH - (rows - 1) * gapV;
     var preset = ST.presetById(s.preset);
-    var widths = [];
-    var weighted = !!(preset && preset.weights && cols === 2);
-    if (weighted) {
-      var total = preset.weights[0] + preset.weights[1];
-      widths = preset.weights.map(function (w) { return available * w / total; });
-    } else {
-      for (var i = 0; i < cols; i++) widths.push(available / cols);
-    }
-    var valid = maxW > 0 && maxH > 0 && cellH > 0 && widths.every(function (w) { return w > 0; });
+    var widths, heights, i;
+    if (colParts && colParts.length) widths = share(available, colParts);
+    else if (preset && preset.weights && cols === 2) widths = share(available, preset.weights);
+    else { widths = []; for (i = 0; i < cols; i++) widths.push(available / cols); }
+    if (rowParts && rowParts.length) heights = share(availableH, rowParts);
+    else { heights = []; for (i = 0; i < rows; i++) heights.push(availableH / rows); }
+    var uneven = function (list) { return list.some(function (v) { return Math.abs(v - list[0]) > 1e-9; }); };
+    var valid = maxW > 0 && maxH > 0 && widths.every(function (w) { return w > 0; }) && heights.every(function (h) { return h > 0; });
     ST.grid = { spacing: spacing, maxW: maxW, maxH: maxH, cols: cols, rows: rows, gapH: gapH, gapV: gapV,
-                widths: widths, cellH: cellH, valid: valid, weighted: weighted,
+                widths: widths, heights: heights, cellH: heights[0], valid: valid,
+                weighted: uneven(widths), tall: uneven(heights), ratioBad: { cols: colParts === null, rows: rowParts === null },
                 left: num(s.left), top: num(s.top) };
     return ST.grid;
   };

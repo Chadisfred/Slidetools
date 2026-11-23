@@ -49,6 +49,22 @@
     return N;
   }
   function frames(F, t, n) { var out = []; for (var i = 0; i < n; i++) { F = step(F, t); out.push(F); } return out; }
+  // Copies in rows: each row is the original moved down, followed by n copies across.
+  // Move down becomes the row step; when it's empty a row is the shape's height plus t.vgap.
+  function gridFrames(F, t, n, rows) {
+    if (!(rows > 1)) return frames(F, t, n);
+    var across = {}, out = [];
+    Object.keys(t).forEach(function (k) { across[k] = t[k]; });
+    across.mv = null;
+    var h = bounds(F).bottom - bounds(F).top, vgap = t.vgap || 0;
+    var stepDown = t.gap ? h + (t.mv !== null ? t.mv : vgap) : (t.mv !== null ? t.mv : h + vgap);
+    for (var r = 0; r < rows; r++) {
+      var base = { cx: F.cx, cy: F.cy + r * stepDown, w: F.w, h: F.h, rot: F.rot, flipH: F.flipH, flipV: F.flipV };
+      if (r) out.push(base);
+      out = out.concat(frames(base, across, n));
+    }
+    return out;
+  }
   function frameOf(box) { return { cx: box.left + box.width / 2, cy: box.top + box.height / 2, w: box.width, h: box.height, rot: box.rot || 0, flipH: !!box.flipH, flipV: !!box.flipV }; }
   function boxOf(F) { return { left: F.cx - F.w / 2, top: F.cy - F.h / 2, width: F.w, height: F.h, rot: F.rot, flipH: F.flipH, flipV: F.flipV }; }
   function corners(F) { return [[-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]].map(function (k) { var v = turn(k[0] * F.w, k[1] * F.h, F.rot); return [F.cx + v[0], F.cy + v[1]]; }); }
@@ -92,7 +108,7 @@
         if (frame) t = Object.assign({}, t, { angle: 0, reflectX: false, reflectY: false, sx: table ? 1 : t.sx, sy: table ? 1 : t.sy });
         var F = frameOf({ left: s.left, top: s.top, width: s.width, height: s.height, rot: frame ? 0 : xml.rot, flipH: xml.flipH, flipV: xml.flipV });
         var base = (R.cNvPr(el).getAttribute("name") || "Shape").replace(/ copy \d+$/, ""), after = el;
-        frames(F, t, j.copies).forEach(function (G, k) {
+        gridFrames(F, t, j.copies, j.rows || 1).forEach(function (G, k) {
           var c = el.cloneNode(true), name = base + " copy " + (k + 1);
           tidyCopy(c, ids, name);
           R.writeBox(c, boxOf(G), { turn: !frame, positionOnly: table });
@@ -116,5 +132,5 @@
     });
   }
 
-  ST.clone = { step: step, frames: frames, frameOf: frameOf, boxOf: boxOf, bounds: bounds, corners: corners, refPoint: refPoint, apply: apply, supported: R.supported, _tidyCopy: tidyCopy };
+  ST.clone = { step: step, frames: frames, gridFrames: gridFrames, frameOf: frameOf, boxOf: boxOf, bounds: bounds, corners: corners, refPoint: refPoint, apply: apply, supported: R.supported, _tidyCopy: tidyCopy };
 })();

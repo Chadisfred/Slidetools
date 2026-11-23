@@ -125,7 +125,7 @@
   function gridLines() {
     var g = ST.calculate(), xs = [], xe = [], ys = [], ye = [], x = g.left, y = g.top;
     for (var c = 0; c < g.cols; c++) { xs.push(x * PT); xe.push((x + g.widths[c]) * PT); x += g.widths[c] + g.gapH; }
-    for (var r = 0; r < g.rows; r++) { ys.push(y * PT); ye.push((y + g.cellH) * PT); y += g.cellH + g.gapV; }
+    for (var r = 0; r < g.rows; r++) { ys.push(y * PT); ye.push((y + g.heights[r]) * PT); y += g.heights[r] + g.gapV; }
     return { xs: xs, xe: xe, ys: ys, ye: ye, grid: g };
   }
   // ---------- Template guides ----------
