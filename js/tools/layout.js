@@ -14,11 +14,11 @@
     { id: "custom", name: "Custom", cols: 0 },
     { id: "960", name: "960", cols: 12 }
   ];
-  var GRID_KEYS = ["spacing", "maxW", "maxH", "cols", "rows", "hIdx", "vIdx"];
+  var GRID_KEYS = ["spacing", "maxW", "maxH", "cols", "rows", "hIdx", "vIdx", "colRatio", "rowRatio"];
 
   var defaults = {
     spacing: "0.42", maxW: "12.5", maxH: "5", cols: "5", rows: "1",
-    left: "0.42", top: "1.25", hIdx: 2, vIdx: 2, preset: "custom",
+    left: "0.42", top: "1.25", hIdx: 2, vIdx: 2, preset: "custom", colRatio: "", rowRatio: "",
     drawRounded: false, groupDrawn: false
   };
   ST.addDefaults(defaults);
@@ -55,6 +55,10 @@
     '<div class="seg" id="segH" data-min="2"></div>' +
     '<div class="sublabel" data-min="2">Gap between rows</div>' +
     '<div class="seg" id="segV" data-min="2"></div>' +
+    '<div class="row" data-min="2">' +
+      '<label class="field"><span class="label-row">Column ratio' + ST.info("Leave empty for equal columns. Each number is a share of the width left after the gaps, so 2:1:1 makes the first column twice as wide as the others. The number of parts sets the number of columns.", "About ratios") + '</span><input type="text" id="colRatio" placeholder="e.g. 2:1:1"></label>' +
+      '<label class="field">Row ratio<input type="text" id="rowRatio" placeholder="e.g. 1:3"></label>' +
+    '</div>' +
     '<div class="toggle" data-min="3">Draw with rounded corners<label class="switch"><input type="checkbox" id="drawRounded"><span></span></label></div>' +
     '<div class="toggle" data-min="3">Group shapes after drawing<label class="switch"><input type="checkbox" id="groupDrawn"><span></span></label></div>' +
     '<div class="inline" data-min="3">' +
@@ -72,9 +76,10 @@
     if (!grid.valid) {
       res.textContent = "Spacing is too large for this area";
       res.className = "result bad";
-    } else if (grid.weighted) {
-      res.textContent = grid.widths[0].toFixed(2) + '" + ' + grid.widths[1].toFixed(2) + '" x ' + grid.cellH.toFixed(2) + '"';
-      res.className = "result";
+    } else if (grid.weighted || grid.tall) {
+      res.textContent = (grid.weighted ? grid.widths.map(function (w) { return w.toFixed(2); }).join(" + ") : grid.widths[0].toFixed(2)) + " x " +
+        (grid.tall ? grid.heights.map(function (h) { return h.toFixed(2); }).join(" / ") : grid.cellH.toFixed(2)) + " in";
+      res.className = res.textContent.length > 24 ? "result long" : "result";
     } else {
       res.textContent = grid.widths[0].toFixed(3) + " x " + grid.cellH.toFixed(3) + " in";
       res.className = "result";
@@ -124,10 +129,10 @@
         el.style.left = x + "px";
         el.style.top = y + "px";
         el.style.width = Math.max(1, grid.widths[c] * scale) + "px";
-        el.style.height = Math.max(1, grid.cellH * scale) + "px";
+        el.style.height = Math.max(1, grid.heights[r] * scale) + "px";
         x += (grid.widths[c] + grid.gapH) * scale;
       }
-      y += (grid.cellH + grid.gapV) * scale;
+      y += (grid.heights[r] + grid.gapV) * scale;
     }
     drawOutlines(stage, { scale: scale, ox: ox, oy: oy });
   }
@@ -225,6 +230,7 @@
       ST.emit("reset"); // refresh the boxes
     } else if (p.cols) {
       s.cols = String(p.cols); $("cols").value = s.cols;
+      s.colRatio = ""; $("colRatio").value = "";
     }
     ST.changed();
   }
@@ -289,13 +295,13 @@
           for (var c = 0; c < grid.cols; c++) {
             var shape = slide.shapes.addGeometricShape(
               rounded ? PowerPoint.GeometricShapeType.roundRectangle : PowerPoint.GeometricShapeType.rectangle,
-              { left: x * PT, top: y * PT, width: grid.widths[c] * PT, height: grid.cellH * PT });
+              { left: x * PT, top: y * PT, width: grid.widths[c] * PT, height: grid.heights[r] * PT });
             shape.name = "Grid R" + (r + 1) + " C" + (c + 1);
             shape.load("id");
-            made.push({ shape: shape, w: grid.widths[c] * PT, h: grid.cellH * PT });
+            made.push({ shape: shape, w: grid.widths[c] * PT, h: grid.heights[r] * PT });
             x += grid.widths[c] + grid.gapH;
           }
-          y += grid.cellH + grid.gapV;
+          y += grid.heights[r] + grid.gapV;
         }
         return context.sync().then(function () {
           if (rounded && ST.cornersSupported()) {
@@ -354,9 +360,10 @@
         var x = grid.left;
         for (var k = 0; k < c; k++) x += grid.widths[k] + grid.gapH;
         s.left = x * PT;
-        s.top = (grid.top + r * (grid.cellH + grid.gapV)) * PT;
+        var yy = grid.top; for (var q = 0; q < r; q++) yy += grid.heights[q] + grid.gapV;
+        s.top = yy * PT;
         s.width = grid.widths[c] * PT;
-        s.height = grid.cellH * PT;
+        s.height = grid.heights[r] * PT;
       });
       return context.sync().then(function () {
         ST.toast("Fitted " + ST.plural(ordered.length, "shape") + ".");
@@ -369,7 +376,7 @@
   function build(body) {
     body.appendChild(ST.html(MARKUP));
     ["spacing", "maxW", "maxH", "cols", "rows", "left", "top"].forEach(function (id) {
-      ST.bindField($(id), id, { number: true, onInput: function () { markCustom(id); } });
+      ST.bindField($(id), id, { number: true, onInput: function () { markCustom(id); clearRatio(id); } });
     });
     Array.prototype.forEach.call(body.querySelectorAll("[data-step]"), function (b) {
       b.addEventListener("click", function (e) {
@@ -379,10 +386,32 @@
         ST.state[id] = String(n);
         $(id).value = ST.state[id];
         markCustom(id);
+        clearRatio(id);
         if (id === "cols" && ST.presetById(ST.state.preset) && !ST.presetById(ST.state.preset).user) ST.state.preset = "custom";
         ST.changed();
       });
     });
+    // Ratios: the number of parts sets columns or rows. Changing the count by hand clears the ratio.
+    [["colRatio", "cols", ST.MAX_COLS], ["rowRatio", "rows", ST.MAX_ROWS]].forEach(function (r) {
+      var box = $(r[0]);
+      box.value = ST.state[r[0]] || "";
+      box.addEventListener("input", function () {
+        ST.state[r[0]] = box.value;
+        var parts = ST.parseRatio(box.value, r[2]);
+        box.classList.toggle("err", parts === null);
+        if (parts && parts.length) { ST.state[r[1]] = String(parts.length); $(r[1]).value = ST.state[r[1]]; }
+        if (r[1] === "cols") ST.state.preset = "custom";
+        ST.changed();
+      });
+      ST.on("reset", function () { box.value = ST.state[r[0]] || ""; box.classList.remove("err"); });
+    });
+    var clearRatio = function (id) {
+      var key = id === "cols" ? "colRatio" : id === "rows" ? "rowRatio" : null;
+      if (!key || !ST.state[key]) return;
+      var parts = ST.parseRatio(ST.state[key], 99);
+      if (parts && parts.length === Math.floor(ST.num(ST.state[id]))) return;
+      ST.state[key] = ""; $(key).value = "";
+    };
     ["drawRounded", "groupDrawn"].forEach(function (id) {
       var box = $(id);
       box.checked = !!ST.state[id];

@@ -105,6 +105,7 @@ Tips:
 4. Your own presets appear after the built in ones. Hover a preset and click the small cross to delete it. Resetting the tool doesn't delete them.
 5. After drawing, the new shapes are selected. With Group shapes after drawing on, they're grouped first. Both need a recent version of PowerPoint.
 6. Choose None for a gap to put cells edge to edge.
+7. Column ratio and Row ratio make unequal columns and rows. Type `2:1:1` for a first column twice as wide as the other two. The number of parts sets Columns or Rows, and changing the count by hand clears the ratio.
 
 ### Transform
 
@@ -129,6 +130,7 @@ Tips:
 7. With Crop pictures to fit on, a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
 8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way.
 9. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
+10. Rows turns copies into a grid. With 3 copies and 3 rows you get 4 across by 3 down. Move down is the step between rows, and left empty it is the shape's height plus the row gap.
 
 ### Corners
 

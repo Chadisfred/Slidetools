@@ -2,6 +2,17 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.22.0] 2026-11-23
+
+### Added
+
+1. Layout: Column ratio and Row ratio for unequal columns and rows, such as `2:1:1`. The number of parts sets Columns or Rows, Draw, Fit and the preview follow the ratios, and Arrange's Columns snapping uses the same cells. Ratios are saved in presets.
+2. Transform: Rows for copies, which makes a grid in one step. Each row repeats the original and its copies across, one Move down lower, or the shape's height plus the row gap apart when Move down is empty.
+
+### Changed
+
+1. Layout: the cell size readout lists each width and height when they differ, in a smaller size when it is long.
+
 ## [2.21.0] 2026-11-23
 
 ### Added
