@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.20.2] 2026-11-23
+
+### Changed
+
+1. The install guide is now a page in the manual, in the same design, linked from the top bar, the sidebar and Getting started. INSTALL.md is a short pointer to it.
+
 ## [2.20.1] 2026-11-23
 
 ### Changed

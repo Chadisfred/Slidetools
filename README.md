@@ -23,7 +23,7 @@ New to the tools? The [user manual](https://chadisfred.github.io/Slidetools/manu
 
 ## Installing
 
-The easiest way is the one click installer. See [INSTALL.md](INSTALL.md), which is written to be handed to anyone who wants the add-in. The options below are for doing it by hand or for whole teams.
+The easiest way is the one click installer. See the [install guide](https://chadisfred.github.io/Slidetools/manual/install.html), which is written to be handed to anyone who wants the add-in. The options below are for doing it by hand or for whole teams.
 
 The install file is `slidetools-manifest.xml`. Save it somewhere permanent on your PC, for example `C:\Users\<you>\Slidetools\slidetools-manifest.xml`. Don't move or rename it afterwards, because PowerPoint looks for it at that exact path.
 
@@ -399,7 +399,7 @@ js/tools/colours.js      Colours tool (palette)
 js/app.js                Starts everything and connects to PowerPoint
 assets/                  Ribbon icons
 install/                 One click installer and uninstaller for Windows
-INSTALL.md               Install guide for new users
+INSTALL.md               Short pointer to the install guide in the manual
 ```
 
 There is no build step. GitHub Pages serves the files as they are.
