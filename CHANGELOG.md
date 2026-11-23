@@ -2,6 +2,16 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.28.0] 2026-11-23
+
+### Added
+
+1. Versions and updates in the settings menu. The top of the menu shows the panel and install versions. The panel checks for updates when it opens and puts a dot on the settings button when one is ready. Update panel reloads it with the new version, and a short What's new list shows the changes. When a new install file is out, Download installer gets it, ready to double click.
+
+### Changed
+
+1. The install file tells the panel which install it is. Run the installer once more so the panel can track it.
+
 ## [2.27.2] 2026-11-23
 
 ### Changed
