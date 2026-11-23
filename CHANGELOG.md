@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.1.1] 2026-11-23
+
+### Fixed
+
+1. Typography: selecting a shape with no text no longer shows a large empty preview. The preview only appears when there is text to show.
+
 ## [3.1.0] 2026-11-23
 
 ### Added
