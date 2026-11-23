@@ -160,7 +160,8 @@
   function supported() { return ST.inOffice && ST.supports("1.8") && typeof DecompressionStream === "function" && typeof TextEncoder === "function" && !!ST.zip; }
 
   // Exports the selected slide, lets editFn change its XML document, then swaps the copy in.
-  // editFn(doc) returns a result with a count; nothing is swapped when the count is 0.
+  // editFn(doc, extra) returns a result with a count; nothing is swapped when the count is 0.
+  // extra.files lists every part of the export (read only), and extra.addImage adds a picture.
   // Resolves to that result, plus slideId: the new slide's id when one was inserted.
   function edit(context, editFn) {
     var sel = context.presentation.getSelectedSlides(), deck = context.presentation.slides;
@@ -179,7 +180,7 @@
       if (slideFiles.length !== 1) throw new Error("Unexpected export");
       var part = slideFiles[0], doc = new DOMParser().parseFromString(part.text, "application/xml");
       var media = mediaHelper(files, part.name);
-      result = editFn(doc, { addImage: media.addImage }) || { count: 0 };
+      result = editFn(doc, { addImage: media.addImage, files: files }) || { count: 0 };
       if (!result.count) return result;
       var enc = new TextEncoder(), changed = media.changed();
       changed[part.name] = enc.encode(serialize(doc));

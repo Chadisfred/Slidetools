@@ -433,4 +433,10 @@
   ST.levelOf = function (id) { return levelOf(tool(id)); };
   ST.isOpen = function (id) { return shown(id) && !(layout.stacked && layout.folded[id]); };
   ST.openTool = function (id) { return openTool(id, false); };
+  ST.pinTool = function (id) {
+    if (layout.stacked || layout.pinned[id] || layout.hidden[id]) return;
+    layout.pinned[id] = true;
+    if (layout.open === id) layout.open = null;
+    saveLayout(); applyAll();
+  };
 })();
