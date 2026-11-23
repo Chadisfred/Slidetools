@@ -472,7 +472,7 @@
     ALIGN.forEach(function (a) {
       var b = document.createElement("button");
       b.className = "tool-btn"; b.title = a[1]; b.setAttribute("aria-label", a[1]); b.innerHTML = a[2];
-      b.addEventListener("click", function () { align(a[0]); });
+      b.addEventListener("click", function () { ST.setRepeat(a[1], function () { align(a[0]); }); align(a[0]); });
       row.appendChild(b);
     });
     seg("arrAlignTo", [["selection", "Selection"], ["area", "Grid area"], ["key", "Largest"]], "arrAlignTo");
@@ -487,12 +487,12 @@
       box.addEventListener("change", function () { ST.state[p[1]] = box.checked; ST.save(); });
       ST.on("reset", function () { box.checked = !!ST.state[p[1]]; });
     });
-    $("arrDistH").addEventListener("click", function () { distribute(true); });
-    $("arrDistV").addEventListener("click", function () { distribute(false); });
+    $("arrDistH").addEventListener("click", function () { ST.setRepeat("Distribute across", function () { distribute(true); }); distribute(true); });
+    $("arrDistV").addEventListener("click", function () { ST.setRepeat("Distribute down", function () { distribute(false); }); distribute(false); });
     $("arrGap").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); distribute(true); } });
-    $("arrSpreadH").addEventListener("click", function () { spread(true); });
-    $("arrSpreadV").addEventListener("click", function () { spread(false); });
-    $("arrSnap").addEventListener("click", snap);
+    $("arrSpreadH").addEventListener("click", function () { ST.setRepeat("Even gaps across", function () { spread(true); }); spread(true); });
+    $("arrSpreadV").addEventListener("click", function () { ST.setRepeat("Even gaps down", function () { spread(false); }); spread(false); });
+    $("arrSnap").addEventListener("click", function () { ST.setRepeat("Snap", function () { snap(); }); snap(); });
     $("arrSwap").addEventListener("click", swap);
     Array.prototype.forEach.call(body.querySelectorAll("[data-nudge]"), function (b) {
       var d = b.getAttribute("data-nudge").split(",").map(Number);

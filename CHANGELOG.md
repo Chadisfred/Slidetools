@@ -2,6 +2,14 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.21.0] 2026-11-23
+
+### Added
+
+1. Share settings, in the settings menu. Export copies a settings code with any of your text styles, shape styles, table styles, colours and Layout presets. Import takes a pasted code and merges it (adding new items and updating ones with the same name) or replaces the chosen lists. Shape styles stay linked to their text styles.
+2. A Repeat button in the top bar runs the last action again on the current selection with the same values: Resize, Match size, Make copies, Align, Distribute, Even gaps, Snap, Round corners, and applying a style or colour.
+3. A Replace this slide? message before cropping pictures or making copies, explaining that comments may not carry over and Undo takes more than one step, with Don't ask again. Cancelling a crop keeps the pictures in proportion instead. Ask before replacing a slide again, in the settings menu, brings the message back.
+
 ## [2.20.2] 2026-11-23
 
 ### Changed

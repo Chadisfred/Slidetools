@@ -803,7 +803,11 @@
       aa.setAttribute("style", sampleStyle(s.font) + (light ? "background:#3a3a3c;" : ""));
       row.querySelector(".style-name").textContent = s.name;
       row.querySelector(".style-sum").textContent = summary(s.font);
-      row.querySelector(".style-apply").addEventListener("click", function () { apply(s); });
+      row.querySelector(".style-apply").addEventListener("click", function () {
+        var sid = s.id;
+        ST.setRepeat("Apply text style " + s.name, function () { var cur = styles.filter(function (x) { return x.id === sid; })[0]; if (cur) apply(cur); });
+        apply(s);
+      });
       row.querySelector(".icon-btn").addEventListener("click", function () { editing = editing === s.id ? null : s.id; render(); });
       list.appendChild(row);
       if (editing === s.id) {
@@ -1020,6 +1024,6 @@
   };
 
   // Exposed for testing only
-  ST._styles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, scanDeck: scanDeck, parseTag: parseTag, tagWith: tagWith,
+  ST._styles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, put: function (s) { styles = s; stylesLoaded = true; return saveStyles(); }, classify: classify, scanDeck: scanDeck, parseTag: parseTag, tagWith: tagWith,
     isWeighted: isWeighted, pptName: pptName, fonts: function () { return { deck: deckFonts, installed: installedFonts, state: rememberedFontCheck() }; } };
 })();

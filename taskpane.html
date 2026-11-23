@@ -6,12 +6,15 @@
 <meta http-equiv="X-UA-Compatible" content="IE=Edge">
 <title>Slide Tools</title>
 <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
-<link rel="stylesheet" href="css/panel.css?v=2.20.0">
+<link rel="stylesheet" href="css/panel.css?v=2.21.0">
 </head>
 <body>
 <div class="topbar">
   <h1>Slide Tools</h1>
   <span class="pill" id="selPill">Nothing selected</span>
+  <button class="icon-btn" id="repeatBtn" title="Repeat the last action" aria-label="Repeat the last action" disabled>
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 8a5 5 0 1 1-1.5-3.6"/><path d="M13 2.5v3h-3"/></svg>
+  </button>
   <button class="icon-btn" id="settingsBtn" title="Show, hide and arrange tools" aria-label="Panel settings">
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M2 4h7M13 4h1M2 8h2M8 8h6M2 12h8M14 12h0"/><circle cx="11" cy="4" r="1.6"/><circle cx="6" cy="8" r="1.6"/><circle cx="12" cy="12" r="1.6"/></svg>
   </button>
@@ -26,20 +29,21 @@
 <div class="toast" id="toast"></div>
 
 <!-- Load order matters: core, then the panel framework, then each tool, then the starter. -->
-<script src="js/core.js?v=2.20.0"></script>
-<script src="js/panels.js?v=2.20.0"></script>
-<script src="js/rebuild.js?v=2.20.0"></script>
-<script src="js/crop.js?v=2.20.0"></script>
-<script src="js/clone.js?v=2.20.0"></script>
-<script src="js/tools/layout.js?v=2.20.0"></script>
-<script src="js/tools/resize.js?v=2.20.0"></script>
-<script src="js/tools/corners.js?v=2.20.0"></script>
-<script src="js/tools/arrange.js?v=2.20.0"></script>
-<script src="js/tools/match.js?v=2.20.0"></script>
-<script src="js/tools/styles.js?v=2.20.0"></script>
-<script src="js/tools/shapestyles.js?v=2.20.0"></script>
-<script src="js/tools/tables.js?v=2.20.0"></script>
-<script src="js/tools/colours.js?v=2.20.0"></script>
-<script src="js/app.js?v=2.20.0"></script>
+<script src="js/core.js?v=2.21.0"></script>
+<script src="js/panels.js?v=2.21.0"></script>
+<script src="js/rebuild.js?v=2.21.0"></script>
+<script src="js/crop.js?v=2.21.0"></script>
+<script src="js/share.js?v=2.21.0"></script>
+<script src="js/clone.js?v=2.21.0"></script>
+<script src="js/tools/layout.js?v=2.21.0"></script>
+<script src="js/tools/resize.js?v=2.21.0"></script>
+<script src="js/tools/corners.js?v=2.21.0"></script>
+<script src="js/tools/arrange.js?v=2.21.0"></script>
+<script src="js/tools/match.js?v=2.21.0"></script>
+<script src="js/tools/styles.js?v=2.21.0"></script>
+<script src="js/tools/shapestyles.js?v=2.21.0"></script>
+<script src="js/tools/tables.js?v=2.21.0"></script>
+<script src="js/tools/colours.js?v=2.21.0"></script>
+<script src="js/app.js?v=2.21.0"></script>
 </body>
 </html>

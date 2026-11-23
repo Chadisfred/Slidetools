@@ -359,7 +359,7 @@
     b.style.color = textOn(c.hex);
     b.title = (c.name ? c.name + "  " : "") + c.hex + ". Click to apply.";
     b.setAttribute("aria-label", b.title);
-    b.addEventListener("click", function () { applyColour(c); });
+    b.addEventListener("click", function () { ST.setRepeat("Apply colour " + c.hex, function () { applyColour(c); }); applyColour(c); });
     return b;
   }
   function render() {
@@ -467,5 +467,5 @@
   });
 
   // Exposed for testing only
-  ST._colours = { get: function () { return palette; }, theme: function () { return theme; } };
+  ST._colours = { get: function () { return palette; }, theme: function () { return theme; }, put: function (list) { palette = list; return save(); } };
 })();
