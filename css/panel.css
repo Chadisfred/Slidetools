@@ -114,6 +114,37 @@ svg { display: block; }
 .menu .sep { height: 1px; background: var(--line); margin: 4px 2px; }
 .menu .menu-title { font-size: 11px; color: var(--muted); padding: 8px 8px 4px; }
 
+/* ---------- Launcher ---------- */
+.launcher { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.launcher[hidden] { display: none; }
+.launch-btn {
+  position: relative; display: grid; justify-items: center; gap: 3px; min-width: 0;
+  padding: 7px 2px 6px; border: 1px solid var(--line); border-radius: 9px;
+  background: var(--card); color: var(--text); cursor: pointer;
+}
+.launch-btn:hover { border-color: var(--accent-line); }
+.launch-icon { width: 18px; height: 18px; color: var(--muted); }
+.launch-icon svg { width: 18px; height: 18px; }
+.launch-name { font-size: 11px; line-height: 1.2; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.launch-btn.on, .launch-btn.pinned { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.launch-btn.on .launch-icon, .launch-btn.pinned .launch-icon { color: var(--accent); }
+.launch-btn.on { box-shadow: inset 0 0 0 1px var(--accent); }
+.launch-btn.pinned::after {
+  content: ""; position: absolute; top: 4px; right: 4px; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--accent);
+}
+.launch-btn.suggest:not(.on):not(.pinned) { border-style: dashed; border-color: var(--accent); }
+@media (max-width: 300px) { .launcher { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Pin: only in the launcher view */
+.pin-btn { display: none; }
+body:not(.stacked) .pin-btn { display: grid; }
+.pin-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); }
+.tool.pinned { border-color: var(--accent-line); }
+.fold-btn .close-x { display: none; }
+body:not(.stacked) .fold-btn .chev { display: none; }
+body:not(.stacked) .fold-btn .close-x { display: block; }
+
 /* ---------- Tool panels ---------- */
 .tool {
   background: var(--card); border: 1px solid var(--line); border-radius: 12px;

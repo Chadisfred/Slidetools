@@ -58,21 +58,36 @@ Ask IT to deploy `slidetools-manifest.xml` from the Microsoft 365 admin center u
 
 ## Using the panel
 
-Each tool sits in its own panel, stacked from top to bottom. Every panel header has the same controls:
+A grid of tool buttons sits at the top of the panel, grouped by job:
+
+| Row | Tools |
+| --- | --- |
+| Placing shapes | Grid, Position, Size, Copies |
+| Text and colour | Typography, Colours, Text styles, Shape styles |
+| Content | Images, Tables, Corners, Similar |
+
+Click a button to open that tool. The other tools close, so there is little scrolling. Click the open tool's button again to close it.
+
+1. Pin a tool with the pin in its header to keep it open while you open another, for example Size and Position together. Pinned tools show first and have a dot on their button.
+2. The panel follows the selection. Selecting a picture opens Images, a table opens Tables, and clicking into text opens Typography. Selecting shapes never changes what is open. The matching button gets a dashed outline either way, and Open tools with the selection in the settings menu turns the opening off.
+3. Show all tools in one list, in the settings menu, brings back the stacked view, where each tool folds and unfolds on its own.
+
+Every tool header has the same controls:
 
 | Control | What it does |
 | --- | --- |
-| Dotted grip on the left | Drag up or down to reorder the tools |
-| Tool name or the arrow on the right | Fold the panel down to just its header, or unfold it |
+| Dotted grip on the left | Drag to change the tool's place in the button grid, or in the list |
+| Tool name or the cross on the right | Close the tool. In the one list view it is an arrow that folds the tool |
+| Pin | Keep the tool open when you open another |
 | Detail button (Basic, More, Full) | Click to cycle how much of the tool is shown |
 | i icon | Hover or tab to it for a short guide to the tool |
-| Three dots | Move up, move down, reset the tool to its defaults, or hide it |
+| Three dots | Move earlier, move later, reset the tool to its defaults, or hide it |
 
-The sliders button at the top right lists every tool so you can show or hide each one. It also has Unfold all, Fold all, Share settings, Ask before replacing a slide again and Reset panel arrangement.
+The sliders button at the top right shows the versions and updates, and lists every tool so you can show or hide each one. It also has Show all tools in one list, Open tools with the selection, Unpin all (or Unfold all and Fold all in the one list view), Share settings, Keyboard shortcuts, Ask before replacing a slide again and Reset panel arrangement.
 
 The circular arrow next to it repeats the last action on the current selection, with the same values. Hover it to see what it will do. It covers Resize, Match size, Make copies, Align, Distribute, Even gaps, Snap, Round corners, and applying a style or colour.
 
-Share settings copies a settings code for your text styles, shape styles, table styles, colours and Layout presets. Send it to someone, and they paste it under Import, then choose Merge (add new items and update ones with the same name) or Replace. The code is plain text you copy and paste yourself.
+Share settings copies a settings code for your text styles, shape styles, table styles, colours and grid presets. Send it to someone, and they paste it under Import, then choose Merge (add new items and update ones with the same name) or Replace. The code is plain text you copy and paste yourself.
 
 Cropping pictures and making copies replace the slide with an edited copy. The first time, a message explains that slide comments may not carry over and Undo takes more than one step, with a Don't ask again box.
 
@@ -84,18 +99,18 @@ Detail levels:
 
 Tools that don't need three levels only offer the ones they use. Corners has Basic and Full. On a narrow panel the level button shows just its dots, and its tooltip names the level.
 
-The panel remembers your values, tool order, detail levels, folded panels and hidden tools between sessions. If PowerPoint uses a dark theme, the panel follows it.
+The panel remembers your values, tool order, the open and pinned tools, detail levels, folded panels and hidden tools between sessions. If PowerPoint uses a dark theme, the panel follows it.
 
 ## The tools
 
-### Layout
+### Grid
 
-Works out an evenly spaced grid and draws it on the slide, or fits selected shapes into it.
+Works out an evenly spaced grid and draws it on the slide, fits selected shapes into it, and snaps shapes onto it or onto your template's guides.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Presets, columns and rows, Draw on slide, Fit selection |
-| More | Preview, cell size, grid spacing, area width and height, Use selection as area, gap sizes |
+| Basic | Presets, columns and rows, Draw on slide, Fit selection, Snap with a choice of Guides, Columns or Steps |
+| More | Preview, cell size, grid spacing, area width and height, Use selection as area, gap sizes, ratios, snap options, template guide report |
 | Full | Gap and grid tiles, left and top position, draw with rounded corners, group after drawing, save your own presets |
 
 Tips:
@@ -107,16 +122,43 @@ Tips:
 5. After drawing, the new shapes are selected. With Group shapes after drawing on, they're grouped first. Both need a recent version of PowerPoint.
 6. Choose None for a gap to put cells edge to edge.
 7. Column ratio and Row ratio make unequal columns and rows. Type `2:1:1` for a first column twice as wide as the other two. The number of parts sets Columns or Rows, and changing the count by hand clears the ratio.
+8. Snap moves each shape's top left corner to the nearest line, and a line under the buttons says what the chosen mode will do:
+   1. Guides: the guides you see on the slide. That covers presentation guides (the ones you can drag on any slide, which a template usually brings with it) and guides in the current slide's layout and master. "Snap all four edges" also moves the right and bottom edges to the nearest guide.
+   2. Columns: the column and row corners of the grid. "Resize to the cells it covers" also sizes the shape to span whole cells.
+   3. Steps: every `g` from the grid area's top left. Can snap all four edges.
+9. With Guides chosen, the More level reports the guides: how many there are, their spacing, any that sit slightly off the pattern, for example "8.34722 in (1 pt right)", and where they were found. Use for grid sets the grid spacing and the grid area's left and top from the guides at full precision. Read again refreshes them after you move, add or remove guides.
 
-### Transform
+Guides are read from a read only copy of the open file, so they're never changed. The copy is taken once and kept until you click Read again. If PowerPoint won't hand over the file, the panel falls back to a copy of the slide (PowerPoint API 1.8). That fallback only has the layout and master guides, and the report says so.
 
-Sets the width and height of every selected shape, using plain numbers or formulas, and makes spaced copies in one step, like Illustrator's Transform effect.
+If shapes drift a little further from the guides the further they are across the slide, the step size is slightly off. PowerPoint shows guide positions to two decimal places, so a 30 pt guide grid (0.41667 in) looks like 0.42. Use for grid, or typing `30pt` in Grid spacing, fixes it.
+
+### Position
+
+Lines shapes up, spaces them exactly, nudges them by the grid step, and copies one shape's position and size onto others.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Width, Height, Resize, Copies, Move across and down, Make copies |
-| More | Live result, lock aspect ratio, reference point, Use selection, match to largest or smallest, Space by, scale, rotate, copies preview |
-| Full | Reflect X and Y, recent formulas |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Nudge by an amount, Copy and Paste with Position, Size or Both. Nudge has [keyboard shortcuts](#keyboard-shortcuts) |
+| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, Paste from (anchor point) |
+| Full | Swap two shapes |
+
+Tips:
+
+1. The gap and nudge boxes take formulas, such as `g`, `0.5g` or `gap`, using the grid's values.
+2. Distribute keeps the first shape where it is and places the rest after it with the exact gap. Even gaps keeps the outer shapes still and shares the space between them equally.
+3. Aligning a single shape to the selection aligns it to the grid area instead.
+4. Copy position and size: select a shape and click Copy. The panel shows its position and size until it is closed. Go to another slide, select one or more shapes, choose Position, Size or Both, and click Paste.
+5. At More, Paste from chooses which point lines up when the sizes differ. Centre places shapes on the copied shape's centre, and with Size only, keeps each shape's own centre still while it is resized.
+
+### Size
+
+Sets the width and height of every selected shape, using plain numbers or formulas, and matches sizes.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Width, Height, Resize |
+| More | Live result, lock aspect ratio, reference point, Use selection, match to largest or smallest |
+| Full | Recent formulas |
 
 Hover over the small i in the tool's header, or tab to it, to read how formulas work.
 
@@ -124,14 +166,28 @@ Tips:
 
 1. Press Enter in Width or Height to apply just that one.
 2. With Lock aspect ratio on, the other side follows. If both boxes are filled, Resize uses Width.
-3. The reference point sets which point stays still: a corner, an edge or the centre. Copies also scale, rotate and reflect around it.
+3. The reference point sets which point stays still: a corner, an edge or the centre. Copies and the size shortcuts use the same point.
 4. Match makes every selected shape the size of the largest or smallest one by area. Lines are matched to each other by length.
 5. Recent formulas keeps your last six. Click one to put it back in the boxes.
 6. Lines are resized by length, whichever box you type in. Horizontal, vertical and diagonal lines keep their direction.
 7. With Crop pictures to fit on (in Images), a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
-8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way. If a box can't be read, such as `h+` with nothing after the plus, it turns red and the message says what to change.
-9. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
-10. Rows turns copies into a grid. With 3 copies and 3 rows you get 4 across by 3 down. Move down is the step between rows, and left empty it is the shape's height plus the row gap.
+
+### Copies
+
+Makes spaced copies of the selected shapes in one step, like Illustrator's Transform effect.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Copies, Move across and down, Make copies |
+| More | Rows, Space by, scale, rotate, reference point, copies preview and summary |
+| Full | Reflect X and Y |
+
+Tips:
+
+1. Set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way. If a box can't be read, such as `h+` with nothing after the plus, it turns red and the message says what to change.
+2. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
+3. Rows turns copies into a grid. With 3 copies and 3 rows you get 4 across by 3 down. Move down is the step between rows, and left empty it is the shape's height plus the row gap.
+4. The reference point is shared with Size, so changing it in either tool changes both.
 
 ### Images
 
@@ -140,7 +196,7 @@ Puts pictures into shapes like a picture placeholder, and moves or resets their 
 | Level | Shows |
 | --- | --- |
 | Basic | Paste into shape, Crop position, Reset crop |
-| More | Crop pictures to fit (used by Transform and Match) |
+| More | Crop pictures to fit (used by Size) |
 
 Tips:
 
@@ -177,53 +233,20 @@ Sets the corner radius of rounded rectangles in points, so corners match across 
 
 Press Enter in the Radius box to round the selection straight away. Square rectangles can't be converted from the panel. Draw them rounded, or use Round in the VBA Slide Tools. Corner changes need PowerPoint API 1.10 or later.
 
-### Arrange
+### Select similar
 
-Lines shapes up and spaces them exactly, using the same grid as Layout.
-
-| Level | Shows |
-| --- | --- |
-| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps, Nudge by an amount. Nudge has [keyboard shortcuts](#keyboard-shortcuts) |
-| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap options, template guide report |
-| Full | Swap two shapes |
-
-Tips:
-
-1. The gap and nudge boxes take formulas, such as `g`, `0.5g` or `gap`, using the Layout grid's values.
-2. Distribute keeps the first shape where it is and places the rest after it with the exact gap. Even gaps keeps the outer shapes still and shares the space between them equally.
-3. Aligning a single shape to the selection aligns it to the grid area instead.
-4. Snap moves each shape's top left corner to the nearest line, and a line under the buttons says what the chosen mode will do:
-   1. Guides: the guides you see on the slide. That covers presentation guides (the ones you can drag on any slide, which a template usually brings with it) and guides in the current slide's layout and master. "Snap all four edges" also moves the right and bottom edges to the nearest guide.
-   2. Columns: the column and row corners of the Layout grid. "Resize to the cells it covers" also sizes the shape to span whole cells.
-   3. Steps: every `g` from the grid area's top left. Can snap all four edges.
-5. With Guides chosen, the More level reports the guides: how many there are, their spacing, any that sit slightly off the pattern, for example "8.34722 in (1 pt right)", and where they were found. Use in Layout sets the Layout spacing and the grid area's left and top from the guides at full precision. Read again refreshes them after you move, add or remove guides.
-
-Guides are read from a read only copy of the open file, so they're never changed. The copy is taken once and kept until you click Read again. If PowerPoint won't hand over the file, the panel falls back to a copy of the slide (PowerPoint API 1.8). That fallback only has the layout and master guides, and the report says so.
-
-If shapes drift a little further from the guides the further they are across the slide, the step size is slightly off. PowerPoint shows guide positions to two decimal places, so a 30 pt guide grid (0.41667 in) looks like 0.42. Use in Layout, or typing `30pt` in Spacing, fixes it.
-
-### Match
-
-Finds shapes like the one you've selected, and copies one shape's position and size onto others.
+Finds shapes like the one you've selected, on this slide or slide by slide. Its button in the grid is called Similar.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Match by chips, Select similar on slide, Copy and Paste with Position, Size or Both |
-| More | Previous slide and Next slide with a count of matches, Paste from (anchor point) |
-
-Select similar:
+| Basic | Match by chips, Select similar on slide |
+| More | Previous slide and Next slide with a count of matches |
 
 1. Select an example shape, tick what to match by (Fill colour, Outline, Shape style, Text style, Size, Type), then click Select similar on slide. Every matching shape on that slide is selected.
 2. PowerPoint can only select shapes on one slide at a time. Next slide and Previous slide jump to the next slide that has matches and select them there, wrapping round at the end. The status line shows how many matches are on that slide and in the whole presentation.
 3. The example is remembered after you click Select similar, so you can keep stepping through slides after the selection changes. Changing the ticks applies to the next step.
 4. Size allows half a point of difference. Pictures, tables and groups can only be matched by Type and Size.
 5. Masters and layouts are never searched.
-
-Copy position and size:
-
-1. Select a shape and click Copy. The panel shows its position and size until it is closed.
-2. Go to another slide, select one or more shapes, and click Paste. Choose Position, Size or Both first.
-3. At More, Paste from chooses which point lines up when the sizes differ. Centre places shapes on the copied shape's centre, and with Size only, keeps each shape's own centre still while it is resized.
 
 ### Styles
 
@@ -339,7 +362,7 @@ Every part can be changed in the style editor: each part's font (or a text style
 
 Tips:
 
-1. Insert table adds a table at the Layout tool's grid area, at its full width, with header text and roles set (Category, Sub-category, Item, then Value columns).
+1. Insert table adds a table at the grid area set in Grid, at its full width, with header text and roles set (Category, Sub-category, Item, then Value columns).
 2. Clicking a style on a table that's already formatted reapplies it, keeping the table's roles. Changing a role reformats a linked table straight away.
 3. Stack repeats blanks a category label when it repeats the row above within the same group. It never touches label or data columns or total rows, and PowerPoint's Undo brings the labels back.
 4. Spaces, tabs and line breaks at the start and end of cells, common in text pasted from Excel, are trimmed before formatting so wrapping and column widths use the clean text. Only cells that change are rewritten. Turn it off in the style editor, or click Trim spaces for a one-off clean up.
@@ -350,9 +373,9 @@ Tips:
 8. Paste data: copy cells in Excel and paste them into the box under Insert table. Insert table then builds the table from them, with the first row as the header and column roles worked out from the values. Up to 40 rows and 20 columns.
 9. Line up decimals, a style setting that is on by default, pads numbers in data columns to the same number of decimal places (1.5 next to 2.25 becomes 1.50), since add-ins can't set decimal tab stops.
 
-Grid-based sizes. With the Layout spacing as g:
+Grid-based sizes. With the grid spacing as g:
 
-1. The table fills the Layout grid area width, rounded down to whole g.
+1. The table fills the grid area width, rounded down to whole g.
 2. Category and data columns are as wide as their longest text needs, rounded up to whole g. Label columns share the rest, also in whole g. With no label column, the spare room goes to the data columns.
 3. Every row, header included, is 1g tall. A row whose text wraps grows in steps of 1/4 g.
 4. The style editor can switch this off, turn off fitting to text (equal columns instead), or change the minimum row height and the step.
@@ -392,13 +415,13 @@ These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of C
 | Wider, narrower, taller, shorter | Ctrl+Alt+Shift+L, J, I, K |
 | Repeat last action | Ctrl+Alt+Shift+D |
 
-Nudge and the size keys step by Arrange's Nudge by amount, and sizes change around Transform's reference point. I, J, K and L are laid out like the arrow keys. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
+Nudge and the size keys step by the Nudge by amount in Position, and sizes change around the reference point in Size. I, J, K and L are laid out like the arrow keys. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
 
 The keys are declared in `shortcuts.json`, which the manifest links with `ExtendedOverrides`, and connected to the tools in `js/shortcuts.js`. Shortcuts need the shared runtime set in the manifest. Keep the two files in step when adding one. When the keys change, raise the `?v=` on the `shortcuts.json` address in the manifest and the manifest `<Version>`, so PowerPoint fetches the new list, and ask users to run the installer again.
 
 ## Formulas
 
-Every number box accepts maths, for example `12.5-2*0.42`. Values are in inches unless you add a unit: `30pt`, `1.5cm` or `12mm`. Boxes keep five decimal places, so `30pt` becomes 0.41667. The Transform boxes also understand these names:
+Every number box accepts maths, for example `12.5-2*0.42`. Values are in inches unless you add a unit: `30pt`, `1.5cm` or `12mm`. Boxes keep five decimal places, so `30pt` becomes 0.41667. The Size, Copies and Position boxes also understand these names:
 
 | Name | Meaning |
 | --- | --- |
@@ -438,31 +461,33 @@ The panel checks `version.json` when it opens. When it's out of date, a dot appe
 | The panel shows an old version | Close PowerPoint, delete the contents of `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, reopen |
 | The panel is blank or shows an error | Check the web address above loads in a browser, then reopen the panel |
 | The Grid Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
-| A slide button says the version is too old | Update Office. Draw, Fit, Resize, Match and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Inserting tables needs 1.8. Formatting existing tables needs 1.9. Corners need 1.10 |
+| A slide button says the version is too old | Update Office. Draw, Fit, Snap, Resize, Select similar and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Inserting tables needs 1.8. Formatting existing tables needs 1.9. Corners need 1.10 |
 | Update all reports something you didn't expect | Click Cancel. Nothing changes until you click Update |
 
 ## Project layout
 
 ```
-taskpane.html            Page shell: top bar, tool stack, script order
+taskpane.html            Page shell: top bar, tool buttons, tool stack, script order
 slidetools-manifest.xml  Office install file (ribbon button, panel address, shared runtime)
 shortcuts.json           Keyboard shortcut keys, linked from the manifest
 version.json             The current panel and install versions, read by the panel to offer updates
 css/panel.css            All styling, light and dark themes, detail level rules
 js/core.js               Shared state, saved settings, formula evaluator, grid maths, PowerPoint helpers
-js/panels.js             Panel framework: headers, detail levels, folding, drag to reorder, menus
-js/tools/layout.js       Layout tool
-js/tools/resize.js       Transform tool (resize, lines, crop, copies)
+js/panels.js             Panel framework: tool buttons, pins, following the selection, headers, detail levels, folding, drag to reorder, menus
+js/tools/snap.js         Snap, shown inside Grid (guides, columns, steps)
+js/tools/layout.js       Grid tool (id layout)
+js/tools/resize.js       Size tool (id resize: resize, lines, crop, match size, shared reference point)
+js/tools/copies.js       Copies tool
 js/tools/images.js       Images tool (paste into shape, crop position, reset crop)
 js/tools/typography.js   Typography tool (spacing, kerning, baseline, margins, autofit)
 js/rebuild.js            In-memory slide rebuild used to crop pictures and make copies
-js/crop.js               Picture cropping for Transform
-js/clone.js              Copies for Transform
+js/crop.js               Picture cropping for Size
+js/clone.js              Copy maths and slide edits for Copies
 js/shortcuts.js          Keyboard shortcuts: names each action and connects it to the tools
 js/update.js             Versions and updates in the settings menu
 js/tools/corners.js      Corners tool
-js/tools/arrange.js      Arrange tool (align, distribute, snap)
-js/tools/match.js        Match tool (select similar, copy position and size)
+js/tools/arrange.js      Position tool (id arrange: align, distribute, nudge, swap, copy and paste position)
+js/tools/match.js        Select similar tool (id match)
 js/tools/styles.js       Styles tool (character styles)
 js/tools/shapestyles.js  Shape styles tool
 js/tools/tables.js       Tables tool (table styles, insert and format)
@@ -518,7 +543,7 @@ There is no build step. GitHub Pages serves the files as they are.
 
 5. Add a manual page `manual/<id>.html` named after the tool's `id`, so How to use in the tool's menu opens it. Follow the other tool pages: overview, annotated panel with a reference row (`data-control`) for every control, how it works, recipes, limits, messages and related tools. Link it from `manual.html` and the sidebar on every page.
 
-New tools appear at the bottom of the stack for anyone who already has a saved arrangement.
+New tools appear at the end of the tool buttons for anyone who already has a saved arrangement. To give a tool a place in the first order, add its `id` to `DEFAULT_ORDER` in `js/panels.js`.
 
 ### Writing panel text
 

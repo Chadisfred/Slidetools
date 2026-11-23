@@ -1,4 +1,4 @@
-/* Picture cropping for Transform. Pictures are cropped to fill a new frame instead of
+/* Picture cropping for the Size tool. Pictures are cropped to fill a new frame instead of
    being stretched. The crop is written to the slide XML through the shared slide rebuild
    (js/rebuild.js), which works in memory and edits only the slide. */
 (function () {

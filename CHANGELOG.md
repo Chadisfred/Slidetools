@@ -2,6 +2,24 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.0.0] 2026-11-23
+
+### Changed
+
+1. Tool buttons at the top of the panel replace the long scrolling stack. Every tool is named in one small grid, grouped by job: Grid, Position, Size and Copies, then Typography, Colours, Text styles and Shape styles, then Images, Tables, Corners and Similar. Clicking a button opens that tool and closes the others, so there is little to scroll. Show all tools in one list, in the settings menu, brings back the stacked view.
+2. Arrange, Transform, Layout and Match are regrouped by job. Layout is now Grid and holds Snap, Arrange is now Position and holds copy and paste position, Transform is now Size, and Match is now Select similar. In detail:
+   1. Layout is now Grid, and Snap (guides, columns, steps and the guide report) moves into it. Use in Layout is now Use for grid.
+   2. Arrange is now Position, and copy and paste position and size moves into it from Match.
+   3. Transform is now Size: width and height, lock, reference point and match size.
+   4. Match is now Select similar.
+3. Saved panel arrangements start once from the new grouped order. Settings, styles, presets and keyboard shortcuts carry over unchanged.
+
+### Added
+
+1. Copies, its own tool, split out of Transform with all the same settings. It shares the reference point with Size.
+2. Pin a tool from its header to keep it open while you open another, such as Size and Position together.
+3. The panel follows the selection: selecting a picture opens Images, a table opens Tables, and clicking into text opens Typography. Selecting shapes never changes what is open. Open tools with the selection, in the settings menu, turns this off.
+
 ## [2.31.0] 2026-11-23
 
 ### Added

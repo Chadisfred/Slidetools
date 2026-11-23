@@ -242,6 +242,8 @@
     });
   };
 
+  // Reads the selection's sizes, and what kind of thing is selected:
+  // picture, table, text (the cursor is in a text box), shape, or none.
   ST.refreshSelection = function () {
     if (!ST.inOffice) return;
     PowerPoint.run(function (context) {
@@ -254,13 +256,37 @@
         });
         sel.count = sel.items.length;
         if (sel.count) { sel.w = sel.items[0].w; sel.h = sel.items[0].h; sel.line = sel.items[0].line; }
-        ST.emit("selection");
+        var types = shapes.items.map(function (s) { return s.type; });
+        return selectionKind(context, shapes.items, types).then(function (kind) { sel.kind = kind; ST.emit("selection"); });
       });
     }).catch(function () {
-      ST.selection.count = 0; ST.selection.items = [];
+      ST.selection.count = 0; ST.selection.items = []; ST.selection.kind = "none";
       ST.emit("selection");
     });
   };
+  function selectionKind(context, items, types) {
+    if (!items.length) return Promise.resolve("none");
+    if (types.every(function (t) { return t === "Table"; })) return Promise.resolve("table");
+    if (types.every(function (t) { return t === "Image"; })) return Promise.resolve("picture");
+    return textCursor(context, items).then(function (inText) {
+      if (inText) return "text";
+      // A picture placeholder counts as a picture
+      if (items.length !== 1 || types[0] !== "Placeholder" || !ST.supports("1.8")) return "shape";
+      var ph = items[0].placeholderFormat;
+      ph.load("type");
+      return context.sync().then(function () { return ph.type === "Picture" ? "picture" : "shape"; }, function () { return "shape"; });
+    });
+  }
+  // True when the cursor or highlighted text is inside a text box, not when whole shapes are selected.
+  function textCursor(context, items) {
+    if (items.length !== 1 || !ST.supports("1.5")) return Promise.resolve(false);
+    try {
+      var pres = context.presentation;
+      var range = pres.getSelectedTextRangeOrNullObject ? pres.getSelectedTextRangeOrNullObject() : pres.getSelectedTextRange();
+      range.load("start,length");
+      return context.sync().then(function () { return !range.isNullObject; }, function () { return false; });
+    } catch (e) { return Promise.resolve(false); }
+  }
 
   // Converts a corner radius in points into PowerPoint's 0 to 0.5 adjustment value.
   ST.cornerValue = function (widthPt, heightPt, radiusPt) {

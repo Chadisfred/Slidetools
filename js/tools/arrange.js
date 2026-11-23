@@ -1,11 +1,15 @@
-/* Arrange tool: align, distribute with exact gaps, snap to the Layout grid, swap and nudge. */
+/* Position tool (id "arrange"): align, distribute with exact gaps, nudge, swap, and copy
+   and paste position and size. Snap lives in the Grid tool (js/tools/snap.js). */
 (function () {
   "use strict";
 
   var ST = window.ST, PT = ST.PT, $ = ST.$;
 
-  var defaults = { arrGap: "g", arrAlignTo: "selection", arrSnap: "cells", arrSnapEdges: false, arrSnapResize: false, arrNudge: "g" };
+  var defaults = { arrGap: "g", arrAlignTo: "selection", arrNudge: "g", pasteWhat: "both", pasteAnchor: 0 };
   ST.addDefaults(defaults);
+
+  var ANCHOR_NAMES = ["top left", "top", "top right", "left", "centre", "right", "bottom left", "bottom", "bottom right"];
+  var copied = null; // { left, top, width, height } in points, for this session only
 
   var ICON = '<svg viewBox="0 0 18 18" fill="currentColor"><rect x="2" y="2" width="1.6" height="14" rx="0.8"/><rect x="5" y="4" width="10" height="4" rx="1.2"/><rect x="5" y="10" width="6" height="4" rx="1.2" opacity="0.6"/></svg>';
 
@@ -30,20 +34,17 @@
       '<div class="pair"><button class="btn small" id="arrDistH" title="Place shapes left to right with this gap">Across</button><button class="btn small" id="arrDistV" title="Place shapes top to bottom with this gap">Down</button></div></div>' +
     '<div class="calc" id="arrGapCalc" data-min="2"></div>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="arrSpreadH" title="Equal gaps, keeping the outer shapes where they are">Even gaps across</button><button class="btn small" id="arrSpreadV" title="Equal gaps, keeping the outer shapes where they are">Even gaps down</button></div>' +
-    '<div class="group-label label-row">Snap' + ST.info("Moves each shape's top left corner to the nearest line.<br><b>Guides</b> the guides on your slide.<br><b>Columns</b> the Layout grid's column and row corners.<br><b>Steps</b> every g from the grid area's top left.", "About snap") + '</div>' +
-    '<div class="seg seg3" id="arrSnapMode"></div>' +
-    '<div class="toggle arr-cells" data-min="2">Resize to the cells it covers<label class="switch"><input type="checkbox" id="arrSnapResize"><span></span></label></div>' +
-    '<div class="toggle arr-edges" data-min="2">Snap all four edges<label class="switch"><input type="checkbox" id="arrSnapEdges"><span></span></label></div>' +
-    '<div class="arr-guides" data-min="2"><div class="help" id="arrGuideInfo"></div>' +
-      '<div class="btn-row"><button class="btn small" id="arrGuideRead" title="Read the guides from this slide\'s layout and master again">Read again</button>' +
-      '<button class="btn small" id="arrGuideUse" title="Set the Layout spacing and the grid area\'s left and top from the guides">Use in Layout</button></div></div>' +
-    '<button class="btn primary" id="arrSnap">Snap</button>' +
     '<div class="group-label">Move</div>' +
     '<div class="nudge-row">' +
       '<label class="field">Nudge by<input type="text" id="arrNudge" placeholder="e.g. g"></label>' +
       '<div class="nudge-pad" id="arrNudgePad"><button class="btn small" data-nudge="-1,0" title="Nudge left' + hint("NudgeLeft") + '">&larr;</button><button class="btn small" data-nudge="0,-1" title="Nudge up' + hint("NudgeUp") + '">&uarr;</button><button class="btn small" data-nudge="0,1" title="Nudge down' + hint("NudgeDown") + '">&darr;</button><button class="btn small" data-nudge="1,0" title="Nudge right' + hint("NudgeRight") + '">&rarr;</button></div>' +
     '</div>' +
-    '<button class="btn small" id="arrSwap" data-min="3" title="Swap the positions of two selected shapes">Swap two shapes</button>';
+    '<button class="btn small" id="arrSwap" data-min="3" title="Swap the positions of two selected shapes">Swap two shapes</button>' +
+    '<div class="group-label">Copy and paste position</div>' +
+    '<div class="btn-row"><button class="btn small" id="posCopy" title="Remember the first selected shape\'s position and size">Copy</button><button class="btn small" id="posPaste" title="Apply the copied position and size to the selected shapes" disabled>Paste</button></div>' +
+    '<div class="seg seg3" id="pasteWhat"></div>' +
+    '<div class="anchor-row" data-min="2"><span class="label-row">Paste from&nbsp;<b id="pasteAnchorName"></b>' + ST.info("The point that lines up with the copied shape when sizes differ.", "About paste from") + '</span><div class="anchor" id="pasteAnchor"></div></div>' +
+    '<div class="help" id="posCopied">Nothing copied yet</div>';
 
   // ---------- Helpers ----------
   function box(items) {
@@ -117,298 +118,6 @@
     });
   }
 
-  // ---------- Snap ----------
-  function nearest(list, v) {
-    var best = 0;
-    for (var i = 1; i < list.length; i++) if (Math.abs(list[i] - v) < Math.abs(list[best] - v)) best = i;
-    return best;
-  }
-  function gridLines() {
-    var g = ST.calculate(), xs = [], xe = [], ys = [], ye = [], x = g.left, y = g.top;
-    for (var c = 0; c < g.cols; c++) { xs.push(x * PT); xe.push((x + g.widths[c]) * PT); x += g.widths[c] + g.gapH; }
-    for (var r = 0; r < g.rows; r++) { ys.push(y * PT); ye.push((y + g.heights[r]) * PT); y += g.heights[r] + g.gapV; }
-    return { xs: xs, xe: xe, ys: ys, ye: ye, grid: g };
-  }
-  // ---------- Template guides ----------
-  // Guides live in two places, with positions in eighths of a point:
-  //   ppt/viewProps.xml  <p:guide>    presentation guides, draggable on any slide
-  //   master and layout  <p15:guide>  template guides, locked outside Slide Master view
-  // The whole open file is read (read only) so both kinds are found. If that isn't possible,
-  // a copy of the slide gives its layout and master, but not the presentation guides.
-  var guides = null; // { slideId, v: [pt], h: [pt], sources: [label], whole: bool }
-  var fileBytes = null; // cached copy of the whole file, cleared by Read again
-  function canReadWholeFile() {
-    try { return !!(Office.context.document && Office.context.document.getFileAsync && Office.FileType && Office.FileType.Compressed); }
-    catch (e) { return false; }
-  }
-  function guidesSupported() {
-    return ST.inOffice && typeof DecompressionStream === "function" && (canReadWholeFile() || ST.supports("1.8"));
-  }
-  function guidesIn(text) {
-    var v = [], h = [];
-    var doc = new DOMParser().parseFromString(text, "application/xml");
-    Array.prototype.forEach.call(doc.getElementsByTagName("*"), function (el) {
-      if (el.localName !== "guide") return;
-      var pos = parseInt(el.getAttribute("pos") || "0", 10) / 8;
-      if (!isFinite(pos)) return;
-      (el.getAttribute("orient") === "horz" ? h : v).push(pos);
-    });
-    return { v: v, h: h };
-  }
-  // parts: [{ label, text }]. Returns sorted, de-duplicated guides and the labels that had any.
-  function collectGuides(parts) {
-    var v = {}, h = {}, sources = [];
-    parts.forEach(function (p) {
-      if (!p.text) return;
-      var g = guidesIn(p.text);
-      g.v.forEach(function (x) { v[x] = true; });
-      g.h.forEach(function (y) { h[y] = true; });
-      if (g.v.length || g.h.length) sources.push(p.label);
-    });
-    function list(o) { return Object.keys(o).map(Number).sort(function (a, b) { return a - b; }); }
-    return { v: list(v), h: list(h), sources: sources };
-  }
-
-  // Reads the open presentation as a zip, slice by slice. Resolves to bytes, or null.
-  function readWholeFile(force) {
-    if (!force && fileBytes) return Promise.resolve(fileBytes);
-    if (!canReadWholeFile()) return Promise.resolve(null);
-    return new Promise(function (resolve) {
-      try {
-        Office.context.document.getFileAsync(Office.FileType.Compressed, { sliceSize: 4194304 }, function (res) {
-          if (res.status !== "succeeded" || !res.value) { resolve(null); return; }
-          var file = res.value, count = file.sliceCount, chunks = [], total = 0;
-          function done(bytes) { try { file.closeAsync(function () {}); } catch (e) { /* already closed */ } resolve(bytes); }
-          function next(i) {
-            if (i >= count) {
-              var out = new Uint8Array(total), at = 0;
-              chunks.forEach(function (c) { out.set(c, at); at += c.length; });
-              fileBytes = out;
-              done(out);
-              return;
-            }
-            file.getSliceAsync(i, function (s) {
-              if (s.status !== "succeeded" || !s.value) { done(null); return; }
-              var c = s.value.data instanceof Uint8Array ? s.value.data : new Uint8Array(s.value.data);
-              chunks.push(c); total += c.length;
-              next(i + 1);
-            });
-          }
-          next(0);
-        });
-      } catch (e) { resolve(null); }
-    });
-  }
-
-  // Zip paths: a target in a .rels file is relative to the folder of the part it belongs to.
-  function resolvePath(fromPart, target) {
-    if (target.charAt(0) === "/") return target.slice(1);
-    var parts = fromPart.split("/").slice(0, -1);
-    target.split("/").forEach(function (seg) { if (seg === "..") parts.pop(); else if (seg && seg !== ".") parts.push(seg); });
-    return parts.join("/");
-  }
-  function relsPath(part) { var i = part.lastIndexOf("/"); return part.slice(0, i) + "/_rels/" + part.slice(i + 1) + ".rels"; }
-  function relations(text) {
-    var doc = new DOMParser().parseFromString(text || "<x/>", "application/xml");
-    return Array.prototype.filter.call(doc.getElementsByTagName("*"), function (el) { return el.localName === "Relationship"; })
-      .map(function (el) { return { id: el.getAttribute("Id"), type: el.getAttribute("Type") || "", target: el.getAttribute("Target") || "" }; });
-  }
-  function relTarget(files, part, typeEnd) {
-    var r = relations(files[relsPath(part)]).filter(function (x) { return x.type.slice(x.type.lastIndexOf("/") + 1) === typeEnd; })[0];
-    return r ? resolvePath(part, r.target) : null;
-  }
-
-  // Finds the guides for the slide at index from the whole file's bytes.
-  function guidesFromFile(bytes, index) {
-    var zip = ST.zip, files = {};
-    var first = /^(ppt\/viewProps\.xml|ppt\/presentation\.xml|ppt\/_rels\/presentation\.xml\.rels|ppt\/slides\/_rels\/[^\/]+\.rels|ppt\/slideLayouts\/_rels\/[^\/]+\.rels)$/;
-    return zip.readZip(bytes, function (n) { return first.test(n); }).then(function (list) {
-      list.forEach(function (f) { files[f.name] = f.text; });
-      var pres = new DOMParser().parseFromString(files["ppt/presentation.xml"] || "<x/>", "application/xml");
-      var ids = Array.prototype.filter.call(pres.getElementsByTagName("*"), function (el) { return el.localName === "sldId"; });
-      var sld = ids[index], rid = null;
-      if (sld) Array.prototype.forEach.call(sld.attributes, function (a) { if (a.localName === "id" && a.namespaceURI && /relationships$/.test(a.namespaceURI)) rid = a.value; });
-      var rel = rid ? relations(files["ppt/_rels/presentation.xml.rels"]).filter(function (r) { return r.id === rid; })[0] : null;
-      var slidePart = rel ? resolvePath("ppt/presentation.xml", rel.target) : null;
-      var layoutPart = slidePart ? relTarget(files, slidePart, "slideLayout") : null;
-      var masterPart = layoutPart ? relTarget(files, layoutPart, "slideMaster") : null;
-      var wanted = [layoutPart, masterPart].filter(Boolean);
-      return (wanted.length ? zip.readZip(bytes, function (n) { return wanted.indexOf(n) >= 0; }) : Promise.resolve([])).then(function (more) {
-        more.forEach(function (f) { files[f.name] = f.text; });
-        var g = collectGuides([
-          { label: "presentation guides", text: files["ppt/viewProps.xml"] },
-          { label: "slide layout", text: layoutPart && files[layoutPart] },
-          { label: "slide master", text: masterPart && files[masterPart] }
-        ]);
-        g.whole = true;
-        return g;
-      });
-    });
-  }
-  function guidesFromCopy(context, slide) {
-    if (!ST.supports("1.8")) return Promise.resolve(null);
-    var data = slide.exportAsBase64();
-    return context.sync().then(function () {
-      return ST.zip.readZip(ST.zip.b64ToBytes(data.value), function (n) { return /^ppt\/(slideMasters\/slideMaster\d+|slideLayouts\/slideLayout\d+)\.xml$/.test(n); });
-    }).then(function (files) {
-      var g = collectGuides(files.map(function (f) { return { label: /Master/.test(f.name) ? "slide master" : "slide layout", text: f.text }; }));
-      g.whole = false;
-      return g;
-    });
-  }
-  function loadGuides(context, force) {
-    if (!guidesSupported() || !ST.zip) return Promise.resolve(null);
-    var sel = context.presentation.getSelectedSlides(), all = context.presentation.slides;
-    sel.load("items/id"); all.load("items/id");
-    return context.sync().then(function () {
-      var slide = sel.items[0] || all.items[0];
-      if (!slide) return null;
-      if (!force && guides && guides.slideId === slide.id) return guides;
-      var index = Math.max(0, all.items.map(function (s) { return s.id; }).indexOf(slide.id));
-      return readWholeFile(force).then(function (bytes) {
-        return bytes ? guidesFromFile(bytes, index).catch(function () { return null; }) : null;
-      }).then(function (g) {
-        return g || guidesFromCopy(context, slide);
-      }).then(function (g) {
-        if (!g) return null;
-        g.slideId = slide.id;
-        guides = g;
-        renderGuideInfo();
-        return g;
-      });
-    });
-  }
-  // Describes the spacing between guides and points out any that are slightly off the pattern.
-  function analyse(list) {
-    if (list.length < 2) return { step: null, off: [] };
-    var counts = {}, gaps = [];
-    for (var i = 1; i < list.length; i++) { var d = Math.round((list[i] - list[i - 1]) * 8) / 8; gaps.push(d); counts[d] = (counts[d] || 0) + 1; }
-    var step = Number(Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; })[0]);
-    // Guides on the pattern share the same remainder after dividing by the step. Ones a little
-    // away from it are reported with how far off they are. Far away ones are taken as deliberate.
-    var rem = {}, best = null;
-    list.forEach(function (p) { var r = Math.round((((p % step) + step) % step) * 8) / 8; rem[r] = (rem[r] || 0) + 1; if (best === null || rem[r] > rem[best]) best = r; });
-    var off = [];
-    list.forEach(function (p) {
-      var d = (((p - best) % step) + step) % step;
-      if (d > step / 2) d -= step;
-      d = Math.round(d * 8) / 8;
-      if (d !== 0 && Math.abs(d) <= Math.max(1, step * 0.1)) off.push({ pos: p, by: d });
-    });
-    return { step: step, off: off, regular: counts[step] === gaps.length };
-  }
-  function inch(pt) { return ST.exact(pt / PT); }
-  function joinWords(list) { return list.length < 2 ? list.join("") : list.slice(0, -1).join(", ") + " and " + list[list.length - 1]; }
-  function describe(list, word) {
-    if (!list.length) return "No " + word + " guides.";
-    var a = analyse(list), text = ST.plural(list.length, word + " guide");
-    if (a.step) text += a.regular ? ", evenly every " + a.step + " pt (" + inch(a.step) + " in)" : ", mostly " + a.step + " pt (" + inch(a.step) + " in) apart";
-    text += ". ";
-    var after = word === "vertical" ? ["right", "left"] : ["down", "up"];
-    text += a.off.length ? ST.plural(a.off.length, "guide") + " slightly off: " + a.off.map(function (o) {
-      return inch(o.pos) + " in (" + Math.abs(o.by) + " pt " + (o.by > 0 ? after[0] : after[1]) + ")";
-    }).join(", ") + "." : (a.step ? "None off the pattern." : "");
-    return text;
-  }
-  function renderGuideInfo() {
-    var el = $("arrGuideInfo");
-    if (!el) return;
-    if (!ST.inOffice) { el.textContent = "Guides are read from your template once the panel is open in PowerPoint."; return; }
-    if (!guidesSupported()) { el.textContent = "This PowerPoint version can't read template guides."; return; }
-    if (!guides) { el.textContent = "Guides haven't been read yet. They're read the first time you snap."; return; }
-    if (!guides.v.length && !guides.h.length) {
-      el.textContent = guides.whole
-        ? "No guides found in the presentation guides, this slide's layout or its master."
-        : "No guides found in this slide's layout or master. The whole file couldn't be read, so guides drawn on the slides weren't checked.";
-      return;
-    }
-    el.textContent = describe(guides.v, "vertical") + " " + describe(guides.h, "horizontal") + " Found in the " + joinWords(guides.sources) + ".";
-  }
-  function readGuidesNow(force) {
-    if (!ST.needOffice()) return;
-    if (!guidesSupported()) { ST.toast("This PowerPoint version can't read template guides.", true); return; }
-    ST.run(function (context) {
-      return loadGuides(context, force).then(function (g) {
-        if (g) ST.toast(g.v.length + g.h.length ? "Read " + ST.plural(g.v.length + g.h.length, "guide") + "." : "No guides found.", !(g.v.length + g.h.length));
-      });
-    });
-  }
-  function useInLayout() {
-    if (!guides || (!guides.v.length && !guides.h.length)) { ST.toast("Read the guides first.", true); return; }
-    var a = analyse(guides.v.length >= guides.h.length ? guides.v : guides.h), s = ST.state, parts = [];
-    if (a.step) { s.spacing = ST.exact(a.step / PT); parts.push("spacing " + s.spacing + " in"); }
-    if (guides.v.length) { s.left = ST.exact(guides.v[0] / PT); parts.push("left " + s.left + " in"); }
-    if (guides.h.length) { s.top = ST.exact(guides.h[0] / PT); parts.push("top " + s.top + " in"); }
-    if (s.preset !== undefined) s.preset = "custom";
-    ST.emit("reset");
-    ST.changed();
-    ST.toast("Layout set from guides: " + parts.join(", ") + ".");
-  }
-  function snapToGuides(edges) {
-    ST.run(function (context) {
-      var shapes = context.presentation.getSelectedShapes();
-      shapes.load("items/left,items/top,items/width,items/height");
-      return loadGuides(context, false).then(function (g) {
-        return context.sync().then(function () {
-          if (!g) { ST.toast("This PowerPoint version can't read template guides.", true); return; }
-          if (!g.v.length && !g.h.length) { ST.toast("No guides found. See the guide report at the More level.", true); return; }
-          var items = shapes.items;
-          if (!items.length) { ST.toast("Select the shapes on your slide first.", true); return; }
-          items.forEach(function (s) {
-            var r = s.left + s.width, b = s.top + s.height;
-            if (g.v.length) {
-              s.left = g.v[nearest(g.v, s.left)];
-              if (edges) { var rs = g.v.filter(function (x) { return x > s.left; }); if (rs.length) s.width = rs[nearest(rs, r)] - s.left; }
-            }
-            if (g.h.length) {
-              s.top = g.h[nearest(g.h, s.top)];
-              if (edges) { var bs = g.h.filter(function (y) { return y > s.top; }); if (bs.length) s.height = bs[nearest(bs, b)] - s.top; }
-            }
-          });
-          return context.sync().then(function () { ST.toast("Snapped " + ST.plural(items.length, "shape") + " to the template guides."); ST.refreshSelection(); });
-        });
-      });
-    });
-  }
-
-  function snap() {
-    if (ST.state.arrSnap === "guides") {
-      if (!ST.needOffice()) return;
-      if (!guidesSupported()) { ST.toast("This PowerPoint version can't read template guides.", true); return; }
-      snapToGuides(!!ST.state.arrSnapEdges);
-      return;
-    }
-    var g = ST.calculate();
-    if (!g.valid) { ST.toast("The Layout grid isn't valid. Check its spacing and area.", true); return; }
-    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
-      if (ST.state.arrSnap === "fine") {
-        var step = g.spacing * PT, ox = g.left * PT, oy = g.top * PT;
-        if (!(step > 0)) { ST.toast("Grid spacing needs to be more than 0.", true); return; }
-        var round = function (v, o) { return o + Math.round((v - o) / step) * step; };
-        items.forEach(function (s) {
-          var r = s.left + s.width, b = s.top + s.height;
-          s.left = round(s.left, ox); s.top = round(s.top, oy);
-          if (ST.state.arrSnapEdges) {
-            s.width = Math.max(step, round(r, ox) - s.left);
-            s.height = Math.max(step, round(b, oy) - s.top);
-          }
-        });
-        return context.sync().then(function () { ST.toast("Snapped " + ST.plural(items.length, "shape") + " to steps of " + ST.nice(g.spacing) + " in."); ST.refreshSelection(); });
-      }
-      var L = gridLines();
-      items.forEach(function (s) {
-        var c = nearest(L.xs, s.left), r = nearest(L.ys, s.top);
-        var right = s.left + s.width, bottom = s.top + s.height;
-        s.left = L.xs[c]; s.top = L.ys[r];
-        if (ST.state.arrSnapResize) {
-          var ce = c + nearest(L.xe.slice(c), right), re = r + nearest(L.ye.slice(r), bottom);
-          s.width = L.xe[ce] - L.xs[c]; s.height = L.ye[re] - L.ys[r];
-        }
-      });
-      return context.sync().then(function () { ST.toast("Snapped " + ST.plural(items.length, "shape") + " to the grid cells."); ST.refreshSelection(); });
-    });
-  }
-
   // ---------- Move ----------
   function nudge(dx, dy) {
     var d = amount("arrNudge");
@@ -418,7 +127,7 @@
       return context.sync().then(function () { ST.refreshSelection(); });
     });
   }
-  // Changes width and height by the nudge amount, keeping Transform's reference point still
+  // Changes width and height by the nudge amount, keeping Size's reference point still
   function resizeBy(dw, dh) {
     var d = amount("arrNudge");
     if (d === null) { ST.toast("Check the nudge amount.", true); return; }
@@ -447,6 +156,77 @@
     });
   }
 
+  // ---------- Copy and paste position and size ----------
+  function inches(pt) { return ST.nice(Math.round(pt / PT * 100) / 100); }
+  function showCopied() {
+    $("posPaste").disabled = !copied;
+    $("posCopied").textContent = copied
+      ? "Copied: left " + inches(copied.left) + ", top " + inches(copied.top) + " in. " + inches(copied.width) + " x " + inches(copied.height) + " in."
+      : "Nothing copied yet";
+  }
+  function copy() {
+    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
+      var s = items[0];
+      copied = { left: s.left, top: s.top, width: s.width, height: s.height };
+      showCopied();
+      ST.toast(items.length > 1 ? "Copied the first selected shape." : "Copied position and size.");
+    }, "Select the shape to copy first.");
+  }
+  // Works out where a shape goes. The chosen anchor point of the shape lands on the same
+  // point of the copied box (Position), or stays where it is (Size only).
+  function placement(s, box, what, anchor) {
+    var fx = (anchor % 3) / 2, fy = Math.floor(anchor / 3) / 2;
+    var size = what !== "position", pos = what !== "size";
+    var w = size ? box.width : s.width, h = size ? box.height : s.height;
+    var ax = pos ? box.left + box.width * fx : s.left + s.width * fx;
+    var ay = pos ? box.top + box.height * fy : s.top + s.height * fy;
+    return { left: ax - w * fx, top: ay - h * fy, width: w, height: h };
+  }
+  function paste() {
+    if (!copied) { ST.toast("Copy a shape first.", true); return; }
+    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
+      var what = ST.state.pasteWhat || "both", anchor = ST.state.pasteAnchor || 0;
+      items.forEach(function (s) {
+        var p = placement(s, copied, what, anchor);
+        if (what !== "position") { s.width = p.width; s.height = p.height; }
+        s.left = p.left; s.top = p.top;
+      });
+      return context.sync().then(function () {
+        var word = what === "both" ? "position and size" : what;
+        ST.toast("Pasted " + word + " onto " + ST.plural(items.length, "shape") + ".");
+        ST.refreshSelection();
+      });
+    }, "Select the shapes to paste onto.");
+  }
+
+  function renderPaste() {
+    var seg = $("pasteWhat");
+    if (!seg.children.length) {
+      [["position", "Position"], ["size", "Size"], ["both", "Both"]].forEach(function (o) {
+        var b = document.createElement("button");
+        b.textContent = o[1];
+        b.setAttribute("data-v", o[0]);
+        b.addEventListener("click", function () { ST.state.pasteWhat = o[0]; ST.changed(); });
+        seg.appendChild(b);
+      });
+    }
+    Array.prototype.forEach.call(seg.children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === (ST.state.pasteWhat || "both")); });
+    var el = $("pasteAnchor");
+    if (!el.children.length) {
+      ANCHOR_NAMES.forEach(function (name, i) {
+        var b = document.createElement("button");
+        b.title = "Line up the " + name + " corner";
+        if (i === 1 || i === 3 || i === 5 || i === 7) b.title = "Line up the " + name + " edge";
+        if (i === 4) b.title = "Line up the centre";
+        b.setAttribute("aria-label", b.title);
+        b.addEventListener("click", function () { ST.state.pasteAnchor = i; ST.changed(); });
+        el.appendChild(b);
+      });
+    }
+    var a = ST.state.pasteAnchor || 0;
+    Array.prototype.forEach.call(el.children, function (b, i) { b.classList.toggle("on", i === a); });
+    $("pasteAnchorName").textContent = ANCHOR_NAMES[a];
+  }
   // ---------- Build ----------
   function seg(id, options, key) {
     var el = $(id);
@@ -455,29 +235,13 @@
       b.textContent = o[1];
       b.addEventListener("click", function () {
         ST.state[key] = o[0]; ST.save(); renderSegs();
-        if (key === "arrSnap" && o[0] === "guides" && !guides && ST.inOffice && guidesSupported()) readGuidesNow(false);
       });
       b.setAttribute("data-v", o[0]);
       el.appendChild(b);
     });
   }
   function renderSegs() {
-    [["arrAlignTo", "arrAlignTo"], ["arrSnapMode", "arrSnap"]].forEach(function (p) {
-      Array.prototype.forEach.call($(p[0]).children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state[p[1]]); });
-    });
-    var mode = ST.state.arrSnap;
-    function show(sel, on) { Array.prototype.forEach.call(document.querySelectorAll(sel), function (el) { el.classList.toggle("off", !on); }); }
-    show(".arr-cells", mode === "cells");
-    show(".arr-edges", mode !== "cells");
-    show(".arr-guides", mode === "guides");
-    renderSnapNote();
-  }
-  function renderSnapNote() {
-    var el = $("arrSnapNote"), mode = ST.state.arrSnap, g = ST.calculate();
-    if (!el) return;
-    if (mode === "guides") el.textContent = "Moves each shape's top left corner to the nearest guide in your template.";
-    else if (mode === "cells") el.textContent = "Moves each shape's top left corner to the nearest column and row corner of the Layout grid (" + g.cols + " x " + g.rows + ").";
-    else el.textContent = "Moves each shape's top left corner to the nearest step of g (" + ST.exact(g.spacing) + " in), counted from the grid area's top left.";
+    Array.prototype.forEach.call($("arrAlignTo").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.arrAlignTo); });
   }
   function updateCalc() {
     var el = $("arrGapCalc");
@@ -497,49 +261,43 @@
       row.appendChild(b);
     });
     seg("arrAlignTo", [["selection", "Selection"], ["area", "Grid area"], ["key", "Largest"]], "arrAlignTo");
-    seg("arrSnapMode", [["guides", "Guides"], ["cells", "Columns"], ["fine", "Steps"]], "arrSnap");
-    $("arrGuideRead").addEventListener("click", function () { readGuidesNow(true); });
-    $("arrGuideUse").addEventListener("click", useInLayout);
     ST.bindField($("arrGap"), "arrGap");
     ST.bindField($("arrNudge"), "arrNudge");
-    [["arrSnapResize", "arrSnapResize"], ["arrSnapEdges", "arrSnapEdges"]].forEach(function (p) {
-      var box = $(p[0]);
-      box.checked = !!ST.state[p[1]];
-      box.addEventListener("change", function () { ST.state[p[1]] = box.checked; ST.save(); });
-      ST.on("reset", function () { box.checked = !!ST.state[p[1]]; });
-    });
     $("arrDistH").addEventListener("click", function () { ST.setRepeat("Distribute across", function () { distribute(true); }); distribute(true); });
     $("arrDistV").addEventListener("click", function () { ST.setRepeat("Distribute down", function () { distribute(false); }); distribute(false); });
     $("arrGap").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); distribute(true); } });
     $("arrSpreadH").addEventListener("click", function () { ST.setRepeat("Even gaps across", function () { spread(true); }); spread(true); });
     $("arrSpreadV").addEventListener("click", function () { ST.setRepeat("Even gaps down", function () { spread(false); }); spread(false); });
-    $("arrSnap").addEventListener("click", function () { ST.setRepeat("Snap", function () { snap(); }); snap(); });
     $("arrSwap").addEventListener("click", swap);
     Array.prototype.forEach.call(body.querySelectorAll("[data-nudge]"), function (b) {
       var d = b.getAttribute("data-nudge").split(",").map(Number);
       b.addEventListener("click", function () { nudge(d[0], d[1]); });
     });
     renderSegs();
-    ST.on("change", function () { updateCalc(); renderSnapNote(); });
+    $("posCopy").addEventListener("click", copy);
+    $("posPaste").addEventListener("click", paste);
+    ST.on("change", renderPaste);
+    ST.on("reset", renderPaste);
+    renderPaste(); showCopied();
+    ST.on("change", updateCalc);
     ST.on("reset", renderSegs);
-    ST.on("ready", renderGuideInfo);
-    renderGuideInfo();
   }
 
   // Used by keyboard shortcuts (js/shortcuts.js)
   ST._arrange = {
     nudge: nudge,
-    resizeBy: resizeBy
+    resizeBy: resizeBy,
+    placement: placement
   };
 
   ST.registerTool({
     id: "arrange",
-    title: "Arrange",
+    title: "Position",
     icon: ICON,
     levels: [1, 2, 3],
     defaultLevel: 1,
     defaults: defaults,
-    tip: { what: "Lines up, spaces and snaps shapes.", steps: ["Select shapes.", "Click an align button, Across or Down, or Snap."] },
+    tip: { what: "Lines up, spaces, nudges and copies the position of shapes.", steps: ["Select shapes.", "Click an align button, Across or Down.", "Or copy one shape's position and paste it onto others."] },
     build: build
   });
 })();

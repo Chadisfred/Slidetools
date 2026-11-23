@@ -1,34 +1,27 @@
-/* Match tool: select shapes like the selected one, slide by slide, and copy one shape's position and size onto others. */
+/* Select similar tool (id "match"): select shapes like the selected one, slide by slide.
+   Copy and paste position lives in the Position tool. */
 (function () {
   "use strict";
 
   var ST = window.ST, PT = ST.PT, $ = ST.$;
 
-  var defaults = { matchBy: "fill,type", pasteWhat: "both", pasteAnchor: 0 };
+  var defaults = { matchBy: "fill,type" };
   ST.addDefaults(defaults);
 
   var CRITERIA = [["fill", "Fill colour"], ["line", "Outline"], ["shapeStyle", "Shape style"], ["textStyle", "Text style"], ["size", "Size"], ["type", "Type"]];
-  var ANCHOR_NAMES = ["top left", "top", "top right", "left", "centre", "right", "bottom left", "bottom", "bottom right"];
   var SIZE_TOLERANCE = 0.5; // points
 
   var ICON = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="2" width="8" height="8" rx="1.5"/><rect x="8" y="8" width="8" height="8" rx="1.5" fill="currentColor" fill-opacity="0.25"/></svg>';
 
   var MARKUP =
-    '<div class="group-label">Select similar</div>' +
     '<div class="sublabel label-row">Match by' + ST.info("Shapes must match on every chip that's on. Size allows half a point of difference. Pictures and tables only match by Type and Size.", "About match by") + '</div>' +
     '<div class="mini-chips" id="matchBy"></div>' +
     '<button class="btn primary" id="matchSelect">Select similar on slide</button>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="matchPrev" title="Go to the previous slide with matches and select them">Previous slide</button><button class="btn small" id="matchNext" title="Go to the next slide with matches and select them">Next slide</button></div>' +
-    '<div class="help" id="matchStatus"></div>' +
-    '<div class="group-label">Position and size</div>' +
-    '<div class="btn-row"><button class="btn small" id="posCopy" title="Remember the first selected shape\'s position and size">Copy</button><button class="btn small" id="posPaste" title="Apply the copied position and size to the selected shapes" disabled>Paste</button></div>' +
-    '<div class="seg seg3" id="pasteWhat"></div>' +
-    '<div class="anchor-row" data-min="2"><span class="label-row">Paste from&nbsp;<b id="pasteAnchorName"></b>' + ST.info("The point that lines up with the copied shape when sizes differ.", "About paste from") + '</span><div class="anchor" id="pasteAnchor"></div></div>' +
-    '<div class="help" id="posCopied">Nothing copied yet</div>';
+    '<div class="help" id="matchStatus"></div>';
 
   // ---------- State kept for this session only ----------
   var reference = null; // signature of the example shape
-  var copied = null;    // { left, top, width, height } in points
 
   function by() { return String(ST.state.matchBy || "").split(",").filter(Boolean); }
 
@@ -161,49 +154,6 @@
     });
   }
 
-  // ---------- Copy and paste position and size ----------
-  function inches(pt) { return ST.nice(Math.round(pt / PT * 100) / 100); }
-  function showCopied() {
-    $("posPaste").disabled = !copied;
-    $("posCopied").textContent = copied
-      ? "Copied: left " + inches(copied.left) + ", top " + inches(copied.top) + " in. " + inches(copied.width) + " x " + inches(copied.height) + " in."
-      : "Nothing copied yet";
-  }
-  function copy() {
-    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
-      var s = items[0];
-      copied = { left: s.left, top: s.top, width: s.width, height: s.height };
-      showCopied();
-      ST.toast(items.length > 1 ? "Copied the first selected shape." : "Copied position and size.");
-    }, "Select the shape to copy first.");
-  }
-  // Works out where a shape goes. The chosen anchor point of the shape lands on the same
-  // point of the copied box (Position), or stays where it is (Size only).
-  function placement(s, box, what, anchor) {
-    var fx = (anchor % 3) / 2, fy = Math.floor(anchor / 3) / 2;
-    var size = what !== "position", pos = what !== "size";
-    var w = size ? box.width : s.width, h = size ? box.height : s.height;
-    var ax = pos ? box.left + box.width * fx : s.left + s.width * fx;
-    var ay = pos ? box.top + box.height * fy : s.top + s.height * fy;
-    return { left: ax - w * fx, top: ay - h * fy, width: w, height: h };
-  }
-  function paste() {
-    if (!copied) { ST.toast("Copy a shape first.", true); return; }
-    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
-      var what = ST.state.pasteWhat || "both", anchor = ST.state.pasteAnchor || 0;
-      items.forEach(function (s) {
-        var p = placement(s, copied, what, anchor);
-        if (what !== "position") { s.width = p.width; s.height = p.height; }
-        s.left = p.left; s.top = p.top;
-      });
-      return context.sync().then(function () {
-        var word = what === "both" ? "position and size" : what;
-        ST.toast("Pasted " + word + " onto " + ST.plural(items.length, "shape") + ".");
-        ST.refreshSelection();
-      });
-    }, "Select the shapes to paste onto.");
-  }
-
   // ---------- Rendering ----------
   function renderChips() {
     var el = $("matchBy"), on = by();
@@ -229,34 +179,6 @@
       b.setAttribute("aria-pressed", String(isOn));
     });
   }
-  function renderPaste() {
-    var seg = $("pasteWhat");
-    if (!seg.children.length) {
-      [["position", "Position"], ["size", "Size"], ["both", "Both"]].forEach(function (o) {
-        var b = document.createElement("button");
-        b.textContent = o[1];
-        b.setAttribute("data-v", o[0]);
-        b.addEventListener("click", function () { ST.state.pasteWhat = o[0]; ST.changed(); });
-        seg.appendChild(b);
-      });
-    }
-    Array.prototype.forEach.call(seg.children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === (ST.state.pasteWhat || "both")); });
-    var el = $("pasteAnchor");
-    if (!el.children.length) {
-      ANCHOR_NAMES.forEach(function (name, i) {
-        var b = document.createElement("button");
-        b.title = "Line up the " + name + " corner";
-        if (i === 1 || i === 3 || i === 5 || i === 7) b.title = "Line up the " + name + " edge";
-        if (i === 4) b.title = "Line up the centre";
-        b.setAttribute("aria-label", b.title);
-        b.addEventListener("click", function () { ST.state.pasteAnchor = i; ST.changed(); });
-        el.appendChild(b);
-      });
-    }
-    var a = ST.state.pasteAnchor || 0;
-    Array.prototype.forEach.call(el.children, function (b, i) { b.classList.toggle("on", i === a); });
-    $("pasteAnchorName").textContent = ANCHOR_NAMES[a];
-  }
   function renderSupport() {
     var ok = !ST.inOffice || canSelect();
     ["matchSelect", "matchPrev", "matchNext"].forEach(function (id) { $(id).disabled = !ok; });
@@ -268,25 +190,23 @@
     $("matchSelect").addEventListener("click", selectOnSlide);
     $("matchPrev").addEventListener("click", function () { step(-1); });
     $("matchNext").addEventListener("click", function () { step(1); });
-    $("posCopy").addEventListener("click", copy);
-    $("posPaste").addEventListener("click", paste);
-    ST.on("change", function () { renderChips(); renderPaste(); });
-    ST.on("reset", function () { renderChips(); renderPaste(); });
+    ST.on("change", renderChips);
+    ST.on("reset", renderChips);
     ST.on("ready", renderSupport);
-    renderChips(); renderPaste(); showCopied(); renderSupport();
+    renderChips(); renderSupport();
   }
 
   ST.registerTool({
     id: "match",
-    title: "Match",
+    title: "Select similar",
     icon: ICON,
     levels: [1, 2],
     defaultLevel: 1,
     defaults: defaults,
-    tip: { what: "Selects shapes like the one you pick, and copies position and size.", steps: ["Select an example shape.", "Choose what to match.", "Click Select similar."] },
+    tip: { what: "Selects shapes like the one you pick, on this slide or slide by slide.", steps: ["Select an example shape.", "Choose what to match.", "Click Select similar."] },
     build: build
   });
 
   // Exposed for testing only
-  ST._match = { signature: signature, matches: matches, placement: placement };
+  ST._match = { signature: signature, matches: matches, placement: function () { return ST._arrange.placement.apply(null, arguments); } };
 })();

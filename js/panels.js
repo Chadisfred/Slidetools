@@ -1,5 +1,10 @@
-/* Panel framework: builds a dockable panel for each registered tool,
-   with detail levels, folding, drag to reorder, hiding and a saved arrangement. */
+/* Panel framework: builds a panel for each registered tool, with detail levels, folding,
+   drag to reorder, hiding and a saved arrangement.
+
+   Two views:
+   Launcher (default)  a grid of tool buttons at the top. Clicking one opens that tool and
+                       closes the others, except pinned tools, which stay open.
+   Stacked             every tool in one scrolling list, each folded or unfolded. */
 (function () {
   "use strict";
 
@@ -12,25 +17,40 @@
     chev: '<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6l4 4 4-4"/></svg>',
     more: '<svg viewBox="0 0 16 16" fill="currentColor"><circle cx="3.5" cy="8" r="1.4"/><circle cx="8" cy="8" r="1.4"/><circle cx="12.5" cy="8" r="1.4"/></svg>',
     check: '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3 3 7-7"/></svg>',
-    blank: '<svg viewBox="0 0 16 16" width="14" height="14"></svg>'
+    blank: '<svg viewBox="0 0 16 16" width="14" height="14"></svg>',
+    close: '<svg class="close-x" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/></svg>',
+    pin: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h4M7 2.5v4L4.5 9h7L9 6.5v-4M8 9v4.5"/></svg>'
   };
+  // The first order, grouped by job: placing shapes, text and colour, then content.
+  var DEFAULT_ORDER = ["layout", "arrange", "resize", "copies", "typography", "colours", "styles", "shapestyles", "images", "tables", "corners", "match"];
+  var LAYOUT_VERSION = 2;
+  // What a tool's launcher button is called, when that differs from its title.
+  var SHORT = { styles: "Text styles", match: "Similar" };
   ST.ICONS = ICONS;
 
-  var layout = { order: [], levels: {}, folded: {}, hidden: {} };
+  var layout = { order: [], levels: {}, folded: {}, hidden: {}, pinned: {}, open: "layout", stacked: false, noAutoOpen: false, v: LAYOUT_VERSION };
+  var lastPick = 0; // when a launcher button was last clicked, so the selection doesn't override it
   var cards = {};
   var openMenu = null;
 
   function loadLayout() {
     var saved = null;
     try { saved = JSON.parse(localStorage.getItem(LAYOUT_KEY) || "null"); } catch (e) { saved = null; }
-    if (saved) Object.keys(layout).forEach(function (k) { if (saved[k]) layout[k] = saved[k]; });
-    // Keep saved order, then add any tools that are new since last time.
+    if (saved) Object.keys(layout).forEach(function (k) { if (saved[k] !== undefined) layout[k] = saved[k]; });
     var ids = ST.tools.map(function (t) { return t.id; });
+    // Arrangements saved before the launcher get the new grouped order once.
+    if (!saved || !(saved.v >= LAYOUT_VERSION)) { layout.order = defaultOrder(); layout.v = LAYOUT_VERSION; }
+    if (layout.open && ids.indexOf(layout.open) < 0) layout.open = null;
+    // Keep saved order, then add any tools that are new since last time.
     layout.order = layout.order.filter(function (id) { return ids.indexOf(id) >= 0; });
-    ids.forEach(function (id) { if (layout.order.indexOf(id) < 0) layout.order.push(id); });
+    defaultOrder().forEach(function (id) { if (layout.order.indexOf(id) < 0) layout.order.push(id); });
   }
   function saveLayout() {
     try { localStorage.setItem(LAYOUT_KEY, JSON.stringify(layout)); } catch (e) { /* storage unavailable */ }
+  }
+  function defaultOrder() {
+    var ids = ST.tools.map(function (t) { return t.id; });
+    return DEFAULT_ORDER.filter(function (id) { return ids.indexOf(id) >= 0; }).concat(ids.filter(function (id) { return DEFAULT_ORDER.indexOf(id) < 0; }));
   }
   function tool(id) { return ST.tools.filter(function (t) { return t.id === id; })[0]; }
   function levelsOf(t) { return t.levels || [1]; }
@@ -51,8 +71,9 @@
         '<span class="tool-icon">' + t.icon + '</span>' +
         '<button class="tool-title" title="Fold or unfold">' + t.title + '</button>' +
         (single ? "" : '<button class="level-btn" title="Show more or less detail"><span class="level-dots"></span><span class="level-name"></span></button>') +
+        '<button class="icon-btn pin-btn" title="Pin: keep this tool open when you open another" aria-label="Pin this tool" aria-pressed="false">' + ICONS.pin + '</button>' +
         '<button class="icon-btn menu-btn" title="Panel options" aria-label="Panel options">' + ICONS.more + '</button>' +
-        '<button class="icon-btn fold-btn" title="Fold or unfold" aria-label="Fold or unfold">' + ICONS.chev + '</button>' +
+        '<button class="icon-btn fold-btn" title="Fold or unfold" aria-label="Fold or unfold">' + ICONS.chev + ICONS.close + '</button>' +
       '</div>' +
       '<div class="tool-body"></div>';
     var body = card.querySelector(".tool-body");
@@ -78,16 +99,31 @@
     card.querySelector(".fold-btn").addEventListener("click", function () { toggleFold(t.id); });
     if (!single) card.querySelector(".level-btn").addEventListener("click", function () { cycleLevel(t.id); });
     card.querySelector(".menu-btn").addEventListener("click", function (e) { e.stopPropagation(); showToolMenu(t.id, e.currentTarget); });
+    card.querySelector(".pin-btn").addEventListener("click", function () { togglePin(t.id); });
     wireDrag(card, card.querySelector(".grip"));
     cards[t.id] = card;
     return card;
   }
 
+  // In the launcher view a tool shows when it's the open one or pinned.
+  function shown(id) {
+    if (layout.hidden[id]) return false;
+    return layout.stacked ? true : (layout.open === id || !!layout.pinned[id]);
+  }
   function applyCard(t) {
     var card = cards[t.id], lv = levelOf(t);
     card.setAttribute("data-level", lv);
-    card.classList.toggle("folded", !!layout.folded[t.id]);
-    card.hidden = !!layout.hidden[t.id];
+    card.classList.toggle("folded", layout.stacked && !!layout.folded[t.id]);
+    card.hidden = !shown(t.id);
+    var pinned = !layout.stacked && !!layout.pinned[t.id];
+    card.classList.toggle("pinned", pinned);
+    var pin = card.querySelector(".pin-btn");
+    pin.setAttribute("aria-pressed", String(pinned));
+    var fold = card.querySelector(".fold-btn");
+    fold.title = layout.stacked ? "Fold or unfold" : "Close " + t.title;
+    fold.setAttribute("aria-label", fold.title);
+    card.querySelector(".tool-title").title = layout.stacked ? "Fold or unfold" : "Close " + t.title;
+    pin.title = pinned ? "Unpin: close this tool when you open another" : "Pin: keep this tool open when you open another";
     var btn = card.querySelector(".level-btn");
     if (btn) {
       var allowed = levelsOf(t);
@@ -100,22 +136,117 @@
     }
   }
 
+  // Display order: everything in saved order when stacked. In the launcher view, pinned
+  // tools first, then the open one.
+  function displayOrder() {
+    if (layout.stacked) return layout.order.slice();
+    var pinned = layout.order.filter(function (id) { return layout.pinned[id]; });
+    var rest = layout.order.filter(function (id) { return !layout.pinned[id]; });
+    if (layout.open && !layout.pinned[layout.open]) { rest.splice(rest.indexOf(layout.open), 1); pinned.push(layout.open); }
+    return pinned.concat(rest);
+  }
   function applyAll() {
     var stack = ST.$("stack");
-    layout.order.forEach(function (id) { stack.appendChild(cards[id]); applyCard(tool(id)); });
-    var anyVisible = layout.order.some(function (id) { return !layout.hidden[id]; });
-    ST.$("emptyNote").hidden = anyVisible;
+    document.body.classList.toggle("stacked", !!layout.stacked);
+    displayOrder().forEach(function (id) { stack.appendChild(cards[id]); applyCard(tool(id)); });
+    var anyTool = layout.order.some(function (id) { return !layout.hidden[id]; });
+    var anyShown = layout.order.some(shown);
+    var note = ST.$("emptyNote");
+    note.hidden = anyShown;
+    note.textContent = !anyTool ? "All tools are hidden. Use the button at the top right to show them." : "Pick a tool above to open it.";
+    renderLauncher();
     ST.emit("layout");
+  }
+
+  // ---------- Launcher ----------
+  function renderLauncher() {
+    var el = ST.$("launcher");
+    if (!el) return;
+    el.hidden = !!layout.stacked;
+    if (layout.stacked) return;
+    el.innerHTML = "";
+    layout.order.forEach(function (id) {
+      if (layout.hidden[id]) return;
+      var t = tool(id), b = document.createElement("button");
+      b.className = "launch-btn";
+      b.setAttribute("data-tool", id);
+      b.title = t.title + (t.tip ? ". " + t.tip.what : "");
+      b.innerHTML = '<span class="launch-icon">' + t.icon + '</span><span class="launch-name"></span>';
+      b.querySelector(".launch-name").textContent = SHORT[id] || t.title;
+      b.classList.toggle("on", layout.open === id);
+      b.classList.toggle("pinned", !!layout.pinned[id]);
+      b.classList.toggle("suggest", suggested === id);
+      b.setAttribute("aria-pressed", String(shown(id)));
+      b.addEventListener("click", function () { lastPick = Date.now(); pick(id); });
+      el.appendChild(b);
+    });
+  }
+  function scrollToCard(id) {
+    var card = cards[id];
+    if (!card || card.hidden) return;
+    var top = card.getBoundingClientRect().top + window.scrollY - ST.$("launcher").getBoundingClientRect().height - 8;
+    if (card.getBoundingClientRect().top < 60 || card.getBoundingClientRect().top > window.innerHeight - 80) window.scrollTo(0, Math.max(0, top));
+  }
+  // A launcher click: opens the tool, or closes it when it's already the open one.
+  function pick(id) {
+    if (layout.open === id) layout.open = null;
+    else layout.open = id;
+    saveLayout(); applyAll();
+    if (layout.open) scrollToCard(id);
+  }
+  function togglePin(id) {
+    if (layout.pinned[id]) {
+      delete layout.pinned[id];
+    } else {
+      layout.pinned[id] = true;
+      if (layout.open === id) layout.open = null; // it stays shown as a pinned tool
+    }
+    saveLayout(); applyAll();
+  }
+  // Opens a tool from code (the selection, or another tool's button). Returns true when shown.
+  function openTool(id, auto) {
+    var t = tool(id);
+    if (!t || layout.hidden[id]) return false;
+    if (layout.stacked) {
+      if (auto) return false; // the stacked view never moves on its own
+      layout.folded[id] = false;
+    } else if (!layout.pinned[id]) {
+      layout.open = id;
+    }
+    saveLayout(); applyAll();
+    scrollToCard(id);
+    return true;
+  }
+  function closeTool(id) {
+    if (layout.stacked) { layout.folded[id] = true; }
+    else { delete layout.pinned[id]; if (layout.open === id) layout.open = null; }
+    saveLayout(); applyAll();
+  }
+
+  // ---------- Following the selection ----------
+  // A picture opens Images, a table opens Tables, and a text cursor opens Typography.
+  var FOLLOW = { picture: "images", table: "tables", text: "typography" };
+  var lastKind = null, suggested = null;
+  function followSelection() {
+    var kind = ST.selection.kind || "none";
+    var id = FOLLOW[kind] || null;
+    if (id && layout.hidden[id]) id = null;
+    suggested = id;
+    var changed = kind !== lastKind;
+    lastKind = kind;
+    if (changed && id && !layout.stacked && !layout.noAutoOpen && Date.now() - lastPick > 4000 && !shown(id)) { openTool(id, true); return; }
+    renderLauncher();
   }
 
   // ---------- Actions ----------
   function toggleFold(id) {
+    if (!layout.stacked) { closeTool(id); return; }
     layout.folded[id] = !layout.folded[id];
     saveLayout(); applyCard(tool(id)); ST.emit("layout");
   }
   function cycleLevel(id) {
     var t = tool(id), allowed = levelsOf(t);
-    if (layout.folded[id]) layout.folded[id] = false;
+    if (layout.stacked && layout.folded[id]) layout.folded[id] = false;
     else layout.levels[id] = allowed[(allowed.indexOf(levelOf(t)) + 1) % allowed.length];
     saveLayout(); applyCard(t); ST.emit("layout");
   }
@@ -129,6 +260,7 @@
   }
   function setHidden(id, hidden) {
     layout.hidden[id] = hidden;
+    if (hidden) { delete layout.pinned[id]; if (layout.open === id) layout.open = null; }
     saveLayout(); applyAll();
   }
   function resetTool(id) {
@@ -168,12 +300,12 @@
   }
   function showToolMenu(id, anchor) {
     var visible = layout.order.filter(function (x) { return !layout.hidden[x]; });
-    var i = visible.indexOf(id), t = tool(id);
+    var i = visible.indexOf(id), t = tool(id), word = layout.stacked ? ["Move up", "Move down"] : ["Move earlier", "Move later"];
     showMenu(anchor, [
       { label: "How to use " + t.title, action: function () { ST.openHelp(t.help || t.id); } },
       "sep",
-      { label: "Move up", disabled: i <= 0, action: function () { move(id, -1); } },
-      { label: "Move down", disabled: i >= visible.length - 1, action: function () { move(id, 1); } },
+      { label: word[0], disabled: i <= 0, action: function () { move(id, -1); } },
+      { label: word[1], disabled: i >= visible.length - 1, action: function () { move(id, 1); } },
       "sep",
       { label: "Reset " + t.title + " to defaults", disabled: !Object.keys(t.defaults || {}).length, action: function () { resetTool(id); } },
       { label: "Hide " + t.title, action: function () { setHidden(id, true); ST.toast(t.title + " hidden. Use the gear button to show it again."); } }
@@ -187,15 +319,21 @@
       items.push({ label: t.title, checked: !layout.hidden[id], action: function () { setHidden(id, !layout.hidden[id]); } });
     });
     items.push("sep");
-    items.push({ label: "Unfold all", action: function () { layout.folded = {}; saveLayout(); applyAll(); } });
-    items.push({ label: "Fold all", action: function () { layout.order.forEach(function (id) { layout.folded[id] = true; }); saveLayout(); applyAll(); } });
+    items.push({ label: "Show all tools in one list", checked: !!layout.stacked, action: function () { layout.stacked = !layout.stacked; saveLayout(); applyAll(); } });
+    items.push({ label: "Open tools with the selection", checked: !layout.noAutoOpen, action: function () { layout.noAutoOpen = !layout.noAutoOpen; saveLayout(); } });
+    if (layout.stacked) {
+      items.push({ label: "Unfold all", action: function () { layout.folded = {}; saveLayout(); applyAll(); } });
+      items.push({ label: "Fold all", action: function () { layout.order.forEach(function (id) { layout.folded[id] = true; }); saveLayout(); applyAll(); } });
+    } else {
+      items.push({ label: "Unpin all", disabled: !Object.keys(layout.pinned).length, action: function () { layout.pinned = {}; saveLayout(); applyAll(); } });
+    }
     items.push("sep");
     items.push({ label: "Share settings", action: function () { ST.openShare(); } });
     items.push({ label: "Keyboard shortcuts", action: function () { ST.shortcuts.show(); } });
     items.push({ label: "Ask before replacing a slide again", action: function () { ST.resetSwapConfirm(); ST.toast("Slide Tools will ask before cropping pictures or making copies."); } });
     items.push({ label: "Reset panel arrangement", action: function () {
-      layout = { order: ST.tools.map(function (t) { return t.id; }), levels: {}, folded: {}, hidden: {} };
-      saveLayout(); applyAll(); ST.toast("Panel order, detail and folding are back to the defaults.");
+      layout = { order: defaultOrder(), levels: {}, folded: {}, hidden: {}, pinned: {}, open: "layout", stacked: false, noAutoOpen: false, v: LAYOUT_VERSION };
+      saveLayout(); applyAll(); ST.toast("Panel view, order, detail and pins are back to the defaults.");
     } });
     showMenu(anchor, items);
   }
@@ -230,9 +368,14 @@
       window.removeEventListener("pointercancel", onEnd);
       clearInterval(scrollTimer);
       card.classList.remove("dragging");
-      layout.order = Array.prototype.map.call(ST.$("stack").children, function (c) { return c.getAttribute("data-tool"); });
-      saveLayout();
-      ST.emit("layout");
+      var dom = Array.prototype.map.call(ST.$("stack").children, function (c) { return c.getAttribute("data-tool"); });
+      if (layout.stacked) layout.order = dom;
+      else {
+        // Only the open and pinned tools were moved: put them back in their own slots, in the new order
+        var moved = dom.filter(shown), slots = moved.map(function (id) { return layout.order.indexOf(id); }).sort(function (a, b) { return a - b; });
+        slots.forEach(function (slot, k) { layout.order[slot] = moved[k]; });
+      }
+      saveLayout(); applyAll();
     }
     grip.addEventListener("pointerdown", function (e) {
       if (e.button !== 0) return;
@@ -284,8 +427,10 @@
     document.addEventListener("click", function (e) { if (openMenu && !openMenu.contains(e.target)) closeMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
     window.addEventListener("resize", closeMenu);
+    ST.on("selection", followSelection);
     wireTips();
   };
   ST.levelOf = function (id) { return levelOf(tool(id)); };
-  ST.isOpen = function (id) { return !layout.folded[id] && !layout.hidden[id]; };
+  ST.isOpen = function (id) { return shown(id) && !(layout.stacked && layout.folded[id]); };
+  ST.openTool = function (id) { return openTool(id, false); };
 })();

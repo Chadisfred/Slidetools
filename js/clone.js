@@ -1,4 +1,4 @@
-/* Copies for Transform, like Illustrator's Transform effect: one set of Scale, Reflect,
+/* Copies for the Copies tool, like Illustrator's Transform effect: one set of Scale, Reflect,
    Rotate and Move values around a reference point, applied again for every copy, so
    each copy builds on the one before. Copies are added to the slide XML through the
    shared slide rebuild (js/rebuild.js), which works in memory and edits only the slide. */

@@ -224,7 +224,7 @@
     '<input type="file" id="imgFile" accept="image/*" hidden>' +
     '<div class="anchor-row"><span class="anchor-text"><span class="label-row">Crop position' + ST.info("Where new pictures are cropped from. With pictures selected, clicking a point also moves their crop there, keeping how much is cropped.", "About crop position") + '</span><b id="imgPosName"></b></span><div class="anchor" id="imgPos"></div></div>' +
     '<button class="btn" id="imgReset" title="Remove the crop so the whole picture shows">Reset crop</button>' +
-    '<div class="toggle" data-min="2"><span class="label-row">Crop pictures to fit' + ST.info("When Transform or Match changes a picture\'s frame shape, the picture is cropped to fill it instead of being stretched. The slide is swapped for an identical copy with the new crop. Turn this off to keep pictures in proportion instead.", "About cropping pictures") + '</span><label class="switch"><input type="checkbox" id="cropPictures"><span></span></label></div>';
+    '<div class="toggle" data-min="2"><span class="label-row">Crop pictures to fit' + ST.info("When Size changes a picture\'s frame shape, the picture is cropped to fill it instead of being stretched. The slide is swapped for an identical copy with the new crop. Turn this off to keep pictures in proportion instead.", "About cropping pictures") + '</span><label class="switch"><input type="checkbox" id="cropPictures"><span></span></label></div>';
 
   function renderPos() {
     var el = $("imgPos"), i0 = ST.state.imgPos === undefined ? 4 : ST.state.imgPos;

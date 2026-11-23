@@ -1,4 +1,5 @@
-/* Layout tool: grid size, presets, preview, position, Draw and Fit. */
+/* Grid tool (id "layout"): grid size, presets, preview, position, Draw and Fit, plus Snap
+   (js/tools/snap.js, which loads first). */
 (function () {
   "use strict";
 
@@ -423,6 +424,7 @@
     $("useArea").addEventListener("click", useArea);
     $("draw").addEventListener("click", drawGrid);
     $("fit").addEventListener("click", fitSelection);
+    if (ST._snap) ST._snap.build(body);
 
     ST.on("change", render);
     ST.on("selection", drawStage);
@@ -432,12 +434,12 @@
 
   ST.registerTool({
     id: "layout",
-    title: "Layout",
+    title: "Grid",
     icon: ICON,
     levels: [1, 2, 3],
     defaultLevel: 2,
-    defaults: defaults,
-    tip: { what: "Plans columns and rows and draws them on the slide.", steps: ["Set columns, rows and spacing.", "Check the preview.", "Click Draw on slide, or select shapes and click Fit selection."] },
+    defaults: Object.assign({}, defaults, ST._snap ? ST._snap.defaults : {}),
+    tip: { what: "Plans columns and rows, draws them on the slide, and snaps shapes to them.", steps: ["Set columns, rows and spacing.", "Check the preview.", "Click Draw on slide or Fit selection, or select shapes and click Snap."] },
     build: build
   });
 })();

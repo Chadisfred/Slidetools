@@ -38,7 +38,7 @@
     supported: function () { return !!(window.Office && Office.actions && Office.actions.associate); },
     show: function () {
       var rows = LIST.map(function (s) { return '<tr><td>' + s[1] + '</td><td class="keys">' + keyText(s[2]) + '</td></tr>'; }).join("");
-      ST.sheet("Keyboard shortcuts", ST.html('<p class="sheet-text">These work while the slide has focus, so click the slide first. They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. Nudge and the size keys (I, J, K and L, laid out like the arrows) step by the Nudge by amount in Arrange. Sizes change around Transform\'s reference point.</p>' +
+      ST.sheet("Keyboard shortcuts", ST.html('<p class="sheet-text">These work while the slide has focus, so click the slide first. They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. Nudge and the size keys (I, J, K and L, laid out like the arrows) step by the Nudge by amount in Position. Sizes change around the reference point in Size.</p>' +
         '<table class="shortcut-table">' + rows + '</table>'));
     }
   };

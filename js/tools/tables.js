@@ -725,7 +725,7 @@
             if (ST.supports("1.5")) slide.setSelectedShapes([shape.id]);
             return context.sync().then(function () {
               if (!style.applied) { style.applied = clone(style.props); saveStyles(); }
-              var placed = res.opts.left !== undefined ? " at the Layout grid area." : ".";
+              var placed = res.opts.left !== undefined ? " at the grid area." : ".";
               if (!formatted) ST.toast("Added a " + rows + " x " + cols + " table" + placed + " This PowerPoint version couldn't format it.", true);
               else ST.toast("Added a " + rows + " x " + cols + " table" + placed + refusedNote(failed), failed.length > 0);
               refreshTable();
@@ -1004,7 +1004,7 @@
       '<label>First column, left<input type="text" id="tbPadFirst" inputmode="decimal" value="' + esc(P.pad.firstLeft) + '"></label>' +
       '<label>Last column, right<input type="text" id="tbPadLast" inputmode="decimal" value="' + esc(P.pad.lastRight) + '"></label></div>';
     var Z = P.size || defaultProps().size;
-    html += '<div class="group-label label-row">Sizes' + ST.info("g is the Layout spacing. Columns are whole steps of g and the table fills the grid area. Label columns get the room left over.", "About table sizes") + '</div><div class="prop-grid">' +
+    html += '<div class="group-label label-row">Sizes' + ST.info("g is the grid spacing set in Grid. Columns are whole steps of g and the table fills the grid area. Label columns get the room left over.", "About table sizes") + '</div><div class="prop-grid">' +
       '<label>Grid-based sizes' + onOff("tbSizeOn", Z.on) + '</label>' +
       '<label>Fit column widths' + onOff("tbSizeFit", Z.fitColumns) + '</label>' +
       '<label>Minimum row height (g)<input type="text" id="tbRowMin" inputmode="decimal" value="' + esc(Z.rowMin) + '"></label>' +
