@@ -15,11 +15,12 @@ New to the tools? The [user manual](https://chadisfred.github.io/Slidetools/manu
 1. [Installing](#installing)
 2. [Using the panel](#using-the-panel)
 3. [The tools](#the-tools)
-4. [Formulas](#formulas)
-5. [Updating](#updating)
-6. [Troubleshooting](#troubleshooting)
-7. [Project layout](#project-layout)
-8. [Adding a new tool](#adding-a-new-tool)
+4. [Keyboard shortcuts](#keyboard-shortcuts)
+5. [Formulas](#formulas)
+6. [Updating](#updating)
+7. [Troubleshooting](#troubleshooting)
+8. [Project layout](#project-layout)
+9. [Adding a new tool](#adding-a-new-tool)
 
 ## Installing
 
@@ -149,7 +150,7 @@ Lines shapes up and spaces them exactly, using the same grid as Layout.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps, Nudge by an amount |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps, Nudge by an amount. Nudge, Align and Distribute have [keyboard shortcuts](#keyboard-shortcuts) |
 | More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap options, template guide report |
 | Full | Swap two shapes |
 
@@ -348,6 +349,22 @@ Notes:
 2. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
 3. The colour pickers in the Styles and Shape styles editors suggest these colours.
 
+## Keyboard shortcuts
+
+These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of Ctrl+Alt+Shift. They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. The list is also in the panel's settings menu.
+
+| Action | Keys |
+| --- | --- |
+| Nudge left, up, down, right | Ctrl+Alt+Shift+Left, Up, Down, Right |
+| Repeat last action | Ctrl+Alt+Shift+D |
+| Align left, centres, right | Ctrl+Alt+Shift+L, C, R |
+| Align top, middles, bottom | Ctrl+Alt+Shift+T, M, B |
+| Distribute across, down | Ctrl+Alt+Shift+H, V |
+
+Nudge moves by Arrange's Nudge by amount. Align, Distribute and Repeat use Arrange's current settings. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
+
+The keys are declared in `shortcuts.json`, which the manifest links with `ExtendedOverrides`, and connected to the tools in `js/shortcuts.js`. Shortcuts need the shared runtime set in the manifest. Keep the two files in step when adding one.
+
 ## Formulas
 
 Every number box accepts maths, for example `12.5-2*0.42`. Values are in inches unless you add a unit: `30pt`, `1.5cm` or `12mm`. Boxes keep five decimal places, so `30pt` becomes 0.41667. The Transform boxes also understand these names:
@@ -372,7 +389,7 @@ Changes to the panel itself go live without reinstalling:
 2. Merging the pull request into `main` publishes it through GitHub Pages within a minute or two.
 3. Close and reopen the panel in PowerPoint.
 
-Only changes to the ribbon button (its name, group or icons) need an updated `slidetools-manifest.xml`. Replace your local copy, raise the `<Version>` number and restart PowerPoint.
+Only changes to the ribbon button (its name, group or icons), the runtime or `shortcuts.json` links need an updated `slidetools-manifest.xml`. Replace your local copy, raise the `<Version>` number and restart PowerPoint.
 
 Script and style links in `taskpane.html` end in `?v=` plus the version number. Raise that number with each release so PowerPoint doesn't keep old copies.
 
@@ -390,7 +407,8 @@ Script and style links in `taskpane.html` end in `?v=` plus the version number. 
 
 ```
 taskpane.html            Page shell: top bar, tool stack, script order
-slidetools-manifest.xml  Office install file (ribbon button and panel address)
+slidetools-manifest.xml  Office install file (ribbon button, panel address, shared runtime)
+shortcuts.json           Keyboard shortcut keys, linked from the manifest
 css/panel.css            All styling, light and dark themes, detail level rules
 js/core.js               Shared state, saved settings, formula evaluator, grid maths, PowerPoint helpers
 js/panels.js             Panel framework: headers, detail levels, folding, drag to reorder, menus
@@ -399,6 +417,7 @@ js/tools/resize.js       Transform tool (resize, lines, crop, copies)
 js/rebuild.js            In-memory slide rebuild used to crop pictures and make copies
 js/crop.js               Picture cropping for Transform
 js/clone.js              Copies for Transform
+js/shortcuts.js          Keyboard shortcuts: names each action and connects it to the tools
 js/tools/corners.js      Corners tool
 js/tools/arrange.js      Arrange tool (align, distribute, snap)
 js/tools/match.js        Match tool (select similar, copy position and size)

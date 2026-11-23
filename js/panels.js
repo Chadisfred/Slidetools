@@ -190,6 +190,7 @@
     items.push({ label: "Fold all", action: function () { layout.order.forEach(function (id) { layout.folded[id] = true; }); saveLayout(); applyAll(); } });
     items.push("sep");
     items.push({ label: "Share settings", action: function () { ST.openShare(); } });
+    items.push({ label: "Keyboard shortcuts", action: function () { ST.shortcuts.show(); } });
     items.push({ label: "Ask before replacing a slide again", action: function () { ST.resetSwapConfirm(); ST.toast("Slide Tools will ask before cropping pictures or making copies."); } });
     items.push({ label: "Reset panel arrangement", action: function () {
       layout = { order: ST.tools.map(function (t) { return t.id; }), levels: {}, folded: {}, hidden: {} };

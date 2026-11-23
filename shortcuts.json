@@ -1,0 +1,188 @@
+{
+  "actions": [
+    {
+      "id": "NudgeLeft",
+      "type": "ExecuteFunction",
+      "name": "Nudge the selection left"
+    },
+    {
+      "id": "NudgeUp",
+      "type": "ExecuteFunction",
+      "name": "Nudge the selection up"
+    },
+    {
+      "id": "NudgeDown",
+      "type": "ExecuteFunction",
+      "name": "Nudge the selection down"
+    },
+    {
+      "id": "NudgeRight",
+      "type": "ExecuteFunction",
+      "name": "Nudge the selection right"
+    },
+    {
+      "id": "RepeatLast",
+      "type": "ExecuteFunction",
+      "name": "Repeat the last action"
+    },
+    {
+      "id": "AlignLeft",
+      "type": "ExecuteFunction",
+      "name": "Align left"
+    },
+    {
+      "id": "AlignCentre",
+      "type": "ExecuteFunction",
+      "name": "Align centre"
+    },
+    {
+      "id": "AlignRight",
+      "type": "ExecuteFunction",
+      "name": "Align right"
+    },
+    {
+      "id": "AlignTop",
+      "type": "ExecuteFunction",
+      "name": "Align top"
+    },
+    {
+      "id": "AlignMiddle",
+      "type": "ExecuteFunction",
+      "name": "Align middle"
+    },
+    {
+      "id": "AlignBottom",
+      "type": "ExecuteFunction",
+      "name": "Align bottom"
+    },
+    {
+      "id": "DistributeAcross",
+      "type": "ExecuteFunction",
+      "name": "Distribute across with the gap"
+    },
+    {
+      "id": "DistributeDown",
+      "type": "ExecuteFunction",
+      "name": "Distribute down with the gap"
+    }
+  ],
+  "shortcuts": [
+    {
+      "action": "NudgeLeft",
+      "key": {
+        "default": "Ctrl+Alt+Shift+Left",
+        "windows": "Ctrl+Alt+Shift+Left",
+        "mac": "Command+Alt+Shift+Left",
+        "web": "Ctrl+Alt+Shift+Left"
+      }
+    },
+    {
+      "action": "NudgeUp",
+      "key": {
+        "default": "Ctrl+Alt+Shift+Up",
+        "windows": "Ctrl+Alt+Shift+Up",
+        "mac": "Command+Alt+Shift+Up",
+        "web": "Ctrl+Alt+Shift+Up"
+      }
+    },
+    {
+      "action": "NudgeDown",
+      "key": {
+        "default": "Ctrl+Alt+Shift+Down",
+        "windows": "Ctrl+Alt+Shift+Down",
+        "mac": "Command+Alt+Shift+Down",
+        "web": "Ctrl+Alt+Shift+Down"
+      }
+    },
+    {
+      "action": "NudgeRight",
+      "key": {
+        "default": "Ctrl+Alt+Shift+Right",
+        "windows": "Ctrl+Alt+Shift+Right",
+        "mac": "Command+Alt+Shift+Right",
+        "web": "Ctrl+Alt+Shift+Right"
+      }
+    },
+    {
+      "action": "RepeatLast",
+      "key": {
+        "default": "Ctrl+Alt+Shift+D",
+        "windows": "Ctrl+Alt+Shift+D",
+        "mac": "Command+Alt+Shift+D",
+        "web": "Ctrl+Alt+Shift+D"
+      }
+    },
+    {
+      "action": "AlignLeft",
+      "key": {
+        "default": "Ctrl+Alt+Shift+L",
+        "windows": "Ctrl+Alt+Shift+L",
+        "mac": "Command+Alt+Shift+L",
+        "web": "Ctrl+Alt+Shift+L"
+      }
+    },
+    {
+      "action": "AlignCentre",
+      "key": {
+        "default": "Ctrl+Alt+Shift+C",
+        "windows": "Ctrl+Alt+Shift+C",
+        "mac": "Command+Alt+Shift+C",
+        "web": "Ctrl+Alt+Shift+C"
+      }
+    },
+    {
+      "action": "AlignRight",
+      "key": {
+        "default": "Ctrl+Alt+Shift+R",
+        "windows": "Ctrl+Alt+Shift+R",
+        "mac": "Command+Alt+Shift+R",
+        "web": "Ctrl+Alt+Shift+R"
+      }
+    },
+    {
+      "action": "AlignTop",
+      "key": {
+        "default": "Ctrl+Alt+Shift+T",
+        "windows": "Ctrl+Alt+Shift+T",
+        "mac": "Command+Alt+Shift+T",
+        "web": "Ctrl+Alt+Shift+T"
+      }
+    },
+    {
+      "action": "AlignMiddle",
+      "key": {
+        "default": "Ctrl+Alt+Shift+M",
+        "windows": "Ctrl+Alt+Shift+M",
+        "mac": "Command+Alt+Shift+M",
+        "web": "Ctrl+Alt+Shift+M"
+      }
+    },
+    {
+      "action": "AlignBottom",
+      "key": {
+        "default": "Ctrl+Alt+Shift+B",
+        "windows": "Ctrl+Alt+Shift+B",
+        "mac": "Command+Alt+Shift+B",
+        "web": "Ctrl+Alt+Shift+B"
+      }
+    },
+    {
+      "action": "DistributeAcross",
+      "key": {
+        "default": "Ctrl+Alt+Shift+H",
+        "windows": "Ctrl+Alt+Shift+H",
+        "mac": "Command+Alt+Shift+H",
+        "web": "Ctrl+Alt+Shift+H"
+      }
+    },
+    {
+      "action": "DistributeDown",
+      "key": {
+        "default": "Ctrl+Alt+Shift+V",
+        "windows": "Ctrl+Alt+Shift+V",
+        "mac": "Command+Alt+Shift+V",
+        "web": "Ctrl+Alt+Shift+V"
+      }
+    }
+  ]
+}
