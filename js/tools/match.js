@@ -24,7 +24,7 @@
     '<div class="btn-row"><button class="btn small" id="posCopy" title="Remember the first selected shape\'s position and size">Copy</button><button class="btn small" id="posPaste" title="Apply the copied position and size to the selected shapes" disabled>Paste</button></div>' +
     '<div class="seg seg3" id="pasteWhat"></div>' +
     '<div class="anchor-row" data-min="2"><span class="label-row">Paste from&nbsp;<b id="pasteAnchorName"></b>' + ST.info("The point that lines up with the copied shape when sizes differ.", "About paste from") + '</span><div class="anchor" id="pasteAnchor"></div></div>' +
-    '<div class="help" id="posCopied">Nothing copied yet.</div>';
+    '<div class="help" id="posCopied">Nothing copied yet</div>';
 
   // ---------- State kept for this session only ----------
   var reference = null; // signature of the example shape
@@ -167,7 +167,7 @@
     $("posPaste").disabled = !copied;
     $("posCopied").textContent = copied
       ? "Copied: left " + inches(copied.left) + ", top " + inches(copied.top) + " in. " + inches(copied.width) + " x " + inches(copied.height) + " in."
-      : "Nothing copied yet.";
+      : "Nothing copied yet";
   }
   function copy() {
     ST.withSelection(["left", "top", "width", "height"], function (context, items) {

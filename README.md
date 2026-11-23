@@ -94,7 +94,7 @@ Works out an evenly spaced grid and draws it on the slide, or fits selected shap
 Tips:
 
 1. Use selection as area: select a box or placeholder and the grid takes its position and size. With several shapes selected, it uses the box around all of them.
-2. The preview shows selected shapes as yellow dashed outlines, so you can see where they sit against the grid before you click Fit.
+2. The preview shows selected shapes as dashed outlines, so you can see where they sit against the grid before you click Fit.
 3. Fit places shapes in reading order: top to bottom, then left to right.
 4. Your own presets appear after the built in ones. Hover a preset and click the small cross to delete it. Resetting the tool doesn't delete them.
 5. After drawing, the new shapes are selected. With Group shapes after drawing on, they're grouped first. Both need a recent version of PowerPoint.

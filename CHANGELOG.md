@@ -2,6 +2,19 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.20.0] 2026-11-23
+
+### Changed
+
+1. A design polish across the panel. Every tool, control and behaviour is unchanged.
+   1. Section labels are in normal case instead of small spaced capitals, and the Layout tiles read Across, Down, Grid and Cells.
+   2. Measurements (cell size, selection details, tile values and result lines) use a monospaced face with even digits, in ink instead of blue.
+   3. Blue is kept for main buttons, selections and switches. Tool icons and stepper buttons are grey.
+   4. The Layout preview shows the grid area as a slide with a dashed guide on a grey canvas, with flat cells and ink outlines for selected shapes. The Copies preview uses the same canvas.
+   5. Sizes sit on a 4 px grid, buttons match the height of input boxes, badges and chips have small rounded corners, and nothing is heavier than weight 600.
+   6. Motion uses short named fades with one easing curve. Swatches show a ring on hover instead of growing.
+   7. Single sentence status lines no longer end with a period.
+
 ## [2.19.0] 2026-11-20
 
 ### Added

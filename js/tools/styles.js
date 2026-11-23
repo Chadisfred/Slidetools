@@ -411,7 +411,7 @@
     } else if (!info.font.color || props().some(function (p) { return info.font[p] === null; })) {
       text.textContent = "Mixed formatting selected.";
     } else {
-      text.textContent = "No style.";
+      text.textContent = "No style";
     }
   }
   function addStatusButton(el, label, fn) {
