@@ -2,6 +2,14 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.23.0] 2026-11-23
+
+### Added
+
+1. Colours: a Contrast check at the More level. For the selected shape it shows the text colour on the fill, the contrast ratio, and whether it passes for body text (4.5 to 1) and large text (3 to 1). When body text fails, it suggests a passing colour from the theme, your colours, white or black, and applies it with one click while keeping style links.
+2. Tables: Paste data. Cells copied from Excel build the new table, with the first row as the header and column roles worked out from the values. Quoted cells with line breaks are handled, up to 40 rows and 20 columns.
+3. Tables: Line up decimals, a style setting on by default. Numbers in data columns are padded to the same number of decimal places so the points line up, keeping currency signs, separators, percent signs and brackets. Only cells that change are rewritten.
+
 ## [2.22.0] 2026-11-23
 
 ### Added

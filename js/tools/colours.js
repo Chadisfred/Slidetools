@@ -35,6 +35,13 @@
     return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? "#1d1d1f" : "#ffffff";
   }
 
+  // ---------- Contrast (WCAG 2) ----------
+  function luminance(hex) {
+    var ch = [1, 3, 5].map(function (i) { var v = parseInt(hex.substr(i, 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); });
+    return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+  }
+  function contrast(a, b) { var x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+
   // ---------- Tints and shades, the way Office works them out ----------
   function rgbToHsl(hex) {
     var r = parseInt(hex.substr(1, 2), 16) / 255, g = parseInt(hex.substr(3, 2), 16) / 255, b = parseInt(hex.substr(5, 2), 16) / 255;
@@ -232,6 +239,7 @@
         });
         return context.sync().then(function () {
           ST.toast((target === "fill" ? "Filled " : "Outlined ") + ST.plural(list.length, "shape") + " with " + (c.name || c.hex) + ".");
+          queueContrast();
         });
       });
     });
@@ -271,6 +279,7 @@
         }
         return next().then(function () {
           ST.toast("Coloured the text " + (c.name || c.hex) + "." + (linked ? " Styled text stays linked to its style." : ""));
+          queueContrast();
         });
       });
     }
@@ -430,7 +439,62 @@
       '<button class="btn small" id="colFromSel">Add from selection</button>' +
       '<div class="group-label" data-min="2">Edit your colours</div>' +
       '<div class="col-edit" id="colEdit" data-min="2"></div>' +
-    '</div>';
+    '</div>' +
+    '<div class="group-label label-row" data-min="2">Contrast' + ST.info("The selected shape\'s text colour against its fill, as a contrast ratio. Body text needs at least 4.5 to 1 and large text (18 pt, or 14 pt bold) at least 3 to 1 to meet the WCAG AA guideline. Without a solid fill, the text is compared with white.", "About contrast") + '</div>' +
+    '<div class="contrast" id="colContrast" data-min="2"></div>';
+
+  // ---------- Contrast of the selected shape ----------
+  var contrastTimer = null, contrastBusy = false;
+  function showContrast(info) {
+    var box = $("colContrast");
+    if (!box) return;
+    if (!info) { box.innerHTML = '<div class="muted-note">Select a shape with text to check its contrast</div>'; return; }
+    if (info.note) { box.innerHTML = '<div class="muted-note">' + info.note + '</div>'; return; }
+    var r = contrast(info.text, info.fill), body = r >= 4.5, large = r >= 3;
+    box.innerHTML = '<div class="contrast-row"><span class="contrast-sample">Aa</span><div class="contrast-figures">' +
+      '<b class="contrast-ratio">' + (Math.floor(r * 10) / 10).toFixed(1) + ' to 1</b>' +
+      '<span class="' + (body ? "ok" : "bad") + '">Body text ' + (body ? "passes" : "fails") + '</span>' +
+      '<span class="' + (large ? "ok" : "bad") + '">Large text ' + (large ? "passes" : "fails") + '</span></div></div>' +
+      (info.solid ? "" : '<div class="muted-note">No solid fill, so the text is compared with white</div>');
+    var sample = box.querySelector(".contrast-sample");
+    sample.style.color = info.text; sample.style.background = info.fill;
+    if (body) return;
+    // Suggest the theme or palette colour with the most contrast that passes
+    var pool = theme.concat(palette, [{ hex: "#FFFFFF", name: "White" }, { hex: "#000000", name: "Black" }]), best = null;
+    pool.forEach(function (c) { var v = contrast(c.hex, info.fill); if (v >= 4.5 && (!best || v > best.v)) best = { c: c, v: v }; });
+    if (!best) return;
+    var row = ST.html('<div class="contrast-fix"><span class="muted-note">Try this text colour</span><button class="mini-chip contrast-swatch" title="Colour the text ' + best.c.hex + '"><i>Aa</i>' + (best.c.name || best.c.hex) + ' <span>' + (Math.floor(best.v * 10) / 10).toFixed(1) + ' to 1</span></button></div>');
+    box.appendChild(row);
+    var chip = box.querySelector(".contrast-swatch i");
+    chip.style.color = best.c.hex; chip.style.background = info.fill;
+    box.querySelector(".contrast-swatch").addEventListener("click", function () {
+      ST.run(function (context) { return applyText(context, best.c); }).then(function () { checkContrast(); });
+    });
+  }
+  // Reads the first selected shape's fill and text colour.
+  function checkContrast() {
+    var box = $("colContrast");
+    if (!box || !box.offsetParent || !ST.inOffice || !ST.supports("1.5") || contrastBusy) return;
+    contrastBusy = true;
+    PowerPoint.run(function (context) {
+      var shapes = context.presentation.getSelectedShapes();
+      shapes.load("items/type");
+      return context.sync().then(function () {
+        var s = shapes.items.filter(function (x) { return SHAPE_TYPES.indexOf(x.type) >= 0; })[0];
+        if (!s) { showContrast(null); return; }
+        var tf = s.textFrame, range = tf.textRange;
+        s.fill.load("type,foregroundColor"); tf.load("hasText"); range.font.load("color");
+        return context.sync().then(function () {
+          if (!tf.hasText) { showContrast(null); return; }
+          var text = norm(range.font.color);
+          if (!text) { showContrast({ note: "The text has more than one colour. Select text with one colour to check it." }); return; }
+          var solid = s.fill.type === "Solid" && norm(s.fill.foregroundColor);
+          showContrast({ text: text, fill: solid ? norm(s.fill.foregroundColor) : "#FFFFFF", solid: !!solid });
+        });
+      });
+    }).catch(function () { showContrast(null); }).then(function () { contrastBusy = false; });
+  }
+  function queueContrast() { clearTimeout(contrastTimer); contrastTimer = setTimeout(checkContrast, 150); }
 
   function build(body) {
     body.appendChild(ST.html(MARKUP));
@@ -452,6 +516,9 @@
     $("colFromSel").addEventListener("click", addFromSelection);
     ST.on("ready", load);
     ST.on("reset", render);
+    ST.on("selection", queueContrast);
+    ST.on("layout", queueContrast);
+    showContrast(null);
     render();
   }
 
@@ -467,5 +534,5 @@
   });
 
   // Exposed for testing only
-  ST._colours = { get: function () { return palette; }, theme: function () { return theme; }, put: function (list) { palette = list; return save(); } };
+  ST._colours = { contrast: contrast, get: function () { return palette; }, theme: function () { return theme; }, put: function (list) { palette = list; return save(); } };
 })();

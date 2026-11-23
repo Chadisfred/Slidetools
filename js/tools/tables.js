@@ -38,6 +38,7 @@
       totalPrefix: "Total",
       thinSingleGroups: true,
       trimSpaces: true,
+      alignDecimals: true,
       size: { on: true, rowMin: 1, rowStep: 0.25, fitColumns: true }
     };
   }
@@ -150,6 +151,51 @@
   // Blanks a category label when it repeats the row above within the same parent group.
   // Removes spaces, tabs and line breaks at the start and end of each cell (text pasted from
   // Excel often has them), leaving everything inside the text alone.
+  // Pads numbers in each data column to the column's largest number of decimal places, so the
+  // points line up in right aligned cells: 1.5 next to 2.25 becomes 1.50. Never removes digits.
+  var NUMBER = /^(\s*[(\-\u2212+]?\s*[$\u20ac\u00a3]?\s*)(\d{1,3}(?:,\d{3})+|\d+)(?:\.(\d+))?(\s*(?:%|[kKmMbB]n?)?\)?\s*)$/;
+  function decimalValues(values, roles) {
+    var out = values.map(function (row) { return row.slice(); }), changed = [];
+    for (var c = 0; c < roles.length; c++) {
+      if (roles[c] !== "D") continue;
+      var most = 0, hits = [];
+      for (var r = 1; r < values.length; r++) {
+        var m = NUMBER.exec(String(values[r][c] === null || values[r][c] === undefined ? "" : values[r][c]));
+        if (m) { hits.push([r, m]); most = Math.max(most, (m[3] || "").length); }
+      }
+      if (!most) continue;
+      hits.forEach(function (h) {
+        var m = h[1], dec = m[3] || "";
+        if (dec.length >= most) return;
+        out[h[0]][c] = m[1] + m[2] + "." + dec + new Array(most - dec.length + 1).join("0") + m[4];
+        changed.push([h[0], c]);
+      });
+    }
+    return { values: out, changed: changed };
+  }
+  // Rows and columns from text copied out of Excel: tabs between cells, line breaks between
+  // rows, and quotes around cells that hold a tab, a line break or a quote.
+  function parseClipboard(text) {
+    var t = String(text || "").replace(/\r\n?/g, "\n"), rows = [], row = [], cell = "", i = 0, quoted = false;
+    if (!t.trim()) return [];
+    while (i < t.length) {
+      var ch = t.charAt(i);
+      if (quoted) {
+        if (ch === '"' && t.charAt(i + 1) === '"') { cell += '"'; i += 2; continue; }
+        if (ch === '"') { quoted = false; i++; continue; }
+        cell += ch; i++; continue;
+      }
+      if (ch === '"' && cell === "") { quoted = true; i++; continue; }
+      if (ch === "\t") { row.push(cell); cell = ""; i++; continue; }
+      if (ch === "\n") { row.push(cell); rows.push(row); row = []; cell = ""; i++; continue; }
+      cell += ch; i++;
+    }
+    if (cell !== "" || row.length) { row.push(cell); rows.push(row); }
+    while (rows.length && rows[rows.length - 1].every(function (v) { return !String(v).trim(); })) rows.pop();
+    var width = rows.reduce(function (m, r) { return Math.max(m, r.length); }, 0);
+    return rows.map(function (r) { while (r.length < width) r.push(""); return r; });
+  }
+
   function trimmedValues(values) {
     var out = values.map(function (row) { return row.slice(); }), changed = [];
     values.forEach(function (row, r) {
@@ -432,11 +478,26 @@
   // kinds PowerPoint refused (empty when everything applied). fresh: a table just inserted.
   // Unless the style says otherwise, spaces at the start and end of cells are trimmed first,
   // so column widths and wrapping are worked out on the clean text.
+  // Rewrites only the number cells that need padding to line up their decimals.
+  function decimalCells(context, info, roles) {
+    var res = decimalValues(info.values, roles), count = 0;
+    res.changed.forEach(function (rc) {
+      if (info.merged[rc[0] + "," + rc[1]] && !info.anchors[rc[0] + "," + rc[1]]) return;
+      info.table.getCellOrNullObject(rc[0], rc[1]).text = res.values[rc[0]][rc[1]];
+      count++;
+    });
+    if (!count) return Promise.resolve(0);
+    return context.sync().then(function () { info.values = res.values; return count; });
+  }
   function formatTable(context, info, style, roles, fresh) {
     var refused = [];
     var first = style.props.trimSpaces !== false && !fresh
       ? trimCells(context, info).catch(function (e) { if (window.console) console.error("Table spaces:", e); refused.push("trim spaces"); })
       : Promise.resolve();
+    if (style.props.alignDecimals !== false && !fresh) {
+      first = first.then(function () { return decimalCells(context, info, roles); })
+        .catch(function (e) { if (window.console) console.error("Table decimals:", e); refused.push("line up decimals"); });
+    }
     return first.then(function () { return formatRules(context, info, style, roles, fresh); })
       .then(function (failed) { refused.forEach(function (f) { failed.unshift(f); }); return failed; });
   }
@@ -601,18 +662,28 @@
     if (!ST.needOffice() || busy) return;
     if (!canInsert()) { ST.toast("This PowerPoint version can't add tables from the panel.", true); return; }
     if (canFormat() && !lineMode()) { withLines(insert); return; }
-    var rows = Math.max(2, Math.min(40, Math.round(ST.num(ST.state.tblRows)) || 6));
-    var cols = Math.max(1, Math.min(20, Math.round(ST.num(ST.state.tblCols)) || 4));
     var style = styles.filter(function (s) { return s.id === Number($("tblInsertStyle").value); })[0] || styles[0];
     if (!style) return;
-    var roles = insertRoles(cols), cats = 0, datas = 0;
-    var header = roles.map(function (r) {
-      if (r === "C") { cats++; return cats === 1 ? "Category" : "Sub-category"; }
-      if (r === "L") return "Item";
-      datas++; return "Value " + datas;
-    });
-    var values = [header];
-    for (var i = 1; i < rows; i++) { var row = []; for (var c = 0; c < cols; c++) row.push(""); values.push(row); }
+    var pasted = parseClipboard($("tblPaste").value), rows, cols, roles, values;
+    if (pasted.length) {
+      if (pasted.length > 40 || pasted[0].length > 20) { ST.toast("Pasted data can be up to 40 rows and 20 columns. This has " + pasted.length + " x " + pasted[0].length + ".", true); return; }
+      values = trimmedValues(pasted).values;
+      rows = values.length; cols = values[0].length;
+      roles = guessRoles(values);
+      if (style.props.alignDecimals !== false) values = decimalValues(values, roles).values;
+    } else {
+      rows = Math.max(2, Math.min(40, Math.round(ST.num(ST.state.tblRows)) || 6));
+      cols = Math.max(1, Math.min(20, Math.round(ST.num(ST.state.tblCols)) || 4));
+      roles = insertRoles(cols);
+      var cats = 0, datas = 0;
+      var header = roles.map(function (r) {
+        if (r === "C") { cats++; return cats === 1 ? "Category" : "Sub-category"; }
+        if (r === "L") return "Item";
+        datas++; return "Value " + datas;
+      });
+      values = [header];
+      for (var i = 1; i < rows; i++) { var row = []; for (var c = 0; c < cols; c++) row.push(""); values.push(row); }
+    }
     var g = ST.calculate();
     busy = true;
     ST.run(function (context) {
@@ -940,6 +1011,7 @@
       '<label>Row height step (g)<input type="text" id="tbRowStep" inputmode="decimal" value="' + esc(Z.rowStep) + '"></label></div>';
     html += '<label class="field">With one category column, thin lines between groups' + onOff("tbThinSingle", P.thinSingleGroups !== false) + '</label>';
     html += '<label class="field">Trim spaces at the start and end of cells' + onOff("tbTrim", P.trimSpaces !== false) + '</label>';
+    html += '<label class="field">Line up decimals in data columns' + onOff("tbDecimals", P.alignDecimals !== false) + '</label>';
     html += '<label class="field">Total rows start with<input type="text" id="tbTotal" value="' + esc(P.totalPrefix) + '"></label>';
     html += '<div class="btn-row"><button class="btn" id="tbCancel">Cancel</button><button class="btn primary" id="tbSave">Save</button></div>' +
       '<div class="btn-row"><button class="btn small" id="tbDup">Duplicate</button><button class="btn small danger" id="tbDel">Delete</button></div></div>';
@@ -992,6 +1064,7 @@
     P.totalPrefix = $("tbTotal").value.trim();
     P.thinSingleGroups = $("tbThinSingle").value === "1";
     P.trimSpaces = $("tbTrim").value === "1";
+    P.alignDecimals = $("tbDecimals").value === "1";
     P.size = P.size || defaultProps().size;
     P.size.on = $("tbSizeOn").value === "1";
     P.size.fitColumns = $("tbSizeFit").value === "1";
@@ -1021,6 +1094,8 @@
     '<div class="btn-row" data-min="2"><button class="btn small" id="tblNew">New style</button><button class="btn small" id="tblUpdate" title="Reformat every table linked to a style">Update all</button></div>' +
     '<button class="btn small" id="tblCheckBtn" data-min="2" title="Check how this PowerPoint shows table lines">Check lines</button>' +
     '<div class="group-label">Insert table</div>' +
+    '<label class="field"><span class="label-row">Paste data' + ST.info("Copy cells in Excel and paste them here. Insert table then builds the table from them: the first row becomes the header, and column roles are worked out from the values. Leave it empty for a blank table of the size below.", "About pasting data") + '</span><textarea id="tblPaste" class="paste-box" rows="3" placeholder="Paste cells from Excel here"></textarea></label>' +
+    '<div class="paste-info" id="tblPasteInfo" hidden><span id="tblPasteSize"></span><button class="link-btn" id="tblPasteClear">Clear</button></div>' +
     '<div class="row"><label class="field">Rows<input type="text" id="tblRows" inputmode="numeric"></label>' +
       '<label class="field">Columns<input type="text" id="tblCols" inputmode="numeric"></label></div>' +
     '<label class="field" data-min="2">Style<select id="tblInsertStyle"></select></label>' +
@@ -1031,6 +1106,17 @@
     ST.bindField($("tblRows"), "tblRows", { number: true });
     ST.bindField($("tblCols"), "tblCols", { number: true });
     $("tblInsert").addEventListener("click", insert);
+    var showPaste = function () {
+      var data = parseClipboard($("tblPaste").value), has = data.length > 0;
+      $("tblPasteInfo").hidden = !has;
+      $("tblRows").disabled = has; $("tblCols").disabled = has;
+      if (has) {
+        $("tblRows").value = data.length; $("tblCols").value = data[0].length;
+        $("tblPasteSize").textContent = data.length + " rows x " + data[0].length + " columns, first row as the header";
+      } else { $("tblRows").value = ST.state.tblRows; $("tblCols").value = ST.state.tblCols; }
+    };
+    $("tblPaste").addEventListener("input", showPaste);
+    $("tblPasteClear").addEventListener("click", function () { $("tblPaste").value = ""; showPaste(); });
     $("tblCheckBtn").addEventListener("click", function () { startLineCheck(null); });
     Array.prototype.forEach.call(body.querySelectorAll("#tblCheck [data-ans]"), function (b) {
       b.addEventListener("click", function () { answerLineCheck(b.getAttribute("data-ans")); });
@@ -1057,6 +1143,6 @@
   });
 
   // Exposed for testing only
-  ST._tables = { trimmedValues: trimmedValues, columnWidths: columnWidths, lineMode: lineMode, cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
+  ST._tables = { decimalValues: decimalValues, parseClipboard: parseClipboard, trimmedValues: trimmedValues, columnWidths: columnWidths, lineMode: lineMode, cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
     get: function () { return styles; }, current: function () { return current; }, put: function (s) { styles = s; stylesLoaded = true; return saveStyles(); } };
 })();
