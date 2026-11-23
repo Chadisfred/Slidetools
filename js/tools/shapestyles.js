@@ -662,7 +662,11 @@
       row.querySelector(".shape-tile i").setAttribute("style", tileStyle(s.props));
       row.querySelector(".style-name").textContent = s.name;
       row.querySelector(".style-sum").textContent = summary(s.props);
-      row.querySelector(".style-apply").addEventListener("click", function () { apply(s); });
+      row.querySelector(".style-apply").addEventListener("click", function () {
+        var sid = s.id;
+        ST.setRepeat("Apply shape style " + s.name, function () { var cur = styles.filter(function (x) { return x.id === sid; })[0]; if (cur) apply(cur); });
+        apply(s);
+      });
       row.querySelector(".icon-btn").addEventListener("click", function () { editing = editing === s.id ? null : s.id; render(); });
       list.appendChild(row);
       if (editing === s.id) {
@@ -770,5 +774,5 @@
   // Used by the Match tool to compare shapes.
   ST.shapeReader = { read: readShapes, types: SHAPE_TYPES, batch: BATCH };
 
-  ST._shapeStyles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, classify: classify, norm: norm };
+  ST._shapeStyles = { get: function () { return styles; }, set: function (s) { styles = s; stylesLoaded = true; render(); }, put: function (s) { styles = s; stylesLoaded = true; return saveStyles(); }, classify: classify, norm: norm };
 })();

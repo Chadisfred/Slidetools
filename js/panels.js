@@ -188,6 +188,9 @@
     items.push("sep");
     items.push({ label: "Unfold all", action: function () { layout.folded = {}; saveLayout(); applyAll(); } });
     items.push({ label: "Fold all", action: function () { layout.order.forEach(function (id) { layout.folded[id] = true; }); saveLayout(); applyAll(); } });
+    items.push("sep");
+    items.push({ label: "Share settings", action: function () { ST.openShare(); } });
+    items.push({ label: "Ask before replacing a slide again", action: function () { ST.resetSwapConfirm(); ST.toast("Slide Tools will ask before cropping pictures or making copies."); } });
     items.push({ label: "Reset panel arrangement", action: function () {
       layout = { order: ST.tools.map(function (t) { return t.id; }), levels: {}, folded: {}, hidden: {} };
       saveLayout(); applyAll(); ST.toast("Panel order, detail and folding are back to the defaults.");
@@ -275,6 +278,7 @@
     layout.order.forEach(function (id) { buildCard(tool(id)); });
     applyAll();
     ST.$("settingsBtn").addEventListener("click", function (e) { e.stopPropagation(); showSettingsMenu(e.currentTarget); });
+    ST.$("repeatBtn").addEventListener("click", function () { ST.runRepeat(); });
     document.addEventListener("click", function (e) { if (openMenu && !openMenu.contains(e.target)) closeMenu(); });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenu(); });
     window.addEventListener("resize", closeMenu);

@@ -73,12 +73,12 @@ svg { display: block; }
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px; background: var(--page); border-bottom: 1px solid var(--line);
 }
-.topbar h1 { font-size: 15px; font-weight: 600; flex: 1; }
+.topbar h1 { font-size: 15px; font-weight: 600; flex: 1 0 auto; white-space: nowrap; }
 .pill {
   font-size: 11px; color: var(--muted); background: var(--card);
   border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px;
   font-family: var(--mono); font-variant-numeric: tabular-nums;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 60%;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto;
 }
 .pill.on { color: var(--accent); border-color: var(--accent-line); background: var(--accent-soft); }
 
@@ -491,3 +491,24 @@ select:focus { border-color: var(--accent); }
 .cp-copy { fill: none; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 2; }
 .cp-ref { fill: var(--accent); }
 .anchor-text { display: flex; flex-direction: column; gap: 2px; }
+
+/* Repeat button: dimmed until there is something to repeat */
+.icon-btn:disabled { opacity: 0.35; cursor: default; background: transparent; }
+
+/* Sheet: a small dialog over the panel (share settings, confirm a slide swap) */
+.sheet-wrap { position: fixed; inset: 0; z-index: 80; background: rgba(0, 0, 0, 0.32); display: grid; align-items: start; justify-items: center; padding: 48px 12px 12px; overflow-y: auto; }
+.sheet { width: 100%; max-width: 320px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px var(--shadow); }
+.sheet-head { display: flex; align-items: center; gap: 8px; padding: 12px 12px 0 16px; }
+.sheet-head h2 { flex: 1; font-size: 14px; font-weight: 600; }
+.sheet-body { padding: 12px 16px 16px; display: grid; gap: 12px; }
+.sheet-pane, #shareFound { display: grid; gap: 12px; }
+#shareFound:empty { display: none; }
+.sheet-checks { display: grid; gap: 8px; }
+.sheet-pane[hidden] { display: none; }
+.sheet-text { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.sheet-list { font-size: 12px; color: var(--text); padding-left: 16px; display: grid; gap: 4px; }
+.sheet-check { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; }
+.sheet-check .muted { color: var(--muted); font-family: var(--mono); font-variant-numeric: tabular-nums; margin-left: auto; }
+.sheet-check input:disabled + * , .sheet-check input:disabled { cursor: default; }
+.sheet-code { width: 100%; font: 11px/1.4 var(--mono); color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 8px; padding: 8px; resize: vertical; word-break: break-all; }
+.sheet-code:focus { outline: none; border-color: var(--accent); }

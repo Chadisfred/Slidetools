@@ -77,7 +77,7 @@
   function build(body) {
     body.appendChild(ST.html(MARKUP));
     ST.bindField($("radius"), "radius", { number: true });
-    $("round").addEventListener("click", roundSelection);
+    $("round").addEventListener("click", function () { ST.setRepeat("Round corners", roundSelection); roundSelection(); });
     $("readRadius").addEventListener("click", readRadius);
     $("radius").addEventListener("keydown", function (e) { if (e.key === "Enter") roundSelection(); });
     ST.on("change", renderChips);

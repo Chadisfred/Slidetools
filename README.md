@@ -67,7 +67,13 @@ Each tool sits in its own panel, stacked from top to bottom. Every panel header 
 | i icon | Hover or tab to it for a short guide to the tool |
 | Three dots | Move up, move down, reset the tool to its defaults, or hide it |
 
-The sliders button at the top right lists every tool so you can show or hide each one. It also has Unfold all, Fold all and Reset panel arrangement.
+The sliders button at the top right lists every tool so you can show or hide each one. It also has Unfold all, Fold all, Share settings, Ask before replacing a slide again and Reset panel arrangement.
+
+The circular arrow next to it repeats the last action on the current selection, with the same values. Hover it to see what it will do. It covers Resize, Match size, Make copies, Align, Distribute, Even gaps, Snap, Round corners, and applying a style or colour.
+
+Share settings copies a settings code for your text styles, shape styles, table styles, colours and Layout presets. Send it to someone, and they paste it under Import, then choose Merge (add new items and update ones with the same name) or Replace. The code is plain text you copy and paste yourself.
+
+Cropping pictures and making copies replace the slide with an edited copy. The first time, a message explains that slide comments may not carry over and Undo takes more than one step, with a Don't ask again box.
 
 Detail levels:
 

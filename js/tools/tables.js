@@ -870,7 +870,11 @@
       row.querySelector(".tbl-tile").innerHTML = tile(s.props);
       row.querySelector(".style-name").textContent = s.name;
       row.querySelector(".style-sum").textContent = summary(s.props);
-      row.querySelector(".style-apply").addEventListener("click", function () { apply(s); });
+      row.querySelector(".style-apply").addEventListener("click", function () {
+        var sid = s.id;
+        ST.setRepeat("Apply table style " + s.name, function () { var cur = styles.filter(function (x) { return x.id === sid; })[0]; if (cur) apply(cur); });
+        apply(s);
+      });
       row.querySelector(".icon-btn").addEventListener("click", function () { editing = editing === s.id ? null : s.id; render(); });
       list.appendChild(row);
       if (editing === s.id) {
@@ -1054,5 +1058,5 @@
 
   // Exposed for testing only
   ST._tables = { trimmedValues: trimmedValues, columnWidths: columnWidths, lineMode: lineMode, cellProps: cellProps, stackedValues: stackedValues, guessRoles: guessRoles, defaultProps: defaultProps,
-    get: function () { return styles; }, current: function () { return current; } };
+    get: function () { return styles; }, current: function () { return current; }, put: function (s) { styles = s; stylesLoaded = true; return saveStyles(); } };
 })();

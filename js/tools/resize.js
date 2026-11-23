@@ -88,14 +88,19 @@
     plans.forEach(function (p) {
       var s = p.shape, nw = p.nw === null ? s.width : p.nw, nh = p.nh === null ? s.height : p.nh;
       if (sameShape(s.width, s.height, nw, nh)) { applySize(s, nw, nh); out.resized++; return; }
-      if (crop) { jobs.push({ shape: s, frame: frameFor(s, nw, nh), anchor: anchorFactors() }); return; }
+      if (crop) { jobs.push({ shape: s, frame: frameFor(s, nw, nh), anchor: anchorFactors(), nw: nw, nh: nh, typedW: p.nw !== null }); return; }
       // Keep proportions, led by the box that was typed
       if (p.nw !== null) nh = s.height * nw / s.width; else nw = s.width * nh / s.height;
       applySize(s, nw, nh); out.kept++;
     });
     return context.sync().then(function () {
       if (!jobs.length) return out;
-      return ST.crop.apply(context, jobs).then(function (r) { out.cropped = r.cropped; out.missed = r.missed; return out; });
+      return ST.confirmSwap("crop pictures").then(function (ok) {
+        if (ok) return ST.crop.apply(context, jobs).then(function (r) { out.cropped = r.cropped; out.missed = r.missed; return out; });
+        // Not swapping the slide: keep the pictures in proportion instead
+        jobs.forEach(function (j) { var sh = j.shape, w = j.nw, h = j.nh; if (j.typedW) h = sh.height * w / sh.width; else w = sh.width * h / sh.height; applySize(sh, w, h); out.kept++; });
+        return context.sync().then(function () { return out; });
+      });
     });
   }
   function pictureMessage(r) {
@@ -176,16 +181,19 @@
     ST.changed();
   }
 
-  function resizeSelection(doW, doH) {
+  // over: { w, h } formula texts to use instead of the boxes (Repeat passes the original ones).
+  function resizeSelection(doW, doH, over) {
     if (!ST.needOffice()) return;
     ST.calculate();
     var lock = !!ST.state.lockAspect;
-    var wText = String(ST.state.resW || "").trim(), hText = String(ST.state.resH || "").trim();
+    var wText = String(over ? over.w : ST.state.resW || "").trim(), hText = String(over ? over.h : ST.state.resH || "").trim();
     doW = doW && !!wText;
     doH = doH && !!hText;
     if (lock && doW && doH) doH = false; // width leads when the lock is on
     if (!doW && !doH) { ST.toast("Type a width or height first.", true); return; }
     var lineText = doW ? wText : hText; // a line's length comes from whichever box is used
+    var rw = doW ? wText : "", rh = doH ? hText : "";
+    ST.setRepeat("Resize" + (rw ? " W " + rw : "") + (rh ? " H " + rh : ""), function () { resizeSelection(!!rw, !!rh, { w: rw, h: rh }); });
     ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
       return ST.crop.pictureFlags(context, items).then(function (isPic) {
         var updates = [], pics = [], lines = 0, skipped = 0, firstW = null, firstH = null;
@@ -233,6 +241,7 @@
   }
 
   function matchSize(largest) {
+    ST.setRepeat("Match size to " + (largest ? "largest" : "smallest"), function () { matchSize(largest); });
     ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
       if (items.length < 2) { ST.toast("Select at least two shapes to match.", true); return; }
       return ST.crop.pictureFlags(context, items).then(function (isPic) {
@@ -273,10 +282,13 @@
   // ---------- Copies ----------
   var MAX_COPIES = 50;
   function copiesText(n) { return n === 1 ? "1 copy" : n + " copies"; }
-  function copyCount() { var n = Math.floor(ST.evaluate(ST.state.cpCount, null, null)); return n >= 1 && n <= MAX_COPIES ? n : null; }
+  function copyCount(S) { var n = Math.floor(ST.evaluate((S || ST.state).cpCount, null, null)); return n >= 1 && n <= MAX_COPIES ? n : null; }
   // Works out the copy settings for a shape of this size (inches). Returns { t } or { bad }.
-  function copySettings(wIn, hIn) {
-    var vars = ST.formulaVars(wIn, hIn), S = ST.state, f = anchorFactors();
+  var COPY_KEYS = ["cpCount", "cpMoveH", "cpMoveV", "cpMode", "cpScaleH", "cpScaleV", "cpUniform", "cpRotate", "cpReflectX", "cpReflectY", "anchor"];
+  // S: the settings to use, the panel's by default (Repeat passes a saved copy).
+  function copySettings(wIn, hIn, S) {
+    S = S || ST.state;
+    var vars = ST.formulaVars(wIn, hIn), a0 = S.anchor || 0, f = { x: (a0 % 3) / 2, y: Math.floor(a0 / 3) / 2 };
     var num = function (text, fallback) { var x = String(text || "").trim(); if (!x) return fallback; return ST.evaluate(x, vars, null); };
     var mh = num(S.cpMoveH, NaN), mv = num(S.cpMoveV, NaN), sx = num(S.cpScaleH, 100), sy = num(S.cpUniform ? S.cpScaleH : S.cpScaleV, 100), a = num(S.cpRotate, 0);
     if (mh === null) return { bad: "Check Move across." };
@@ -315,20 +327,27 @@
   }
   function renderMode() { Array.prototype.forEach.call($("cpMode").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.cpMode); }); }
   function syncUniform() { var u = !!ST.state.cpUniform; $("cpScaleV").disabled = u; if (u) { ST.state.cpScaleV = ST.state.cpScaleH; $("cpScaleV").value = ST.state.cpScaleV; } }
-  function makeCopies() {
+  function makeCopies(saved) {
     if (!ST.needOffice()) return;
     if (!ST.clone.supported()) { ST.toast("This version of PowerPoint can't make copies. It needs PowerPoint API 1.8.", true); return; }
     ST.calculate();
-    var n = copyCount();
+    var S = saved || {};
+    if (!saved) COPY_KEYS.forEach(function (k) { S[k] = ST.state[k]; });
+    var n = copyCount(S);
     if (n === null) { ST.toast("Copies must be 1 to " + MAX_COPIES + ".", true); return; }
+    ST.setRepeat("Make " + copiesText(n), function () { makeCopies(S); });
     ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
       var jobs = [];
       for (var i = 0; i < items.length; i++) {
-        var s = items[i], c = copySettings(s.width / PT, s.height / PT);
+        var s = items[i], c = copySettings(s.width / PT, s.height / PT, S);
         if (c.bad) { ST.toast(c.bad, true); return; }
         jobs.push({ shape: s, t: c.t, copies: n });
       }
-      return ST.clone.apply(context, jobs).then(function (r) {
+      return ST.confirmSwap("copy shapes").then(function (ok) {
+        if (!ok) return { cancelled: true };
+        return ST.clone.apply(context, jobs);
+      }).then(function (r) {
+        if (r.cancelled) { ST.toast("No copies were made."); return; }
         var msg = r.made ? "Made " + copiesText(n) + " of " + ST.plural(r.shapes, "shape") + "." : "No copies were made.";
         if (r.missed.length) msg += " Couldn't find " + r.missed.join(", ") + " in the slide.";
         if (r.fixed) msg += " Tables, charts and other frames can't turn or flip, and tables keep their size, so those settings were skipped for them.";
@@ -362,7 +381,7 @@
     Array.prototype.forEach.call($("cpMode").children, function (b) { b.addEventListener("click", function () { ST.state.cpMode = b.getAttribute("data-v"); renderMode(); ST.changed(); }); });
     var switches = ["cpUniform", "cpReflectX", "cpReflectY"];
     switches.forEach(function (k) { var el = $(k); el.checked = !!ST.state[k]; el.addEventListener("change", function () { ST.state[k] = el.checked; if (k === "cpUniform") syncUniform(); ST.changed(); }); });
-    $("cpGo").addEventListener("click", makeCopies);
+    $("cpGo").addEventListener("click", function () { makeCopies(); });
     renderMode(); syncUniform();
     renderAnchor();
     renderRecent();
