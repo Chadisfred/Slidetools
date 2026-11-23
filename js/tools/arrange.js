@@ -10,6 +10,7 @@
   var ICON = '<svg viewBox="0 0 18 18" fill="currentColor"><rect x="2" y="2" width="1.6" height="14" rx="0.8"/><rect x="5" y="4" width="10" height="4" rx="1.2"/><rect x="5" y="10" width="6" height="4" rx="1.2" opacity="0.6"/></svg>';
 
   function svg(paths) { return '<svg viewBox="0 0 16 16" fill="currentColor">' + paths + "</svg>"; }
+  function hint(id) { return ST.shortcuts ? ST.shortcuts.hint(id) : ""; }
   var ALIGN = [
     ["left", "Align left", svg('<rect x="1.5" y="1" width="1.4" height="14" rx="0.7"/><rect x="4" y="3" width="9" height="3.5" rx="1"/><rect x="4" y="9.5" width="5.5" height="3.5" rx="1"/>')],
     ["centre", "Align centres", svg('<rect x="7.3" y="1" width="1.4" height="14" rx="0.7"/><rect x="3" y="3" width="10" height="3.5" rx="1" opacity="0.85"/><rect x="5" y="9.5" width="6" height="3.5" rx="1" opacity="0.85"/>')],
@@ -26,7 +27,7 @@
     '<div class="seg seg3" id="arrAlignTo" data-min="2"></div>' +
     '<div class="group-label label-row">Distribute' + ST.info("Across and Down place shapes one after another with exactly this gap. Even gaps keeps the outer shapes still and shares the space.", "About distribute") + '</div>' +
     '<div class="inline"><label class="field">Gap between shapes<input type="text" id="arrGap" placeholder="e.g. g"></label>' +
-      '<div class="pair"><button class="btn small" id="arrDistH" title="Place shapes left to right with this gap">Across</button><button class="btn small" id="arrDistV" title="Place shapes top to bottom with this gap">Down</button></div></div>' +
+      '<div class="pair"><button class="btn small" id="arrDistH" title="Place shapes left to right with this gap' + hint("DistributeAcross") + '">Across</button><button class="btn small" id="arrDistV" title="Place shapes top to bottom with this gap' + hint("DistributeDown") + '">Down</button></div></div>' +
     '<div class="calc" id="arrGapCalc" data-min="2"></div>' +
     '<div class="btn-row" data-min="2"><button class="btn small" id="arrSpreadH" title="Equal gaps, keeping the outer shapes where they are">Even gaps across</button><button class="btn small" id="arrSpreadV" title="Equal gaps, keeping the outer shapes where they are">Even gaps down</button></div>' +
     '<div class="group-label label-row">Snap' + ST.info("Moves each shape's top left corner to the nearest line.<br><b>Guides</b> the guides on your slide.<br><b>Columns</b> the Layout grid's column and row corners.<br><b>Steps</b> every g from the grid area's top left.", "About snap") + '</div>' +
@@ -40,7 +41,7 @@
     '<div class="group-label">Move</div>' +
     '<div class="nudge-row">' +
       '<label class="field">Nudge by<input type="text" id="arrNudge" placeholder="e.g. g"></label>' +
-      '<div class="nudge-pad" id="arrNudgePad"><button class="btn small" data-nudge="-1,0" title="Left">&larr;</button><button class="btn small" data-nudge="0,-1" title="Up">&uarr;</button><button class="btn small" data-nudge="0,1" title="Down">&darr;</button><button class="btn small" data-nudge="1,0" title="Right">&rarr;</button></div>' +
+      '<div class="nudge-pad" id="arrNudgePad"><button class="btn small" data-nudge="-1,0" title="Nudge left' + hint("NudgeLeft") + '">&larr;</button><button class="btn small" data-nudge="0,-1" title="Nudge up' + hint("NudgeUp") + '">&uarr;</button><button class="btn small" data-nudge="0,1" title="Nudge down' + hint("NudgeDown") + '">&darr;</button><button class="btn small" data-nudge="1,0" title="Nudge right' + hint("NudgeRight") + '">&rarr;</button></div>' +
     '</div>' +
     '<button class="btn small" id="arrSwap" data-min="3" title="Swap the positions of two selected shapes">Swap two shapes</button>';
 
@@ -471,7 +472,7 @@
     var row = $("arrAlign");
     ALIGN.forEach(function (a) {
       var b = document.createElement("button");
-      b.className = "tool-btn"; b.title = a[1]; b.setAttribute("aria-label", a[1]); b.innerHTML = a[2];
+      b.className = "tool-btn"; b.title = a[1] + (ST.shortcuts ? ST.shortcuts.hint("Align" + a[0].charAt(0).toUpperCase() + a[0].slice(1)) : ""); b.setAttribute("aria-label", a[1]); b.innerHTML = a[2];
       b.addEventListener("click", function () { ST.setRepeat(a[1], function () { align(a[0]); }); align(a[0]); });
       row.appendChild(b);
     });
@@ -504,6 +505,13 @@
     ST.on("ready", renderGuideInfo);
     renderGuideInfo();
   }
+
+  // Used by keyboard shortcuts (js/shortcuts.js). Align and distribute also set Repeat, like their buttons.
+  ST._arrange = {
+    nudge: nudge,
+    alignKey: function (edge) { var a = ALIGN.filter(function (x) { return x[0] === edge; })[0]; ST.setRepeat(a[1], function () { align(edge); }); align(edge); },
+    distributeKey: function (across) { var label = across ? "Distribute across" : "Distribute down"; ST.setRepeat(label, function () { distribute(across); }); distribute(across); }
+  };
 
   ST.registerTool({
     id: "arrange",

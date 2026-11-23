@@ -513,6 +513,10 @@ select:focus { border-color: var(--accent); }
 .sheet-check input:disabled + * , .sheet-check input:disabled { cursor: default; }
 .sheet-code { width: 100%; font: 11px/1.4 var(--mono); color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 8px; padding: 8px; resize: vertical; word-break: break-all; }
 .sheet-code:focus { outline: none; border-color: var(--accent); }
+.shortcut-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.shortcut-table td { padding: 6px 0; border-top: 1px solid var(--line); vertical-align: baseline; }
+.shortcut-table tr:first-child td { border-top: 0; }
+.shortcut-table .keys { text-align: right; font-family: var(--mono); font-size: 11px; color: var(--muted); white-space: nowrap; padding-left: 8px; }
 
 /* Tables: paste box */
 .paste-box { width: 100%; font: 12px/1.4 var(--mono); color: var(--text); background: var(--field); border: 1px solid var(--field-line); border-radius: 8px; padding: 8px 10px; resize: vertical; white-space: pre; overflow-x: auto; }

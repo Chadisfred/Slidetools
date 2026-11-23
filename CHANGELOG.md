@@ -2,6 +2,16 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.25.0] 2026-11-23
+
+### Added
+
+1. Keyboard shortcuts that work while the slide has focus: Ctrl+Alt+Shift with an arrow to nudge, D to repeat the last action, L, C, R, T, M and B to align, and H and V to distribute (Cmd+Option+Shift on a Mac). They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. Keyboard shortcuts in the settings menu lists them, and the Arrange buttons show their keys in their tooltips.
+
+### Changed
+
+1. The install file now uses a shared runtime and links the shortcut keys. Installs from before 2.25.0 need the installer run once more for the shortcuts. Everything else keeps working without it.
+
 ## [2.24.0] 2026-11-23
 
 ### Changed
