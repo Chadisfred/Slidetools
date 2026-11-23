@@ -128,7 +128,7 @@ Tips:
 5. Recent formulas keeps your last six. Click one to put it back in the boxes.
 6. Lines are resized by length, whichever box you type in. Horizontal, vertical and diagonal lines keep their direction.
 7. With Crop pictures to fit on, a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
-8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way.
+8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way. If a box can't be read, such as `h+` with nothing after the plus, it turns red and the message says what to change.
 9. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
 10. Rows turns copies into a grid. With 3 copies and 3 rows you get 4 across by 3 down. Move down is the step between rows, and left empty it is the shape's height plus the row gap.
 
@@ -149,9 +149,9 @@ Lines shapes up and spaces them exactly, using the same grid as Layout.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Snap with a choice of Guides, Columns or Steps, Nudge by an amount |
 | More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap options, template guide report |
-| Full | Nudge by an amount, swap two shapes |
+| Full | Swap two shapes |
 
 Tips:
 
@@ -347,7 +347,6 @@ Notes:
 1. Theme and template colours are read only. They belong to the slide master, so the panel never changes them. Template colours are read from a copy of the first slide, which needs PowerPoint API 1.8.
 2. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
 3. The colour pickers in the Styles and Shape styles editors suggest these colours.
-4. At the More level, Contrast shows the selected shape's text colour on its fill, the contrast ratio, and whether it passes for body text (4.5 to 1) and large text (3 to 1). When body text fails, click the suggested colour to fix it.
 
 ## Formulas
 

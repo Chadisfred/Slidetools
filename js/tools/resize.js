@@ -125,6 +125,9 @@
     });
     var calc = $("calc");
     calc.textContent = parts.join("     ");
+    ["cpMoveH", "cpMoveV"].forEach(function (k) { $(k).classList.toggle("err", !!c.field && c.field === k); });
+    // A problem shows at every level, so the reason is visible before clicking Make copies
+    if (bad) calc.removeAttribute("data-min"); else calc.setAttribute("data-min", "2");
     calc.className = bad ? "calc bad" : "calc";
   }
 
@@ -296,8 +299,13 @@
     var vars = ST.formulaVars(wIn, hIn), a0 = S.anchor || 0, f = { x: (a0 % 3) / 2, y: Math.floor(a0 / 3) / 2 };
     var num = function (text, fallback) { var x = String(text || "").trim(); if (!x) return fallback; return ST.evaluate(x, vars, null); };
     var mh = num(S.cpMoveH, NaN), mv = num(S.cpMoveV, NaN), sx = num(S.cpScaleH, 100), sy = num(S.cpUniform ? S.cpScaleH : S.cpScaleV, 100), a = num(S.cpRotate, 0);
-    if (mh === null) return { bad: "Check Move across." };
-    if (mv === null) return { bad: "Check Move down." };
+    var names = "w, h, g, gap, vgap, col and row";
+    var moveBad = function (label, text, example, which) {
+      var why = ST.formulaProblem(text, vars), hint = /isn't a name/.test(why) ? " The names you can use are " + names + "." : "";
+      return { bad: label + " " + (why || "can't be read") + "." + hint + " Change it to something like " + example + ", or clear the box for no movement " + which + ".", field: label === "Move across" ? "cpMoveH" : "cpMoveV" };
+    };
+    if (mh === null) return moveBad("Move across", S.cpMoveH, "w+gap", "across");
+    if (mv === null) return moveBad("Move down", S.cpMoveV, "h+vgap", "down");
     if (!(sx > 0)) return { bad: "Check Scale across. It must be more than 0." };
     if (!(sy > 0)) return { bad: "Check Scale down. It must be more than 0." };
     if (a === null) return { bad: "Check Rotate." };
@@ -310,6 +318,9 @@
     var w = sel.count ? Math.max(sel.w, 0.01) : 1.5, h = sel.count ? Math.max(sel.h, 0.01) : 1;
     var rows = rowCount();
     var c = copySettings(w, h), bad = n === null ? "Copies must be 1 to " + MAX_COPIES + "." : rows === null ? "Rows must be 1 to " + MAX_ROWS + "." : c.bad;
+    ["cpMoveH", "cpMoveV"].forEach(function (k) { $(k).classList.toggle("err", !!c.field && c.field === k); });
+    // A problem shows at every level, so the reason is visible before clicking Make copies
+    if (bad) calc.removeAttribute("data-min"); else calc.setAttribute("data-min", "2");
     calc.className = bad ? "calc bad" : "calc";
     $("cpGo").disabled = !!bad;
     if (bad) { calc.textContent = bad; prev.innerHTML = ""; return; }

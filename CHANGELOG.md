@@ -2,6 +2,21 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.24.0] 2026-11-23
+
+### Changed
+
+1. Arrange: Nudge is now part of the Basic level.
+2. Transform: when a Move box can't be read, the box turns red and the message says what to change, such as "Move down ends with +", or which name isn't known. The message shows at every level, before Make copies is clicked.
+
+### Removed
+
+1. Colours: the Contrast check.
+
+### Fixed
+
+1. Colours: colouring text could fail with "PowerPoint didn't accept one of the values". Text without a Slide Tools style is now coloured in one step, and styled text falls back to a plain colour if PowerPoint refuses the detailed edit.
+
 ## [2.23.0] 2026-11-23
 
 ### Added
