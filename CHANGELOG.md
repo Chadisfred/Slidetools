@@ -2,6 +2,17 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.20.1] 2026-11-23
+
+### Changed
+
+1. Manual: the same design polish as the panel. Content, layout and navigation are unchanged.
+   1. Sidebar and table headings are in normal case instead of small spaced capitals, and headings are a little lighter.
+   2. Numbered markers and table numbers are ink circles with monospaced digits, and step numbers are outlined circles.
+   3. Level tags show the panel's dots: one for Basic, two for More, three for Full.
+   4. Diagram guides are neutral dashed lines, code and keys use the panel's monospaced face, and spacing sits on a 4 px grid.
+   5. Markers show a ring on hover instead of growing.
+
 ## [2.20.0] 2026-11-23
 
 ### Changed
