@@ -82,7 +82,7 @@ Detail levels:
 2. More adds the common settings.
 3. Full shows everything, including help text and less used options.
 
-Tools that don't need three levels only offer the ones they use. Corners has Basic and Full.
+Tools that don't need three levels only offer the ones they use. Corners has Basic and Full. On a narrow panel the level button shows just its dots, and its tooltip names the level.
 
 The panel remembers your values, tool order, detail levels, folded panels and hidden tools between sessions. If PowerPoint uses a dark theme, the panel follows it.
 
@@ -155,8 +155,8 @@ Exact text spacing, margins and autofit for the selected shapes.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Character spacing, line spacing in points or lines, space before and after, Apply spacing, margins, autofit, wrap |
-| More | Kerning, baseline, Read from selection |
+| Basic | Live preview, character spacing, line spacing in points or lines, space before and after, Apply spacing, margins, autofit, wrap |
+| More | Kerning, baseline, Read from selection, Live preview switch |
 
 Tips:
 
@@ -164,6 +164,7 @@ Tips:
 2. Line spacing in points keeps the same distance whatever the font size, which helps text in different boxes line up.
 3. Margins, autofit and wrap apply straight away. Spacing, kerning and baseline swap the slide for an identical copy, in memory, because add-ins can't set them directly, so Undo takes more than one step.
 4. Read from selection copies a shape's settings into the boxes, ready to apply to others.
+5. The live preview shows a scaled copy of the first selected text box with the values in the boxes, so you can see line breaks before applying. The dashed line marks the shape's height.
 
 ### Corners
 

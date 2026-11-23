@@ -12,7 +12,7 @@
   var PPR_ORDER = ["lnSpc", "spcBef", "spcAft"];
 
   var defaults = { tySpc: "", tyLine: "", tyLineUnit: "pt", tyBefore: "", tyAfter: "", tyKern: "", tyBase: "",
-                   tyMl: "", tyMr: "", tyMt: "", tyMb: "" };
+                   tyMl: "", tyMr: "", tyMt: "", tyMb: "", tyPreviewOn: true };
   ST.addDefaults(defaults);
 
   // A number in points from a box, "" when empty, null when it can't be read
@@ -143,7 +143,7 @@
       }).then(function (n) {
         if (n === null) { ST.toast("Nothing was changed."); return; }
         ST.toast(n ? "Set the spacing in " + ST.plural(n, "shape") + "." : "Couldn't find text in the selected shapes.", !n);
-        ST.refreshSelection();
+        ST.refreshSelection(); queuePreview(true);
       }, function (e) { ST.toast("Couldn't change the slide. " + (ST.errorText ? ST.errorText(e) : ""), true); });
     });
   }
@@ -160,7 +160,7 @@
       var list = textItems(items);
       if (!list.length) { ST.toast("Select shapes or text boxes.", true); return; }
       list.forEach(function (s) { keys.forEach(function (k) { s.textFrame[k] = m[k]; }); });
-      return context.sync().then(function () { ST.toast("Set the margins of " + ST.plural(list.length, "shape") + "."); });
+      return context.sync().then(function () { ST.toast("Set the margins of " + ST.plural(list.length, "shape") + "."); queuePreview(); });
     });
   }
   function setFrame(prop, value, label) {
@@ -169,7 +169,7 @@
       var list = textItems(items);
       if (!list.length) { ST.toast("Select shapes or text boxes.", true); return; }
       list.forEach(function (s) { s.textFrame[prop] = value; });
-      return context.sync().then(function () { ST.toast(label + " for " + ST.plural(list.length, "shape") + "."); });
+      return context.sync().then(function () { ST.toast(label + " for " + ST.plural(list.length, "shape") + "."); queuePreview(); });
     });
   }
 
@@ -205,9 +205,98 @@
     });
   }
 
+  // ---------- Live preview ----------
+  // A scaled copy of the first selected text box, drawn with the values in the boxes. It only
+  // reads: the current spacing comes from an export that never swaps the slide.
+  var pv = { info: null, cache: {}, timer: null, busy: false, again: false };
+  var PX = 4 / 3; // pixels per point
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function previewOn() { return ST.state.tyPreviewOn !== false; }
+  function previewVisible() { var b = $("tyPreview"); return !!b && !!b.offsetParent && previewOn(); }
+  function queuePreview(fresh) {
+    if (fresh) pv.cache = {};
+    clearTimeout(pv.timer);
+    pv.timer = setTimeout(loadPreview, 200);
+  }
+  function loadPreview() {
+    if (!ST.inOffice || !previewVisible() || !ST.supports("1.4")) { renderPreview(); return; }
+    if (pv.busy) { pv.again = true; return; }
+    pv.busy = true;
+    PowerPoint.run(function (context) {
+      var shapes = context.presentation.getSelectedShapes();
+      shapes.load("items/id,items/name,items/type,items/left,items/top,items/width,items/height");
+      return context.sync().then(function () {
+        var s = textItems(shapes.items)[0];
+        if (!s) return null;
+        var tf = s.textFrame, tr = tf.textRange, info = { id: s.id, name: s.name, box: { left: s.left, top: s.top, width: s.width, height: s.height } };
+        tf.load("leftMargin,rightMargin,topMargin,bottomMargin,wordWrap,verticalAlignment");
+        tr.load("text"); tr.font.load("name,size,color,bold,italic"); tr.paragraphFormat.load("horizontalAlignment");
+        s.fill.load("type,foregroundColor");
+        return context.sync().then(function () {
+          info.text = String(tr.text || "").slice(0, 600);
+          info.margins = { l: tf.leftMargin, r: tf.rightMargin, t: tf.topMargin, b: tf.bottomMargin };
+          info.wrap = tf.wordWrap !== false; info.valign = tf.verticalAlignment || "Top";
+          info.align = tr.paragraphFormat.horizontalAlignment || "Left";
+          info.fill = s.fill.type === "Solid" ? s.fill.foregroundColor : null;
+          info.font = { name: tr.font.name, size: tr.font.size, color: tr.font.color, bold: tr.font.bold, italic: tr.font.italic };
+          if (info.font.name && info.font.size && info.font.color) return;
+          // Mixed formatting: use the first character's font
+          var first = tr.getSubstring(0, 1);
+          first.font.load("name,size,color,bold,italic");
+          return context.sync().then(function () {
+            ["name", "size", "color", "bold", "italic"].forEach(function (k) { if (info.font[k] === null || info.font[k] === undefined) info.font[k] = first.font[k]; });
+          }).catch(function () {});
+        }).then(function () {
+          if (pv.cache[s.id] !== undefined || !R.supported()) { info.cur = pv.cache[s.id] || null; return info; }
+          return R.edit(context, function (doc) {
+            var el = R.matchShapes(doc, boxesOf([s]), ["sp"])[0], body = el && kid(el, NS_P, "txBody");
+            pv.cache[s.id] = body ? readBody(body) : null;
+            return { count: 0 };
+          }).then(function () { info.cur = pv.cache[s.id]; return info; }, function () { info.cur = null; return info; });
+        });
+      });
+    }).then(function (info) { pv.info = info; }, function () { pv.info = null; })
+      .then(function () {
+        pv.busy = false; renderPreview();
+        if (pv.again) { pv.again = false; queuePreview(); }
+      });
+  }
+  // The values the preview shows: a filled box wins, then the shape's own setting, then the default
+  function effective(info) {
+    var cur = info.cur || {}, S = ST.state, pick = function (key, own, dflt) { var v = num(S[key]); return typeof v === "number" ? v : (own !== null && own !== undefined ? own : dflt); };
+    var lineBox = num(S.tyLine), line = typeof lineBox === "number" && lineBox > 0 ? { unit: S.tyLineUnit === "x" ? "x" : "pt", value: lineBox } : (cur.line || { unit: "x", value: 1 });
+    var m = info.margins, margin = function (key, own, dflt) { var v = num(S[key]); return typeof v === "number" && v >= 0 ? v : (typeof own === "number" ? own : dflt); };
+    return { spc: pick("tySpc", cur.spc, 0), before: pick("tyBefore", cur.before, 0), after: pick("tyAfter", cur.after, 0), base: pick("tyBase", cur.base, 0), line: line,
+             ml: margin("tyMl", m.l, 7.2), mr: margin("tyMr", m.r, 7.2), mt: margin("tyMt", m.t, 3.6), mb: margin("tyMb", m.b, 3.6) };
+  }
+  function renderPreview() {
+    var box = $("tyPreview");
+    if (!box) return;
+    box.hidden = !previewOn();
+    if (box.hidden) return;
+    var info = pv.info;
+    if (!info) { box.innerHTML = '<div class="muted-note">Select a text box to preview its text with these settings.</div>'; return; }
+    var e = effective(info), f = info.font || {}, size = f.size || 18, W = Math.max(info.box.width, 1), H = Math.max(info.box.height, 1);
+    var lh = e.line.unit === "pt" ? e.line.value + "pt" : String(e.line.value * 1.2);
+    var align = { Center: "center", Centered: "center", Right: "right", Justify: "justify", JustifyLow: "justify", Distributed: "justify" }[info.align] || "left";
+    var justify = /Middle|Center/.test(info.valign) ? "center" : /Bottom/.test(info.valign) ? "flex-end" : "flex-start";
+    var paras = (info.text || "").split(/\r\n|\r|\n/).map(function (p) {
+      var inner = p ? p.split("\v").map(esc).join("<br>") : "&nbsp;";
+      return '<p style="margin:' + e.before + 'pt 0 ' + e.after + 'pt;line-height:' + lh + '"><span style="position:relative;top:' + (-e.base / 100) + 'em">' + inner + '</span></p>';
+    }).join("");
+    var avail = Math.max(120, box.clientWidth - 2), k = Math.min(1, avail / (W * PX));
+    box.innerHTML = '<div class="ty-stage"><div class="ty-page" style="width:' + W + 'pt;min-height:' + H + 'pt;padding:' + e.mt + 'pt ' + e.mr + 'pt ' + e.mb + 'pt ' + e.ml + 'pt;' +
+      'font-family:&quot;' + esc(f.name || "Calibri") + '&quot;, sans-serif;font-size:' + size + 'pt;color:' + esc(f.color || "#1d1d1f") + ';font-weight:' + (f.bold ? 700 : 400) + ';font-style:' + (f.italic ? "italic" : "normal") + ';' +
+      'letter-spacing:' + e.spc + 'pt;text-align:' + align + ';justify-content:' + justify + ';white-space:' + (info.wrap ? "pre-wrap" : "pre") + ';background:' + esc(info.fill || "#ffffff") + ';transform:scale(' + k + ')">' +
+      paras + '<i class="ty-bounds" style="height:' + H + 'pt"></i></div></div><div class="ty-caption">' + esc(info.name || "Selected shape") + ', ' + Math.round(k * 100) + '% size</div>';
+    var page = box.querySelector(".ty-page");
+    box.querySelector(".ty-stage").style.height = Math.ceil(Math.max(page.offsetHeight, H * PX) * k) + "px";
+  }
+
   // ---------- Panel ----------
   var MARKUP =
     '<div class="group-label label-row">Spacing' + ST.info("Exact spacing for all the text in the selected shapes. Leave a box empty to keep what each shape has. PowerPoint add-ins can\'t set spacing directly, so the slide is swapped for an identical copy with the new spacing. Slide comments may not carry over, and Undo takes more than one step.", "About spacing") + '</div>' +
+    '<div class="ty-preview" id="tyPreview" aria-live="polite"></div>' +
     '<label class="field">Character spacing (pt)<input type="text" id="tySpc" inputmode="decimal" placeholder="e.g. -0.5 or 1"></label>' +
     '<div class="row">' +
       '<label class="field">Line spacing<input type="text" id="tyLine" inputmode="decimal" placeholder="e.g. 18"></label>' +
@@ -223,20 +312,22 @@
     '</div>' +
     '<button class="btn primary" id="tyApply">Apply spacing</button>' +
     '<div class="group-label">Text box</div>' +
+    '<div class="sublabel">Margins (pt)</div>' +
     '<div class="row">' +
-      '<label class="field">Left margin (pt)<input type="text" id="tyMl" inputmode="decimal" placeholder="7.2"></label>' +
-      '<label class="field">Right margin (pt)<input type="text" id="tyMr" inputmode="decimal" placeholder="7.2"></label>' +
+      '<label class="field">Left<input type="text" id="tyMl" inputmode="decimal" placeholder="7.2"></label>' +
+      '<label class="field">Right<input type="text" id="tyMr" inputmode="decimal" placeholder="7.2"></label>' +
     '</div>' +
     '<div class="row">' +
-      '<label class="field">Top margin (pt)<input type="text" id="tyMt" inputmode="decimal" placeholder="3.6"></label>' +
-      '<label class="field">Bottom margin (pt)<input type="text" id="tyMb" inputmode="decimal" placeholder="3.6"></label>' +
+      '<label class="field">Top<input type="text" id="tyMt" inputmode="decimal" placeholder="3.6"></label>' +
+      '<label class="field">Bottom<input type="text" id="tyMb" inputmode="decimal" placeholder="3.6"></label>' +
     '</div>' +
     '<button class="btn" id="tyMargins">Apply margins</button>' +
     '<div class="sublabel">Autofit</div>' +
-    '<div class="btn-row" id="tyFit"><button class="btn small" data-v="AutoSizeNone" title="Text can overflow the shape">Off</button><button class="btn small" data-v="AutoSizeTextToFitShape" title="Shrink the text to fit the shape">Shrink text</button><button class="btn small" data-v="AutoSizeShapeToFitText" title="Resize the shape to fit the text">Fit shape</button></div>' +
+    '<div class="btn-row" id="tyFit"><button class="btn small" data-v="AutoSizeNone" title="Autofit off: text can overflow the shape">Off</button><button class="btn small" data-v="AutoSizeTextToFitShape" title="Shrink the text to fit the shape">Shrink</button><button class="btn small" data-v="AutoSizeShapeToFitText" title="Resize the shape to fit the text">Resize</button></div>' +
     '<div class="sublabel">Wrap text</div>' +
     '<div class="btn-row" id="tyWrap"><button class="btn small" data-v="1" title="Wrap text inside the shape">Wrap</button><button class="btn small" data-v="0" title="Keep each paragraph on one line">Don\'t wrap</button></div>' +
-    '<button class="btn small" id="tyRead" data-min="2" title="Fill the boxes from the selected shape">Read from selection</button>';
+    '<button class="btn small" id="tyRead" data-min="2" title="Fill the boxes from the selected shape">Read from selection</button>' +
+    '<div class="toggle" data-min="2"><span class="label-row">Live preview' + ST.info("Shows a scaled copy of the selected text box with the values in the boxes, before you apply them. Fonts that aren\'t installed on this computer show as a similar font.", "About the preview") + '</span><label class="switch"><input type="checkbox" id="tyPreviewOn"><span></span></label></div>';
 
   function renderUnit() { Array.prototype.forEach.call($("tyLineUnit").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === (ST.state.tyLineUnit === "x" ? "x" : "pt")); }); }
   function build(body) {
@@ -249,7 +340,7 @@
       $(k).addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); applyMargins(); } });
     });
     Array.prototype.forEach.call($("tyLineUnit").children, function (b) {
-      b.addEventListener("click", function () { ST.state.tyLineUnit = b.getAttribute("data-v"); ST.save(); renderUnit(); });
+      b.addEventListener("click", function () { ST.state.tyLineUnit = b.getAttribute("data-v"); ST.save(); renderUnit(); renderPreview(); });
     });
     var labels = { AutoSizeNone: "Turned autofit off", AutoSizeTextToFitShape: "Text now shrinks to fit", AutoSizeShapeToFitText: "Shapes now resize to fit the text" };
     Array.prototype.forEach.call($("tyFit").children, function (b) {
@@ -261,8 +352,16 @@
     $("tyApply").addEventListener("click", function () { applySpacing(); });
     $("tyMargins").addEventListener("click", applyMargins);
     $("tyRead").addEventListener("click", readSelection);
+    var pvOn = $("tyPreviewOn");
+    pvOn.checked = previewOn();
+    pvOn.addEventListener("change", function () { ST.state.tyPreviewOn = pvOn.checked; ST.save(); renderPreview(); if (pvOn.checked) queuePreview(); });
     renderUnit();
-    ST.on("reset", renderUnit);
+    renderPreview();
+    ST.on("reset", function () { renderUnit(); pvOn.checked = previewOn(); renderPreview(); });
+    ST.on("change", renderPreview);
+    ST.on("selection", function () { queuePreview(); });
+    ST.on("layout", function () { queuePreview(); });
+    ST.on("ready", function () { queuePreview(); });
   }
 
   ST.registerTool({
@@ -276,5 +375,5 @@
     build: build
   });
 
-  ST._typography = { readSpec: readSpec, applyToBody: applyToBody, readBody: readBody, applySpacing: applySpacing, readSelection: readSelection };
+  ST._typography = { renderPreview: renderPreview, loadPreview: loadPreview, readSpec: readSpec, applyToBody: applyToBody, readBody: readBody, applySpacing: applySpacing, readSelection: readSelection };
 })();

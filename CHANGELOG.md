@@ -2,6 +2,17 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.31.0] 2026-11-23
+
+### Added
+
+1. Typography: a live preview. A scaled copy of the first selected text box, with its font, size, colour, width and margins, updates as you type spacing and margin values, so you can see line breaks and tightness before applying. The dashed line marks the shape's height. A switch at More hides it.
+
+### Fixed
+
+1. Typography: the Autofit buttons are now Off, Shrink and Resize, and margin labels are Left, Right, Top and Bottom, so nothing breaks onto two lines on narrow panels.
+2. On panels 330 px wide or less, the level button shows just its dots, so tool titles aren't cut off, and the fold button no longer sticks out past the edge.
+
 ## [2.30.0] 2026-11-23
 
 ### Added
