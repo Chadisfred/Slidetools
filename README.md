@@ -224,7 +224,7 @@ Tips:
 6. Line spacing in points keeps the same distance whatever the font size, which helps text in different boxes line up.
 7. Margins, autofit and wrap apply straight away. Spacing, kerning and baseline swap the slide for an identical copy, in memory, because add-ins can't set them directly, so Undo takes more than one step.
 8. Read from selection copies a shape's settings into the boxes, ready to apply to others.
-9. The live preview shows a scaled copy of the first selected text box with the values in the boxes, so you can see line breaks before applying. The dashed line marks the shape's height.
+9. The live preview shows a scaled copy of the first selected text box with the values in the boxes, so you can see line breaks before applying. The dashed line marks the shape's height. A shape with no text shows no preview.
 
 ### Corners
 

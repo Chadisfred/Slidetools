@@ -225,7 +225,8 @@
   var PX = 4 / 3; // pixels per point
   function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function previewOn() { return ST.state.tyPreviewOn !== false; }
-  function previewVisible() { var b = $("tyPreview"); return !!b && !!b.offsetParent && previewOn(); }
+  // Whether the preview could show: the box itself may be hidden while the shape has no text
+  function previewVisible() { var b = $("tyPreview"); return !!b && previewOn() && (ST.isOpen ? ST.isOpen("typography") : true); }
   function queuePreview(fresh) {
     if (fresh) pv.cache = {};
     clearTimeout(pv.timer);
@@ -294,6 +295,8 @@
     if (box.hidden) return;
     var info = pv.info;
     if (!info) { box.innerHTML = '<div class="muted-note">Select a text box to preview its text with these settings.</div>'; return; }
+    // A shape with no text has nothing to preview
+    if (!String(info.text || "").trim()) { box.innerHTML = ""; box.hidden = true; return; }
     var e = effective(info), f = info.font || {}, typed = num(S_size(), f.size || 18), size = typeof typed === "number" && typed >= 1 ? typed : (f.size || 18), W = Math.max(info.box.width, 1), H = Math.max(info.box.height, 1);
     var lh = e.line.unit === "pt" ? e.line.value + "pt" : String(e.line.value * 1.2);
     var family = String(ST.state.tyFontName || "").trim() || f.name || "Calibri";
