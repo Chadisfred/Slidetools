@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.27.0] 2026-11-23
+
+### Added
+
+1. Transform: Picture fill. Select shapes, then paste, drop or choose a picture to fill them like a picture placeholder. Fill and crop crops the picture to each shape's proportions so it never stretches, with the crop following the reference point. Fit inside, at More, shows the whole picture. The picture is cropped inside the panel and stays on this computer. Paste again to swap it.
+
 ## [2.26.1] 2026-11-23
 
 ### Changed
