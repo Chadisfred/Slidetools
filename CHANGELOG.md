@@ -2,6 +2,19 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.2.0] 2026-11-23
+
+### Added
+
+1. Typography: minus and plus on Character spacing, Line spacing, Space before and Space after. Each box shows the value in use now, read from the shape or its layout, master or default text style, and the steps start from it. The preview shows the result straight away, and Apply spacing sets it.
+
+### Fixed
+
+1. Typography: the Font box no longer turns red for a font name.
+2. Typography: the preview shrinks the text the same way PowerPoint does when Shrink text on overflow is on, so it fits the dashed box as it does on the slide.
+3. Typography: the preview tries a font's family at the right weight, such as Avenir Next LT Pro at Light, and says when a font isn't available to the panel, as with Office cloud fonts, instead of quietly showing another font.
+4. Typography: Case buttons no longer look half on when PowerPoint can't report them.
+
 ## [3.1.1] 2026-11-23
 
 ### Fixed

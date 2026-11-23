@@ -603,3 +603,4 @@ input[type=text]:disabled { opacity: 0.6; }
 .ty-swatch.empty span { background: repeating-linear-gradient(45deg, var(--field-line) 0 2px, transparent 2px 5px) !important; }
 .ty-case { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ty-case .btn { white-space: nowrap; padding: 0 4px; }
+.ty-caption.ty-note { color: var(--muted); font-family: inherit; line-height: 1.35; margin-top: 2px; }

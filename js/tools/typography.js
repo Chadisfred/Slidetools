@@ -119,6 +119,83 @@
     out.spc = rPr && rPr.getAttribute("spc") !== null ? +rPr.getAttribute("spc") / 100 : null;
     out.kern = rPr && rPr.getAttribute("kern") !== null ? +rPr.getAttribute("kern") / 100 : null;
     out.base = rPr && rPr.getAttribute("baseline") !== null ? +rPr.getAttribute("baseline") / 1000 : null;
+    // Shrink text on overflow: PowerPoint draws the text at fontScale and tightens lines by lnSpcReduction
+    var bodyPr = kid(body, NS_A, "bodyPr"), fit = bodyPr && kid(bodyPr, NS_A, "normAutofit");
+    out.fontScale = fit && fit.getAttribute("fontScale") ? +fit.getAttribute("fontScale") / 100000 : 1;
+    out.lineReduce = fit && fit.getAttribute("lnSpcReduction") ? +fit.getAttribute("lnSpcReduction") / 100000 : 0;
+    return out;
+  }
+
+  // ---------- Inherited spacing ----------
+  // Spacing a shape doesn't set itself comes from its layout and master placeholder, the master's
+  // text styles, or the presentation's default text style. These fill the gaps, so the panel can
+  // show the value in use now. Space before and after given as a share of a line become points.
+  function pathJoin(from, target) {
+    var parts = from.split("/"); parts.pop();
+    target.split("/").forEach(function (seg) { if (seg === "..") parts.pop(); else if (seg && seg !== ".") parts.push(seg); });
+    return parts.join("/");
+  }
+  function partDoc(files, name) {
+    var f = (files || []).filter(function (x) { return x.name === name; })[0];
+    return f ? new DOMParser().parseFromString(f.text, "application/xml") : null;
+  }
+  function relTarget(files, part, typeEnd) {
+    var i = part.lastIndexOf("/"), rels = partDoc(files, part.slice(0, i) + "/_rels/" + part.slice(i + 1) + ".rels");
+    if (!rels) return null;
+    var r = Array.prototype.filter.call(rels.getElementsByTagName("*"), function (e) { return e.localName === "Relationship" && /\/(\w+)$/.exec(e.getAttribute("Type") || "")[1] === typeEnd; })[0];
+    return r ? pathJoin(part, r.getAttribute("Target")) : null;
+  }
+  function phOf(el) {
+    var nv = el && kid(el, NS_P, "nvSpPr"), nvPr = nv && kid(nv, NS_P, "nvPr"), ph = nvPr && kid(nvPr, NS_P, "ph");
+    return ph ? { type: ph.getAttribute("type") || "body", idx: ph.getAttribute("idx") } : null;
+  }
+  function findPh(doc, ph) {
+    if (!doc || !ph) return null;
+    var list = Array.prototype.filter.call(doc.getElementsByTagNameNS(NS_P, "sp"), function (sp) { return !!phOf(sp); });
+    return list.filter(function (sp) { var o = phOf(sp); return ph.idx && o.idx === ph.idx; })[0] ||
+           list.filter(function (sp) { return phOf(sp).type === ph.type; })[0] ||
+           (ph.type === "obj" || ph.type === "body" ? list.filter(function (sp) { return phOf(sp).type === "body"; })[0] : null) || null;
+  }
+  function lvl1Of(sp) { var b = sp && kid(sp, NS_P, "txBody"), l = b && kid(b, NS_A, "lstStyle"); return l ? kid(l, NS_A, "lvl1pPr") : null; }
+  function fillFrom(pPr, out, size) {
+    if (!pPr) return;
+    var sp = function (name) {
+      var e = kid(pPr, NS_A, name), pts = e && kid(e, NS_A, "spcPts"), pct = e && kid(e, NS_A, "spcPct");
+      if (pts) return { unit: "pt", value: +pts.getAttribute("val") / 100 };
+      if (pct) return { unit: "x", value: +pct.getAttribute("val") / 100000 };
+      return null;
+    };
+    if (!out.line) { var l = sp("lnSpc"); if (l) out.line = l; }
+    [["before", "spcBef"], ["after", "spcAft"]].forEach(function (k) {
+      if (out[k[0]] !== null && out[k[0]] !== undefined) return;
+      var v = sp(k[1]);
+      if (v) out[k[0]] = v.unit === "pt" ? v.value : Math.round(v.value * (size || 18) * 1.2 * 10) / 10;
+    });
+    var d = kid(pPr, NS_A, "defRPr");
+    if ((out.spc === null || out.spc === undefined) && d && d.getAttribute("spc") !== null) out.spc = +d.getAttribute("spc") / 100;
+  }
+  function withInherited(out, doc, el, files, size) {
+    try {
+      fillFrom(lvl1Of(el), out, size);
+      var ph = phOf(el), slidePart = (files || []).filter(function (f) { return /^ppt\/slides\/slide\d+\.xml$/.test(f.name); })[0];
+      if (slidePart) {
+        var layoutPart = relTarget(files, slidePart.name, "slideLayout"), masterPart = layoutPart && relTarget(files, layoutPart, "slideMaster");
+        var layout = layoutPart && partDoc(files, layoutPart), master = masterPart && partDoc(files, masterPart);
+        if (ph) {
+          fillFrom(lvl1Of(findPh(layout, ph)), out, size);
+          fillFrom(lvl1Of(findPh(master, ph)), out, size);
+          var styles = master && master.getElementsByTagNameNS(NS_P, "txStyles")[0];
+          var style = styles && kid(styles, NS_P, /title/i.test(ph.type) ? "titleStyle" : "bodyStyle");
+          fillFrom(style && kid(style, NS_A, "lvl1pPr"), out, size);
+        } else {
+          var pres = partDoc(files, "ppt/presentation.xml"), def = pres && pres.getElementsByTagNameNS(NS_P, "defaultTextStyle")[0];
+          fillFrom(def && kid(def, NS_A, "lvl1pPr"), out, size);
+        }
+      }
+    } catch (e) { /* keep what the shape itself sets */ }
+    // PowerPoint's own defaults for anything still unset
+    if (!out.line) out.line = { unit: "x", value: 1 };
+    ["before", "after", "spc"].forEach(function (k) { if (out[k] === null || out[k] === undefined) out[k] = 0; });
     return out;
   }
 
@@ -267,7 +344,7 @@
           if (pv.cache[s.id] !== undefined || !R.supported()) { info.cur = pv.cache[s.id] || null; return info; }
           return R.edit(context, function (doc) {
             var el = R.matchShapes(doc, boxesOf([s]), ["sp"])[0], body = el && kid(el, NS_P, "txBody");
-            pv.cache[s.id] = body ? readBody(body) : null;
+            pv.cache[s.id] = body ? withInherited(readBody(body), doc, el, arguments[1] && arguments[1].files, info.font && info.font.size) : null;
             pv.fonts = fontsIn(doc, arguments[1] && arguments[1].files);
             renderFontList();
             return { count: 0 };
@@ -276,7 +353,7 @@
       });
     }).then(function (info) { pv.info = info; }, function () { pv.info = null; })
       .then(function () {
-        pv.busy = false; renderPreview(); renderFontState();
+        pv.busy = false; renderPreview(); renderFontState(); renderNow();
         if (pv.again) { pv.again = false; queuePreview(); }
       });
   }
@@ -297,9 +374,15 @@
     if (!info) { box.innerHTML = '<div class="muted-note">Select a text box to preview its text with these settings.</div>'; return; }
     // A shape with no text has nothing to preview
     if (!String(info.text || "").trim()) { box.innerHTML = ""; box.hidden = true; return; }
-    var e = effective(info), f = info.font || {}, typed = num(S_size(), f.size || 18), size = typeof typed === "number" && typed >= 1 ? typed : (f.size || 18), W = Math.max(info.box.width, 1), H = Math.max(info.box.height, 1);
-    var lh = e.line.unit === "pt" ? e.line.value + "pt" : String(e.line.value * 1.2);
-    var family = String(ST.state.tyFontName || "").trim() || f.name || "Calibri";
+    var e = effective(info), f = info.font || {}, typed = num(S_size(), f.size || 18), cur = info.cur || {};
+    // PowerPoint's shrink on overflow scale applies while the size box is empty
+    var scale = typeof typed === "number" ? 1 : (cur.fontScale || 1), reduce = typeof typed === "number" ? 0 : (cur.lineReduce || 0);
+    var size = (typeof typed === "number" && typed >= 1 ? typed : (f.size || 18)) * scale, W = Math.max(info.box.width, 1), H = Math.max(info.box.height, 1);
+    var lh = e.line.unit === "pt" ? e.line.value + "pt" : String(Math.max(0.1, e.line.value - reduce) * 1.2);
+    var face = fontFace(String(ST.state.tyFontName || "").trim() || f.name || "Calibri");
+    var canDraw = fontAvailable(face.full) || (face.base !== face.full && fontAvailable(face.base));
+    var familyCss = '&quot;' + esc(face.full) + '&quot;, ' + (face.base !== face.full ? '&quot;' + esc(face.base) + '&quot;, ' : "") + "sans-serif";
+    var weight = f.bold ? 700 : (fontAvailable(face.full) ? 400 : face.weight);
     var deco = [f.underline && f.underline !== "None" ? "underline" : "", f.strikethrough ? "line-through" : ""].filter(Boolean).join(" ") || "none";
     var align = { Center: "center", Centered: "center", Right: "right", Justify: "justify", JustifyLow: "justify", Distributed: "justify" }[info.align] || "left";
     var justify = /Middle|Center/.test(info.valign) ? "center" : /Bottom/.test(info.valign) ? "flex-end" : "flex-start";
@@ -309,15 +392,41 @@
     }).join("");
     var avail = Math.max(120, box.clientWidth - 2), k = Math.min(1, avail / (W * PX));
     box.innerHTML = '<div class="ty-stage"><div class="ty-page" style="width:' + W + 'pt;min-height:' + H + 'pt;padding:' + e.mt + 'pt ' + e.mr + 'pt ' + e.mb + 'pt ' + e.ml + 'pt;' +
-      'font-family:&quot;' + esc(family) + '&quot;, sans-serif;font-size:' + size + 'pt;color:' + esc(f.color || "#1d1d1f") + ';font-weight:' + (f.bold ? 700 : 400) + ';font-style:' + (f.italic ? "italic" : "normal") + ';' +
+      'font-family:' + familyCss + ';font-size:' + size + 'pt;color:' + esc(f.color || "#1d1d1f") + ';font-weight:' + weight + ';font-style:' + (f.italic ? "italic" : "normal") + ';' +
       'text-decoration:' + deco + ';text-transform:' + (f.allCaps ? "uppercase" : "none") + ';font-variant:' + (f.smallCaps ? "small-caps" : "normal") + ';' +
       'letter-spacing:' + e.spc + 'pt;text-align:' + align + ';justify-content:' + justify + ';white-space:' + (info.wrap ? "pre-wrap" : "pre") + ';background:' + esc(info.fill || "#ffffff") + ';transform:scale(' + k + ')">' +
-      paras + '<i class="ty-bounds" style="height:' + H + 'pt"></i></div></div><div class="ty-caption">' + esc(info.name || "Selected shape") + ', ' + Math.round(k * 100) + '% size</div>';
+      paras + '<i class="ty-bounds" style="height:' + H + 'pt"></i></div></div><div class="ty-caption">' + esc(info.name || "Selected shape") + ', ' + Math.round(k * 100) + '% size' + (scale < 1 ? ', text shrunk to ' + Math.round(scale * 100) + '% to fit' : '') + '</div>' +
+      (canDraw ? '' : '<div class="ty-caption ty-note">' + esc(face.full) + ' isn\'t available to the panel, so a similar font is shown. Office cloud fonts can\'t be used outside Office.</div>');
     var page = box.querySelector(".ty-page");
     box.querySelector(".ty-stage").style.height = Math.ceil(Math.max(page.offsetHeight, H * PX) * k) + "px";
   }
 
   function S_size() { return ST.state.tyFontSize; }
+
+  // Fonts often carry their weight in the name, such as "Avenir Next LT Pro Light". The panel's
+  // browser may only know the family, so the preview also tries the family at that weight.
+  var WEIGHTS = [[/\s+(extra|ultra)\s*light$/i, 200], [/\s+thin$/i, 100], [/\s+light$/i, 300], [/\s+(semi|demi)\s*bold$/i, 600], [/\s+demi$/i, 600],
+                 [/\s+medium$/i, 500], [/\s+(extra|ultra)\s*bold$/i, 800], [/\s+heavy$/i, 800], [/\s+black$/i, 900], [/\s+bold$/i, 700], [/\s+(regular|book|roman)$/i, 400]];
+  function fontFace(name) {
+    var base = name, weight = 400;
+    for (var i = 0; i < WEIGHTS.length; i++) if (WEIGHTS[i][0].test(name)) { base = name.replace(WEIGHTS[i][0], ""); weight = WEIGHTS[i][1]; break; }
+    return { full: name, base: base, weight: weight };
+  }
+  // Whether the panel can draw a font: text in it measures differently from the fallbacks
+  var fontSeen = {};
+  function fontAvailable(name) {
+    if (fontSeen[name] !== undefined) return fontSeen[name];
+    var ok = false;
+    try {
+      var c = document.createElement("canvas").getContext("2d"), sample = "mmmmmmmmmwwwwwlli1Il0O";
+      ok = ["monospace", "serif"].some(function (fb) {
+        c.font = "40px " + fb; var w0 = c.measureText(sample).width;
+        c.font = '40px "' + name.replace(/"/g, "") + '", ' + fb; return Math.abs(c.measureText(sample).width - w0) > 0.5;
+      });
+    } catch (e) { ok = true; }
+    fontSeen[name] = ok;
+    return ok;
+  }
 
   // ---------- Font (API) ----------
   // Case settings need PowerPoint API 1.8. Resolves { allCaps, smallCaps, strikethrough }, null when mixed or unknown.
@@ -425,7 +534,8 @@
       var k = b.getAttribute("data-v"), v = f[k];
       var on = k === "underline" ? (v && v !== "None") : v === true;
       b.classList.toggle("on", has && !!on);
-      b.classList.toggle("mixed", has && (v === null || v === undefined) && k !== "underline");
+      // null means mixed. Undefined means this PowerPoint can't say, so nothing is lit.
+      b.classList.toggle("mixed", has && v === null && k !== "underline");
       b.setAttribute("aria-pressed", String(has && !!on));
     });
     $("tyFontSize").placeholder = has && f.size && !(pv.info.mixed || {}).size ? ST.nice(f.size) + " now" : "e.g. 18, 2g or +2";
@@ -434,6 +544,38 @@
     sw.style.background = has && f.color ? f.color : "transparent";
     $("tyColour").classList.toggle("empty", !(has && f.color));
   }
+  // Spacing steppers change the box, starting from the shape's current value, so the preview
+  // shows the result. Apply spacing commits it, because each apply replaces the slide.
+  function stepBox(key, dir) {
+    var S = ST.state, cur = (pv.info && pv.info.cur) || {}, f = (pv.info && pv.info.font) || {};
+    var x = S.tyLineUnit === "x", typed = key === "tyLine" && x ? plain(S[key]) : num(S[key]), base;
+    if (typeof typed === "number") base = typed;
+    else if (key === "tySpc") base = typeof cur.spc === "number" ? cur.spc : 0;
+    else if (key === "tyBefore") base = typeof cur.before === "number" ? cur.before : 0;
+    else if (key === "tyAfter") base = typeof cur.after === "number" ? cur.after : 0;
+    else if (cur.line) base = lineIn(cur.line, x, f.size);
+    else base = x ? 1 : Math.round((f.size || 18) * 1.2);
+    var step = key === "tySpc" ? 0.1 : key === "tyLine" && x ? 0.05 : 1, v = Math.round((base + dir * step) * 100) / 100;
+    if (key === "tySpc") v = Math.max(-100, Math.min(400, v));
+    else if (key === "tyLine") v = Math.max(x ? 0.1 : 1, v);
+    else v = Math.max(0, v);
+    S[key] = ST.nice(v); $(key).value = S[key]; markField(key); ST.changed();
+  }
+  // A line spacing in the unit the panel shows: points, or a multiple of single spacing
+  function lineIn(line, inLines, size) {
+    var one = (size || 18) * 1.2;
+    if ((line.unit === "x") === !!inLines) return line.value;
+    return inLines ? Math.round(line.value / one * 100) / 100 : Math.round(line.value * one * 10) / 10;
+  }
+  // Each spacing box shows the value in use now as a hint
+  function renderNow() {
+    var cur = (pv.info && pv.info.cur) || null, x = ST.state.tyLineUnit === "x";
+    var show = function (id, v, dflt) { $(id).placeholder = cur && typeof v === "number" ? ST.nice(v) + " now" : dflt; };
+    show("tySpc", cur && cur.spc, "e.g. -0.5 or 1");
+    show("tyBefore", cur && cur.before, "e.g. 0");
+    show("tyAfter", cur && cur.after, "e.g. 6");
+    show("tyLine", cur && cur.line ? lineIn(cur.line, x, pv.info.font && pv.info.font.size) : null, x ? "e.g. 0.9" : "e.g. 18");
+  }
   function openColours() {
     ST.state.colTarget = "text"; ST.save(); ST.emit("reset");
     if (ST.pinTool) ST.pinTool("typography");
@@ -441,7 +583,7 @@
   }
   function markField(key) {
     var el = $(key), text = String(ST.state[key] || "").trim();
-    if (!el) return;
+    if (!el || key === "tyFontName") return; // a font name is free text
     var bad = text && (isPtBox(key) ? num(text, key === "tyFontSize" ? 12 : undefined) === null : plain(text) === null);
     el.classList.toggle("err", !!bad);
     el.title = bad ? (isPtBox(key) ? (ST.ptProblem(text, key === "tyFontSize" ? 12 : undefined) || "can't be read") : "can't be read").replace(/^./, function (c) { return c.toUpperCase(); }) + "." : "";
@@ -458,14 +600,14 @@
     '<div class="field" data-min="2">Case<div class="btn-row ty-case" id="tyCase"><button class="btn small" data-v="allCaps" title="All capitals">All caps</button><button class="btn small" data-v="smallCaps" title="Small capitals">Small caps</button><button class="btn small" data-v="strikethrough" title="Strikethrough">Strike</button></div></div>' +
     '<div class="group-label label-row">Spacing' + ST.info("Exact spacing for all the text in the selected shapes. Leave a box empty to keep what each shape has. PowerPoint add-ins can\'t set spacing directly, so the slide is swapped for an identical copy with the new spacing. Slide comments may not carry over, and Undo takes more than one step.", "About spacing") + '</div>' +
     '<div class="ty-preview" id="tyPreview" aria-live="polite"></div>' +
-    '<label class="field">Character spacing (pt)<input type="text" id="tySpc" inputmode="decimal" placeholder="e.g. -0.5 or 1"></label>' +
+    '<label class="field">Character spacing (pt)<div class="stepper"><input type="text" id="tySpc" inputmode="decimal" placeholder="e.g. -0.5 or 1"><button data-step-box="tySpc:-1" title="Less">&minus;</button><button data-step-box="tySpc:1" title="More">+</button></div></label>' +
     '<div class="row">' +
-      '<label class="field">Line spacing<input type="text" id="tyLine" inputmode="decimal" placeholder="e.g. 18"></label>' +
+      '<label class="field">Line spacing<div class="stepper"><input type="text" id="tyLine" inputmode="decimal" placeholder="e.g. 18"><button data-step-box="tyLine:-1" title="Less">&minus;</button><button data-step-box="tyLine:1" title="More">+</button></div></label>' +
       '<label class="field">Measured in<div class="seg seg2" id="tyLineUnit"><button data-v="pt" title="Line spacing in points">Points</button><button data-v="x" title="Line spacing as a multiple of single spacing">Lines</button></div></label>' +
     '</div>' +
     '<div class="row">' +
-      '<label class="field">Space before (pt)<input type="text" id="tyBefore" inputmode="decimal" placeholder="e.g. 0"></label>' +
-      '<label class="field">Space after (pt)<input type="text" id="tyAfter" inputmode="decimal" placeholder="e.g. 6"></label>' +
+      '<label class="field">Space before (pt)<div class="stepper"><input type="text" id="tyBefore" inputmode="decimal" placeholder="e.g. 0"><button data-step-box="tyBefore:-1" title="Less">&minus;</button><button data-step-box="tyBefore:1" title="More">+</button></div></label>' +
+      '<label class="field">Space after (pt)<div class="stepper"><input type="text" id="tyAfter" inputmode="decimal" placeholder="e.g. 6"><button data-step-box="tyAfter:-1" title="Less">&minus;</button><button data-step-box="tyAfter:1" title="More">+</button></div></label>' +
     '</div>' +
     '<div class="row" data-min="2">' +
       '<label class="field"><span class="label-row">Kerning from (pt)' + ST.info("Kerning tightens letter pairs such as AV in text at this size and larger. 0 turns kerning off.", "About kerning") + '</span><input type="text" id="tyKern" inputmode="decimal" placeholder="e.g. 12"></label>' +
@@ -504,6 +646,10 @@
       b.addEventListener("click", function () { setFont(b.getAttribute("data-v")); });
     });
     $("tyColour").addEventListener("click", openColours);
+    Array.prototype.forEach.call(body.querySelectorAll("[data-step-box]"), function (b) {
+      var d = b.getAttribute("data-step-box").split(":");
+      b.addEventListener("click", function (e) { e.preventDefault(); stepBox(d[0], +d[1]); });
+    });
     ["tySpc", "tyLine", "tyBefore", "tyAfter", "tyKern", "tyBase"].forEach(function (k) {
       $(k).addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); applySpacing(); } });
     });
@@ -511,7 +657,7 @@
       $(k).addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); applyMargins(); } });
     });
     Array.prototype.forEach.call($("tyLineUnit").children, function (b) {
-      b.addEventListener("click", function () { ST.state.tyLineUnit = b.getAttribute("data-v"); ST.save(); renderUnit(); renderPreview(); });
+      b.addEventListener("click", function () { ST.state.tyLineUnit = b.getAttribute("data-v"); ST.save(); renderUnit(); renderPreview(); renderNow(); markField("tyLine"); });
     });
     var labels = { AutoSizeNone: "Turned autofit off", AutoSizeTextToFitShape: "Text now shrinks to fit", AutoSizeShapeToFitText: "Shapes now resize to fit the text" };
     Array.prototype.forEach.call($("tyFit").children, function (b) {
@@ -547,6 +693,6 @@
     build: build
   });
 
-  ST._typography = { renderPreview: renderPreview, loadPreview: loadPreview, readSpec: readSpec, applyToBody: applyToBody, readBody: readBody, applySpacing: applySpacing, readSelection: readSelection,
+  ST._typography = { withInherited: withInherited, fontFace: fontFace, fontAvailable: fontAvailable, stepBox: stepBox, renderPreview: renderPreview, loadPreview: loadPreview, readSpec: readSpec, applyToBody: applyToBody, readBody: readBody, applySpacing: applySpacing, readSelection: readSelection,
                      setFont: setFont, fontsIn: fontsIn, num: num, stepSize: stepSize };
 })();
