@@ -1,4 +1,4 @@
-/* Slide rebuild, shared by Transform's picture cropping and copies. PowerPoint's add-in
+/* Slide rebuild, shared by picture cropping, Copies, Images and Typography. PowerPoint's add-in
    API can't crop or duplicate shapes, so the current slide is exported, its XML is
    edited, and the edited copy replaces the original using the deck's own layout.
    Everything happens in memory inside the panel: nothing is sent anywhere and nothing
