@@ -5,7 +5,7 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>3fdacb2e-ca13-4e60-b6d9-4472e2e81fdc</Id>
-  <Version>1.0.0.4</Version>
+  <Version>1.0.0.5</Version>
   <ProviderName>Slide Tools</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Slide Tools Panel"/>
@@ -87,5 +87,5 @@
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
-  <ExtendedOverrides Url="https://chadisfred.github.io/Slidetools/shortcuts.json"/>
+  <ExtendedOverrides Url="https://chadisfred.github.io/Slidetools/shortcuts.json?v=2.27.1"/>
 </OfficeApp>

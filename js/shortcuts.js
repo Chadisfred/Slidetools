@@ -6,7 +6,8 @@
   "use strict";
 
   var ST = window.ST;
-  // id, label, key, and what it runs. Keep in step with shortcuts.json.
+  // id, label, key, and what it runs. Keep in step with shortcuts.json. When keys change, also
+  // raise the ?v= on its address in the manifest and the manifest Version, so PowerPoint fetches it again.
   var LIST = [
     ["NudgeLeft", "Nudge left", "Left", function () { arr().nudge(-1, 0); }],
     ["NudgeUp", "Nudge up", "Up", function () { arr().nudge(0, -1); }],
