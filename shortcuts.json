@@ -72,7 +72,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+Left",
         "windows": "Ctrl+Alt+Shift+Left",
-        "mac": "Command+Alt+Shift+Left",
+        "mac": "Command+Option+Shift+Left",
         "web": "Ctrl+Alt+Shift+Left"
       }
     },
@@ -81,7 +81,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+Up",
         "windows": "Ctrl+Alt+Shift+Up",
-        "mac": "Command+Alt+Shift+Up",
+        "mac": "Command+Option+Shift+Up",
         "web": "Ctrl+Alt+Shift+Up"
       }
     },
@@ -90,7 +90,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+Down",
         "windows": "Ctrl+Alt+Shift+Down",
-        "mac": "Command+Alt+Shift+Down",
+        "mac": "Command+Option+Shift+Down",
         "web": "Ctrl+Alt+Shift+Down"
       }
     },
@@ -99,7 +99,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+Right",
         "windows": "Ctrl+Alt+Shift+Right",
-        "mac": "Command+Alt+Shift+Right",
+        "mac": "Command+Option+Shift+Right",
         "web": "Ctrl+Alt+Shift+Right"
       }
     },
@@ -108,7 +108,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+D",
         "windows": "Ctrl+Alt+Shift+D",
-        "mac": "Command+Alt+Shift+D",
+        "mac": "Command+Option+Shift+D",
         "web": "Ctrl+Alt+Shift+D"
       }
     },
@@ -117,7 +117,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+L",
         "windows": "Ctrl+Alt+Shift+L",
-        "mac": "Command+Alt+Shift+L",
+        "mac": "Command+Option+Shift+L",
         "web": "Ctrl+Alt+Shift+L"
       }
     },
@@ -126,7 +126,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+C",
         "windows": "Ctrl+Alt+Shift+C",
-        "mac": "Command+Alt+Shift+C",
+        "mac": "Command+Option+Shift+C",
         "web": "Ctrl+Alt+Shift+C"
       }
     },
@@ -135,7 +135,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+R",
         "windows": "Ctrl+Alt+Shift+R",
-        "mac": "Command+Alt+Shift+R",
+        "mac": "Command+Option+Shift+R",
         "web": "Ctrl+Alt+Shift+R"
       }
     },
@@ -144,7 +144,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+T",
         "windows": "Ctrl+Alt+Shift+T",
-        "mac": "Command+Alt+Shift+T",
+        "mac": "Command+Option+Shift+T",
         "web": "Ctrl+Alt+Shift+T"
       }
     },
@@ -153,7 +153,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+M",
         "windows": "Ctrl+Alt+Shift+M",
-        "mac": "Command+Alt+Shift+M",
+        "mac": "Command+Option+Shift+M",
         "web": "Ctrl+Alt+Shift+M"
       }
     },
@@ -162,7 +162,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+B",
         "windows": "Ctrl+Alt+Shift+B",
-        "mac": "Command+Alt+Shift+B",
+        "mac": "Command+Option+Shift+B",
         "web": "Ctrl+Alt+Shift+B"
       }
     },
@@ -171,7 +171,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+H",
         "windows": "Ctrl+Alt+Shift+H",
-        "mac": "Command+Alt+Shift+H",
+        "mac": "Command+Option+Shift+H",
         "web": "Ctrl+Alt+Shift+H"
       }
     },
@@ -180,7 +180,7 @@
       "key": {
         "default": "Ctrl+Alt+Shift+V",
         "windows": "Ctrl+Alt+Shift+V",
-        "mac": "Command+Alt+Shift+V",
+        "mac": "Command+Option+Shift+V",
         "web": "Ctrl+Alt+Shift+V"
       }
     }

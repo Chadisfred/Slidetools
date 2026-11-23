@@ -5,7 +5,7 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>3fdacb2e-ca13-4e60-b6d9-4472e2e81fdc</Id>
-  <Version>1.0.0.3</Version>
+  <Version>1.0.0.4</Version>
   <ProviderName>Slide Tools</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Slide Tools Panel"/>
@@ -19,11 +19,6 @@
   <Hosts>
     <Host Name="Presentation"/>
   </Hosts>
-  <Requirements>
-    <Sets DefaultMinVersion="1.1">
-      <Set Name="SharedRuntime" MinVersion="1.1"/>
-    </Sets>
-  </Requirements>
   <DefaultSettings>
     <SourceLocation DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html"/>
   </DefaultSettings>
@@ -40,6 +35,7 @@
             <Description resid="GetStarted.Description"/>
             <LearnMoreUrl resid="Taskpane.Url"/>
           </GetStarted>
+          <FunctionFile resid="Taskpane.Url"/>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="SlideToolsPanel.Group">
@@ -61,6 +57,7 @@
                     <bt:Image size="80" resid="Icon.80"/>
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>SlideToolsPanel</TaskpaneId>
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
