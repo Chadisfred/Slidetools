@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.27.1] 2026-11-23
+
+### Fixed
+
+1. Changed shortcut keys could be ignored because PowerPoint kept an old copy of the key list. The install file now gives the list a versioned address, so PowerPoint fetches the current keys. Run the installer once more to pick this up.
+
 ## [2.27.0] 2026-11-23
 
 ### Added

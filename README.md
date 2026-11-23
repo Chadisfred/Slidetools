@@ -362,7 +362,7 @@ These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of C
 
 Nudge and the size keys step by Arrange's Nudge by amount, and sizes change around Transform's reference point. I, J, K and L are laid out like the arrow keys. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
 
-The keys are declared in `shortcuts.json`, which the manifest links with `ExtendedOverrides`, and connected to the tools in `js/shortcuts.js`. Shortcuts need the shared runtime set in the manifest. Keep the two files in step when adding one.
+The keys are declared in `shortcuts.json`, which the manifest links with `ExtendedOverrides`, and connected to the tools in `js/shortcuts.js`. Shortcuts need the shared runtime set in the manifest. Keep the two files in step when adding one. When the keys change, raise the `?v=` on the `shortcuts.json` address in the manifest and the manifest `<Version>`, so PowerPoint fetches the new list, and ask users to run the installer again.
 
 ## Formulas
 
