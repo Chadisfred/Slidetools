@@ -313,6 +313,8 @@ Tips:
 5. Inserting needs PowerPoint API 1.8. Formatting an existing table needs 1.9. Only the top left cell of a merged area can be formatted.
 6. Tables inside content placeholders (made with the table icon in a layout) work the same as other tables.
 7. At the More level, a line under the column chips shows what PowerPoint reports about the selection, such as "1 selected shape (Placeholder holding Table), slide 3, 1 table on the slide". It helps when a table isn't being picked up.
+8. Paste data: copy cells in Excel and paste them into the box under Insert table. Insert table then builds the table from them, with the first row as the header and column roles worked out from the values. Up to 40 rows and 20 columns.
+9. Line up decimals, a style setting that is on by default, pads numbers in data columns to the same number of decimal places (1.5 next to 2.25 becomes 1.50), since add-ins can't set decimal tab stops.
 
 Grid-based sizes. With the Layout spacing as g:
 
@@ -345,6 +347,7 @@ Notes:
 1. Theme and template colours are read only. They belong to the slide master, so the panel never changes them. Template colours are read from a copy of the first slide, which needs PowerPoint API 1.8.
 2. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
 3. The colour pickers in the Styles and Shape styles editors suggest these colours.
+4. At the More level, Contrast shows the selected shape's text colour on its fill, the contrast ratio, and whether it passes for body text (4.5 to 1) and large text (3 to 1). When body text fails, click the suggested colour to fix it.
 
 ## Formulas
 
