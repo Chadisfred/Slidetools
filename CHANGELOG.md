@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.25.1] 2026-11-23
+
+### Fixed
+
+1. Keyboard shortcuts could show "This add-in could not be started". The install file now names the panel page as the add-in's function file, so PowerPoint can start Slide Tools when a shortcut is pressed, and the shortcut actions are registered as soon as the page loads. Run the installer once more to pick this up.
+
 ## [2.25.0] 2026-11-23
 
 ### Added

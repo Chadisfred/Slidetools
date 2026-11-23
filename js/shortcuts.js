@@ -55,5 +55,10 @@
       } catch (e) { if (window.console) console.error(e); }
     });
   }
-  if (window.Office && Office.onReady) Office.onReady(register);
+  // Register straight away, as Microsoft's sample does, so a shortcut that starts the
+  // add-in finds its action. Office.onReady repeats it in case Office.actions arrives late.
+  var done = false;
+  function registerOnce() { if (!done && ST.shortcuts.supported()) { done = true; register(); } }
+  registerOnce();
+  if (window.Office && Office.onReady) Office.onReady(registerOnce);
 })();
