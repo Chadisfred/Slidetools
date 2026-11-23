@@ -418,6 +418,26 @@
       return context.sync().then(function () { ST.refreshSelection(); });
     });
   }
+  // Changes width and height by the nudge amount, keeping Transform's reference point still
+  function resizeBy(dw, dh) {
+    var d = amount("arrNudge");
+    if (d === null) { ST.toast("Check the nudge amount.", true); return; }
+    var a = ST.state.anchor || 0, fx = (a % 3) / 2, fy = Math.floor(a / 3) / 2;
+    ST.withSelection(["left", "top", "width", "height"], function (context, items) {
+      var skipped = 0;
+      items.forEach(function (s) {
+        var w = s.width + dw * d, h = s.height + dh * d;
+        // A line keeps its zero side, and nothing shrinks to nothing
+        if ((dw && s.width > 0 && w < 1) || (dh && s.height > 0 && h < 1)) { skipped++; return; }
+        if (dw && s.width > 0) { s.left -= (w - s.width) * fx; s.width = w; }
+        if (dh && s.height > 0) { s.top -= (h - s.height) * fy; s.height = h; }
+      });
+      return context.sync().then(function () {
+        if (skipped) ST.toast(ST.plural(skipped, "shape") + " can't get any smaller.", true);
+        ST.refreshSelection();
+      });
+    });
+  }
   function swap() {
     ST.withSelection(["left", "top"], function (context, items) {
       if (items.length !== 2) { ST.toast("Select exactly two shapes to swap.", true); return; }
@@ -509,6 +529,7 @@
   // Used by keyboard shortcuts (js/shortcuts.js). Align and distribute also set Repeat, like their buttons.
   ST._arrange = {
     nudge: nudge,
+    resizeBy: resizeBy,
     alignKey: function (edge) { var a = ALIGN.filter(function (x) { return x[0] === edge; })[0]; ST.setRepeat(a[1], function () { align(edge); }); align(edge); },
     distributeKey: function (across) { var label = across ? "Distribute across" : "Distribute down"; ST.setRepeat(label, function () { distribute(across); }); distribute(across); }
   };

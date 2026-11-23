@@ -356,12 +356,13 @@ These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of C
 | Action | Keys |
 | --- | --- |
 | Nudge left, up, down, right | Ctrl+Alt+Shift+Left, Up, Down, Right |
+| Wider, narrower, taller, shorter | Alt+Shift+Right, Left, Down, Up |
 | Repeat last action | Ctrl+Alt+Shift+D |
 | Align left, centres, right | Ctrl+Alt+Shift+L, C, R |
 | Align top, middles, bottom | Ctrl+Alt+Shift+T, M, B |
 | Distribute across, down | Ctrl+Alt+Shift+H, V |
 
-Nudge moves by Arrange's Nudge by amount. Align, Distribute and Repeat use Arrange's current settings. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
+Nudge and the size keys step by Arrange's Nudge by amount, and sizes change around Transform's reference point (Option+Shift on a Mac). Align, Distribute and Repeat use Arrange's current settings. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
 
 The keys are declared in `shortcuts.json`, which the manifest links with `ExtendedOverrides`, and connected to the tools in `js/shortcuts.js`. Shortcuts need the shared runtime set in the manifest. Keep the two files in step when adding one.
 
