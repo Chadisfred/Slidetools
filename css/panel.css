@@ -135,8 +135,9 @@ svg { display: block; }
 .grip svg { width: 10px; height: 16px; }
 .tool-icon { width: 16px; height: 16px; color: var(--muted); flex: none; }
 .tool-title {
-  flex: 1; border: none; background: transparent; text-align: left; cursor: pointer;
+  flex: 1; min-width: 0; border: none; background: transparent; text-align: left; cursor: pointer;
   font-size: 13px; font-weight: 600; padding: 4px; border-radius: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .level-btn {
   border: 1px solid var(--line); background: var(--page); color: var(--muted);
@@ -541,3 +542,18 @@ input[type=text]:disabled { opacity: 0.6; }
 
 /* Typography: three autofit buttons in a row */
 #tyFit { grid-template-columns: repeat(3, 1fr); }
+#tyFit .btn, #tyWrap .btn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Typography: live preview */
+.ty-preview { display: grid; gap: 4px; }
+.ty-preview[hidden] { display: none; }
+.ty-stage { position: relative; overflow: hidden; background: var(--page); border-radius: 8px; }
+.ty-page { position: absolute; top: 0; left: 0; transform-origin: 0 0; box-sizing: border-box; display: flex; flex-direction: column; overflow-wrap: break-word; }
+.ty-page p { margin: 0; }
+.ty-bounds { position: absolute; left: 0; right: 0; top: 0; border: 1px dashed var(--accent); pointer-events: none; }
+.ty-caption { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+/* Narrow panels: the level button shows just its dots, so tool titles fit */
+@media (max-width: 330px) {
+  .level-btn .level-name { display: none; }
+  .level-btn { padding: 0 6px; }
+}
