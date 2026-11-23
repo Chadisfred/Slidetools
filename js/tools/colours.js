@@ -278,7 +278,12 @@
         }
         return next().then(function () {
           ST.toast("Coloured the text " + (c.name || c.hex) + "." + (linked ? " Styled text stays linked to its style." : ""));
-        }, function (e) { ST.toast("PowerPoint wouldn't colour this text. " + ST.errorText(e), true); });
+        }, function (e) {
+          // Name the PowerPoint call that refused, so a report can say exactly where it failed
+          var where = e && e.debugInfo && e.debugInfo.errorLocation ? " (" + e.debugInfo.errorLocation + ")" : "";
+          if (window.console) console.error(e);
+          ST.toast("PowerPoint wouldn't colour this text" + where + ". " + ST.errorText(e), true);
+        });
       });
     }
   }
