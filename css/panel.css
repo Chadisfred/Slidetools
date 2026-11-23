@@ -538,3 +538,6 @@ input[type=text]:disabled { opacity: 0.6; }
 .update-changes:empty { display: none; }
 .update-changes .menu-title { padding: 0; }
 .update-version { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+/* Typography: three autofit buttons in a row */
+#tyFit { grid-template-columns: repeat(3, 1fr); }

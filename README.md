@@ -149,6 +149,22 @@ Tips:
 3. Crop position sets which part of the picture stays in view. With pictures selected, clicking a point moves their crop there. Reset crop shows the whole picture again.
 4. The slide is swapped for an identical copy, in memory, to place or crop pictures, so slide comments may not carry over and Undo takes more than one step. Text in a shape is removed when a picture is placed in it.
 
+### Typography
+
+Exact text spacing, margins and autofit for the selected shapes.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Character spacing, line spacing in points or lines, space before and after, Apply spacing, margins, autofit, wrap |
+| More | Kerning, baseline, Read from selection |
+
+Tips:
+
+1. Fill in only what you want to change. Empty boxes are left as each shape has them.
+2. Line spacing in points keeps the same distance whatever the font size, which helps text in different boxes line up.
+3. Margins, autofit and wrap apply straight away. Spacing, kerning and baseline swap the slide for an identical copy, in memory, because add-ins can't set them directly, so Undo takes more than one step.
+4. Read from selection copies a shape's settings into the boxes, ready to apply to others.
+
 ### Corners
 
 Sets the corner radius of rounded rectangles in points, so corners match across shapes of different sizes.
@@ -437,6 +453,7 @@ js/panels.js             Panel framework: headers, detail levels, folding, drag 
 js/tools/layout.js       Layout tool
 js/tools/resize.js       Transform tool (resize, lines, crop, copies)
 js/tools/images.js       Images tool (paste into shape, crop position, reset crop)
+js/tools/typography.js   Typography tool (spacing, kerning, baseline, margins, autofit)
 js/rebuild.js            In-memory slide rebuild used to crop pictures and make copies
 js/crop.js               Picture cropping for Transform
 js/clone.js              Copies for Transform
