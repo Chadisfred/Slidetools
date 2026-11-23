@@ -12,6 +12,10 @@
     ["NudgeUp", "Nudge up", "Up", function () { arr().nudge(0, -1); }],
     ["NudgeDown", "Nudge down", "Down", function () { arr().nudge(0, 1); }],
     ["NudgeRight", "Nudge right", "Right", function () { arr().nudge(1, 0); }],
+    ["GrowWidth", "Wider", "Right", function () { arr().resizeBy(1, 0); }, "Alt+Shift+"],
+    ["ShrinkWidth", "Narrower", "Left", function () { arr().resizeBy(-1, 0); }, "Alt+Shift+"],
+    ["GrowHeight", "Taller", "Down", function () { arr().resizeBy(0, 1); }, "Alt+Shift+"],
+    ["ShrinkHeight", "Shorter", "Up", function () { arr().resizeBy(0, -1); }, "Alt+Shift+"],
     ["RepeatLast", "Repeat last action", "D", function () { ST.runRepeat(); }],
     ["AlignLeft", "Align left", "L", function () { arr().alignKey("left"); }],
     ["AlignCentre", "Align centres", "C", function () { arr().alignKey("centre"); }],
@@ -28,18 +32,21 @@
     try { if (window.Office && Office.context && Office.context.diagnostics) return Office.context.diagnostics.platform === "Mac"; } catch (e) {}
     return /Mac/i.test(navigator.platform || "");
   }
-  // "Ctrl+Alt+Shift+L", or "Cmd+Option+Shift+L" on a Mac
-  function keyText(key) { return (isMac() ? "Cmd+Option+Shift+" : "Ctrl+Alt+Shift+") + key; }
+  // "Ctrl+Alt+Shift+L", or "Cmd+Option+Shift+L" on a Mac. Resizing uses Alt+Shift (Option+Shift).
+  function keyText(key, mods) {
+    if (mods) return (isMac() ? mods.replace("Alt", "Option") : mods) + key;
+    return (isMac() ? "Cmd+Option+Shift+" : "Ctrl+Alt+Shift+") + key;
+  }
   function byId(id) { return LIST.filter(function (s) { return s[0] === id; })[0]; }
 
   ST.shortcuts = {
-    list: function () { return LIST.map(function (s) { return { id: s[0], label: s[1], keys: keyText(s[2]) }; }); },
+    list: function () { return LIST.map(function (s) { return { id: s[0], label: s[1], keys: keyText(s[2], s[4]) }; }); },
     // Text for a tooltip, such as " (Ctrl+Alt+Shift+L)"
-    hint: function (id) { var s = byId(id); return s ? " (" + keyText(s[2]) + ")" : ""; },
+    hint: function (id) { var s = byId(id); return s ? " (" + keyText(s[2], s[4]) + ")" : ""; },
     supported: function () { return !!(window.Office && Office.actions && Office.actions.associate); },
     show: function () {
-      var rows = LIST.map(function (s) { return '<tr><td>' + s[1] + '</td><td class="keys">' + keyText(s[2]) + '</td></tr>'; }).join("");
-      ST.sheet("Keyboard shortcuts", ST.html('<p class="sheet-text">These work while the slide has focus, so click the slide first. They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. Nudge uses the Nudge by amount in Arrange.</p>' +
+      var rows = LIST.map(function (s) { return '<tr><td>' + s[1] + '</td><td class="keys">' + keyText(s[2], s[4]) + '</td></tr>'; }).join("");
+      ST.sheet("Keyboard shortcuts", ST.html('<p class="sheet-text">These work while the slide has focus, so click the slide first. They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. Nudge and the size keys step by the Nudge by amount in Arrange. Sizes change around Transform\'s reference point.</p>' +
         '<table class="shortcut-table">' + rows + '</table>'));
     }
   };

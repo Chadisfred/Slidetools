@@ -21,6 +21,26 @@
       "name": "Nudge the selection right"
     },
     {
+      "id": "GrowWidth",
+      "type": "ExecuteFunction",
+      "name": "Make the selection wider by the nudge amount"
+    },
+    {
+      "id": "ShrinkWidth",
+      "type": "ExecuteFunction",
+      "name": "Make the selection narrower by the nudge amount"
+    },
+    {
+      "id": "GrowHeight",
+      "type": "ExecuteFunction",
+      "name": "Make the selection taller by the nudge amount"
+    },
+    {
+      "id": "ShrinkHeight",
+      "type": "ExecuteFunction",
+      "name": "Make the selection shorter by the nudge amount"
+    },
+    {
       "id": "RepeatLast",
       "type": "ExecuteFunction",
       "name": "Repeat the last action"
@@ -101,6 +121,42 @@
         "windows": "Ctrl+Alt+Shift+Right",
         "mac": "Command+Option+Shift+Right",
         "web": "Ctrl+Alt+Shift+Right"
+      }
+    },
+    {
+      "action": "GrowWidth",
+      "key": {
+        "default": "Alt+Shift+Right",
+        "windows": "Alt+Shift+Right",
+        "mac": "Option+Shift+Right",
+        "web": "Alt+Shift+Right"
+      }
+    },
+    {
+      "action": "ShrinkWidth",
+      "key": {
+        "default": "Alt+Shift+Left",
+        "windows": "Alt+Shift+Left",
+        "mac": "Option+Shift+Left",
+        "web": "Alt+Shift+Left"
+      }
+    },
+    {
+      "action": "GrowHeight",
+      "key": {
+        "default": "Alt+Shift+Down",
+        "windows": "Alt+Shift+Down",
+        "mac": "Option+Shift+Down",
+        "web": "Alt+Shift+Down"
+      }
+    },
+    {
+      "action": "ShrinkHeight",
+      "key": {
+        "default": "Alt+Shift+Up",
+        "windows": "Alt+Shift+Up",
+        "mac": "Option+Shift+Up",
+        "web": "Alt+Shift+Up"
       }
     },
     {

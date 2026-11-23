@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.26.0] 2026-11-23
+
+### Added
+
+1. Size shortcuts: Alt+Shift+Right and Down make the selection wider and taller, and Left and Up make it narrower and shorter, by Arrange's Nudge by amount (Option+Shift on a Mac). Sizes change around Transform's reference point, a straight line only changes along its length, and nothing shrinks below 1 pt.
+
 ## [2.25.1] 2026-11-23
 
 ### Fixed
