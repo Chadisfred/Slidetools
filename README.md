@@ -114,7 +114,7 @@ Sets the width and height of every selected shape, using plain numbers or formul
 
 | Level | Shows |
 | --- | --- |
-| Basic | Width, Height, Resize, Copies, Move across and down, Make copies |
+| Basic | Width, Height, Resize, Copies, Move across and down, Make copies, Picture fill |
 | More | Live result, lock aspect ratio, crop pictures to fit, reference point, Use selection, match to largest or smallest, Space by, scale, rotate, copies preview |
 | Full | Reflect X and Y, recent formulas |
 
@@ -132,6 +132,7 @@ Tips:
 8. Copies: set how many, then Move across and Move down (formulas such as `w+gap`), and optionally Scale, Rotate and Reflect. Each copy is transformed from the one before, so a rotate of 45 with 7 copies makes a ring. Space by Gap measures the move as space between edges. Leave a Move box empty for no movement that way. If a box can't be read, such as `h+` with nothing after the plus, it turns red and the message says what to change.
 9. Copies use the same in-memory slide swap as cropping, so they are exact copies of text, formatting, pictures, groups and tables. A copied placeholder becomes an ordinary shape, and tables and charts don't rotate or flip.
 10. Rows turns copies into a grid. With 3 copies and 3 rows you get 4 across by 3 down. Move down is the step between rows, and left empty it is the shape's height plus the row gap.
+11. Picture fill turns any shape into a picture frame. Select the shape, click the Picture fill box and press Ctrl+V, drop a picture on it, or choose a file. The picture is cropped to the shape's proportions inside the panel, so it never stretches, and the crop follows the reference point. Fit inside (More) shows the whole picture instead. Paste again to swap the picture, or after resizing the shape.
 
 ### Corners
 

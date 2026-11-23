@@ -524,3 +524,9 @@ select:focus { border-color: var(--accent); }
 .paste-info { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); margin-top: -4px; }
 .paste-info[hidden] { display: none; }
 input[type=text]:disabled { opacity: 0.6; }
+
+/* Transform: picture fill drop zone */
+.pic-drop { display: grid; gap: 2px; justify-items: center; text-align: center; padding: 14px 12px; border: 1px dashed var(--field-line); border-radius: 8px; background: var(--field); font-size: 12px; color: var(--muted); cursor: pointer; }
+.pic-drop b { font-weight: 500; color: var(--text); }
+.pic-drop a { color: var(--accent); }
+.pic-drop:focus, .pic-drop.over { outline: none; border-color: var(--accent); border-style: solid; background: var(--field-focus); }
