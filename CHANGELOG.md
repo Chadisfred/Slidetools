@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [2.30.0] 2026-11-23
+
+### Added
+
+1. Typography, a new tool. Set exact character spacing, line spacing in points or lines, space before and after paragraphs, kerning and baseline for all the text in the selected shapes. Empty boxes are left alone. Margins, autofit and wrapping apply straight away. Read from selection copies a shape's settings into the boxes.
+
 ## [2.29.0] 2026-11-23
 
 ### Added
