@@ -1,7 +1,9 @@
-/* Typography tool: exact character spacing, line spacing, paragraph spacing, kerning and
-   baseline, plus text box margins, wrap and autofit. PowerPoint's add-in API has no
-   spacing, kerning or baseline settings, so those are written to the slide XML through the
-   shared slide rebuild (js/rebuild.js), in memory. Margins, wrap and autofit use the API. */
+/* Typography tool: font, size, style and case, exact character spacing, line spacing,
+   paragraph spacing, kerning and baseline, plus text box margins, wrap and autofit.
+   Font settings, margins, wrap and autofit use the PowerPoint API and apply straight away.
+   The API has no spacing, kerning or baseline settings, so those are written to the slide
+   XML through the shared slide rebuild (js/rebuild.js), in memory.
+   Point boxes take formulas in points: 2g, g/2, 12pt+2, and in Size, +2 or *1.5. */
 (function () {
   "use strict";
 
@@ -11,25 +13,36 @@
   var TEXT_TYPES = ["GeometricShape", "TextBox", "Placeholder", "Callout", "Freeform"];
   var PPR_ORDER = ["lnSpc", "spcBef", "spcAft"];
 
-  var defaults = { tySpc: "", tyLine: "", tyLineUnit: "pt", tyBefore: "", tyAfter: "", tyKern: "", tyBase: "",
+  var defaults = { tyFontName: "", tyFontSize: "", tySpc: "", tyLine: "", tyLineUnit: "pt", tyBefore: "", tyAfter: "", tyKern: "", tyBase: "",
                    tyMl: "", tyMr: "", tyMt: "", tyMb: "", tyPreviewOn: true };
   ST.addDefaults(defaults);
+  var PT_KEYS = ["tyFontSize", "tySpc", "tyBefore", "tyAfter", "tyKern", "tyMl", "tyMr", "tyMt", "tyMb"];
 
-  // A number in points from a box, "" when empty, null when it can't be read
-  function num(text) {
-    var t = String(text || "").trim().replace(/\s*pt$/i, "").replace(/\s*%$/, "");
+  // A number in points from a box, "" when empty, null when it can't be read.
+  // Points boxes take grid names (g, col, gap) in points. own: the current value, for +2 or *1.5.
+  function num(text, own) {
+    var t = String(text || "").trim();
+    if (!t) return "";
+    var v = ST.evaluatePt(t, own);
+    return v === null || !isFinite(v) ? null : v;
+  }
+  // A plain number, for Lines and Baseline %
+  function plain(text) {
+    var t = String(text || "").trim().replace(/\s*%$/, "");
     if (!t) return "";
     var v = ST.evaluate(t, null, null);
     return v === null || !isFinite(v) ? null : v;
   }
+  function isPtBox(key, S) { return PT_KEYS.indexOf(key) >= 0 || (key === "tyLine" && (S || ST.state).tyLineUnit !== "x"); }
 
   // ---------- Reading the panel (pure) ----------
   // Returns { spec } or { bad }. spec values are undefined when the box is empty (leave as is).
   function readSpec(S) {
     var out = {}, bad = null;
     function take(key, label, test, msg) {
-      var v = num(S[key]);
+      var pt = isPtBox(key, S), v = pt ? num(S[key]) : plain(S[key]);
       if (v === "") return undefined;
+      if (v === null && pt) { var why = ST.ptProblem(S[key]); bad = bad || label + " " + (why || "can\'t be read") + ". Use points or names such as g, g/2 or gap."; return undefined; }
       if (v === null || !test(v)) { bad = bad || label + " " + msg; return undefined; }
       return v;
     }
@@ -152,14 +165,14 @@
   function applyMargins() {
     var m = { leftMargin: num(ST.state.tyMl), rightMargin: num(ST.state.tyMr), topMargin: num(ST.state.tyMt), bottomMargin: num(ST.state.tyMb) };
     var keys = Object.keys(m).filter(function (k) { return m[k] !== ""; });
-    if (keys.some(function (k) { return m[k] === null || m[k] < 0; })) { ST.toast("Margins must be 0 or more points.", true); return; }
+    if (keys.some(function (k) { return m[k] === null || m[k] < 0; })) { ST.toast("Margins must be 0 or more points, or names such as g or g/2.", true); return; }
     if (!keys.length) { ST.toast("Fill in at least one margin first.", true); return; }
     if (!ST.needOffice()) return;
     ST.setRepeat("Apply margins", applyMargins);
     ST.withSelection(["type"], function (context, items) {
       var list = textItems(items);
       if (!list.length) { ST.toast("Select shapes or text boxes.", true); return; }
-      list.forEach(function (s) { keys.forEach(function (k) { s.textFrame[k] = m[k]; }); });
+      list.forEach(function (s) { keys.forEach(function (k) { s.textFrame[k] = Math.round(m[k] * 100) / 100; }); });
       return context.sync().then(function () { ST.toast("Set the margins of " + ST.plural(list.length, "shape") + "."); queuePreview(); });
     });
   }
@@ -230,7 +243,7 @@
         if (!s) return null;
         var tf = s.textFrame, tr = tf.textRange, info = { id: s.id, name: s.name, box: { left: s.left, top: s.top, width: s.width, height: s.height } };
         tf.load("leftMargin,rightMargin,topMargin,bottomMargin,wordWrap,verticalAlignment");
-        tr.load("text"); tr.font.load("name,size,color,bold,italic"); tr.paragraphFormat.load("horizontalAlignment");
+        tr.load("text"); tr.font.load("name,size,color,bold,italic,underline"); tr.paragraphFormat.load("horizontalAlignment");
         s.fill.load("type,foregroundColor");
         return context.sync().then(function () {
           info.text = String(tr.text || "").slice(0, 600);
@@ -238,7 +251,10 @@
           info.wrap = tf.wordWrap !== false; info.valign = tf.verticalAlignment || "Top";
           info.align = tr.paragraphFormat.horizontalAlignment || "Left";
           info.fill = s.fill.type === "Solid" ? s.fill.foregroundColor : null;
-          info.font = { name: tr.font.name, size: tr.font.size, color: tr.font.color, bold: tr.font.bold, italic: tr.font.italic };
+          info.font = { name: tr.font.name, size: tr.font.size, color: tr.font.color, bold: tr.font.bold, italic: tr.font.italic, underline: tr.font.underline };
+          info.mixed = { name: !tr.font.name, size: !tr.font.size, color: !tr.font.color };
+          return readCase(context, tr).then(function (c) { info.font.allCaps = c.allCaps; info.font.smallCaps = c.smallCaps; info.font.strikethrough = c.strikethrough; });
+        }).then(function () {
           if (info.font.name && info.font.size && info.font.color) return;
           // Mixed formatting: use the first character's font
           var first = tr.getSubstring(0, 1);
@@ -251,20 +267,22 @@
           return R.edit(context, function (doc) {
             var el = R.matchShapes(doc, boxesOf([s]), ["sp"])[0], body = el && kid(el, NS_P, "txBody");
             pv.cache[s.id] = body ? readBody(body) : null;
+            pv.fonts = fontsIn(doc, arguments[1] && arguments[1].files);
+            renderFontList();
             return { count: 0 };
           }).then(function () { info.cur = pv.cache[s.id]; return info; }, function () { info.cur = null; return info; });
         });
       });
     }).then(function (info) { pv.info = info; }, function () { pv.info = null; })
       .then(function () {
-        pv.busy = false; renderPreview();
+        pv.busy = false; renderPreview(); renderFontState();
         if (pv.again) { pv.again = false; queuePreview(); }
       });
   }
   // The values the preview shows: a filled box wins, then the shape's own setting, then the default
   function effective(info) {
-    var cur = info.cur || {}, S = ST.state, pick = function (key, own, dflt) { var v = num(S[key]); return typeof v === "number" ? v : (own !== null && own !== undefined ? own : dflt); };
-    var lineBox = num(S.tyLine), line = typeof lineBox === "number" && lineBox > 0 ? { unit: S.tyLineUnit === "x" ? "x" : "pt", value: lineBox } : (cur.line || { unit: "x", value: 1 });
+    var cur = info.cur || {}, S = ST.state, pick = function (key, own, dflt) { var v = key === "tyBase" ? plain(S[key]) : num(S[key]); return typeof v === "number" ? v : (own !== null && own !== undefined ? own : dflt); };
+    var lineBox = S.tyLineUnit === "x" ? plain(S.tyLine) : num(S.tyLine), line = typeof lineBox === "number" && lineBox > 0 ? { unit: S.tyLineUnit === "x" ? "x" : "pt", value: lineBox } : (cur.line || { unit: "x", value: 1 });
     var m = info.margins, margin = function (key, own, dflt) { var v = num(S[key]); return typeof v === "number" && v >= 0 ? v : (typeof own === "number" ? own : dflt); };
     return { spc: pick("tySpc", cur.spc, 0), before: pick("tyBefore", cur.before, 0), after: pick("tyAfter", cur.after, 0), base: pick("tyBase", cur.base, 0), line: line,
              ml: margin("tyMl", m.l, 7.2), mr: margin("tyMr", m.r, 7.2), mt: margin("tyMt", m.t, 3.6), mb: margin("tyMb", m.b, 3.6) };
@@ -276,8 +294,10 @@
     if (box.hidden) return;
     var info = pv.info;
     if (!info) { box.innerHTML = '<div class="muted-note">Select a text box to preview its text with these settings.</div>'; return; }
-    var e = effective(info), f = info.font || {}, size = f.size || 18, W = Math.max(info.box.width, 1), H = Math.max(info.box.height, 1);
+    var e = effective(info), f = info.font || {}, typed = num(S_size(), f.size || 18), size = typeof typed === "number" && typed >= 1 ? typed : (f.size || 18), W = Math.max(info.box.width, 1), H = Math.max(info.box.height, 1);
     var lh = e.line.unit === "pt" ? e.line.value + "pt" : String(e.line.value * 1.2);
+    var family = String(ST.state.tyFontName || "").trim() || f.name || "Calibri";
+    var deco = [f.underline && f.underline !== "None" ? "underline" : "", f.strikethrough ? "line-through" : ""].filter(Boolean).join(" ") || "none";
     var align = { Center: "center", Centered: "center", Right: "right", Justify: "justify", JustifyLow: "justify", Distributed: "justify" }[info.align] || "left";
     var justify = /Middle|Center/.test(info.valign) ? "center" : /Bottom/.test(info.valign) ? "flex-end" : "flex-start";
     var paras = (info.text || "").split(/\r\n|\r|\n/).map(function (p) {
@@ -286,15 +306,153 @@
     }).join("");
     var avail = Math.max(120, box.clientWidth - 2), k = Math.min(1, avail / (W * PX));
     box.innerHTML = '<div class="ty-stage"><div class="ty-page" style="width:' + W + 'pt;min-height:' + H + 'pt;padding:' + e.mt + 'pt ' + e.mr + 'pt ' + e.mb + 'pt ' + e.ml + 'pt;' +
-      'font-family:&quot;' + esc(f.name || "Calibri") + '&quot;, sans-serif;font-size:' + size + 'pt;color:' + esc(f.color || "#1d1d1f") + ';font-weight:' + (f.bold ? 700 : 400) + ';font-style:' + (f.italic ? "italic" : "normal") + ';' +
+      'font-family:&quot;' + esc(family) + '&quot;, sans-serif;font-size:' + size + 'pt;color:' + esc(f.color || "#1d1d1f") + ';font-weight:' + (f.bold ? 700 : 400) + ';font-style:' + (f.italic ? "italic" : "normal") + ';' +
+      'text-decoration:' + deco + ';text-transform:' + (f.allCaps ? "uppercase" : "none") + ';font-variant:' + (f.smallCaps ? "small-caps" : "normal") + ';' +
       'letter-spacing:' + e.spc + 'pt;text-align:' + align + ';justify-content:' + justify + ';white-space:' + (info.wrap ? "pre-wrap" : "pre") + ';background:' + esc(info.fill || "#ffffff") + ';transform:scale(' + k + ')">' +
       paras + '<i class="ty-bounds" style="height:' + H + 'pt"></i></div></div><div class="ty-caption">' + esc(info.name || "Selected shape") + ', ' + Math.round(k * 100) + '% size</div>';
     var page = box.querySelector(".ty-page");
     box.querySelector(".ty-stage").style.height = Math.ceil(Math.max(page.offsetHeight, H * PX) * k) + "px";
   }
 
+  function S_size() { return ST.state.tyFontSize; }
+
+  // ---------- Font (API) ----------
+  // Case settings need PowerPoint API 1.8. Resolves { allCaps, smallCaps, strikethrough }, null when mixed or unknown.
+  function readCase(context, range) {
+    var none = { allCaps: null, smallCaps: null, strikethrough: null };
+    if (!ST.supports("1.8")) return Promise.resolve(none);
+    try { range.font.load("allCaps,smallCaps,strikethrough"); } catch (e) { return Promise.resolve(none); }
+    return context.sync().then(function () { return { allCaps: range.font.allCaps, smallCaps: range.font.smallCaps, strikethrough: range.font.strikethrough }; }, function () { return none; });
+  }
+  // The text to change: the highlighted text when there is some, otherwise all the text in the selected shapes.
+  function textTargets(context) {
+    var pres = context.presentation, shapes = pres.getSelectedShapes();
+    shapes.load("items/id,items/type,items/name");
+    return context.sync().then(function () {
+      var whole = { list: textItems(shapes.items).map(function (s) { return s.textFrame.textRange; }), part: false };
+      if (!ST.supports("1.5")) return whole;
+      var r;
+      try { r = pres.getSelectedTextRangeOrNullObject ? pres.getSelectedTextRangeOrNullObject() : pres.getSelectedTextRange(); r.load("length"); }
+      catch (e) { return whole; }
+      return context.sync().then(function () { return !r.isNullObject && r.length > 0 ? { list: [r], part: true } : whole; }, function () { return whole; });
+    });
+  }
+  // Each range's font size, using the first letter when the sizes are mixed
+  function sizesOf(context, list) {
+    list.forEach(function (r) { r.font.load("size"); });
+    return context.sync().then(function () {
+      var firsts = list.map(function (r) { if (r.font.size) return null; var f = r.getSubstring(0, 1); f.font.load("size"); return f; });
+      return context.sync().then(function () { return list.map(function (r, i) { return r.font.size || (firsts[i] && firsts[i].font.size) || null; }); }, function () { return list.map(function (r) { return r.font.size || null; }); });
+    });
+  }
+  function stepSize(size, dir) { return dir > 0 ? size + (size >= 20 ? 2 : 1) : Math.max(1, size - (size > 20 ? 2 : 1)); }
+  function whereText(t) { return t.part ? "the highlighted text" : ST.plural(t.list.length, "shape"); }
+
+  // kind: "name", "size" (text: a formula), "step" (dir), or a style key with value true/false or "Single"/"None"
+  function setFont(kind, value) {
+    if (!ST.needOffice()) return;
+    if (!ST.supports("1.4")) { ST.toast("This version of PowerPoint can\'t change fonts from add-ins.", true); return; }
+    var caseKey = ["allCaps", "smallCaps", "strikethrough"].indexOf(kind) >= 0;
+    if (caseKey && !ST.supports("1.8")) { ST.toast("Caps and strikethrough need PowerPoint API 1.8. Update PowerPoint.", true); return; }
+    if (kind === "name" && !String(value || "").trim()) { ST.toast("Type or pick a font first.", true); return; }
+    if (kind === "size") {
+      if (!String(value || "").trim()) { ST.toast("Type a size first, such as 18, 2g or +2.", true); return; }
+      if (num(value, 12) === null) { ST.toast("Size " + (ST.ptProblem(value, 12) || "can\'t be read") + ". Use points, names such as g, or +2.", true); return; }
+    }
+    ST.run(function (context) {
+      return textTargets(context).then(function (t) {
+        if (!t.list.length) { ST.toast("Select text, or shapes with text.", true); return; }
+        if (kind === "size" || kind === "step") {
+          return sizesOf(context, t.list).then(function (sizes) {
+            var bad = 0;
+            t.list.forEach(function (r, i) {
+              var cur = sizes[i] || 18, v = kind === "step" ? stepSize(cur, value) : num(value, cur);
+              if (!(v >= 1 && v <= 4000)) { bad++; return; }
+              r.font.size = Math.round(v * 10) / 10;
+            });
+            return context.sync().then(function () {
+              if (bad) ST.toast("Sizes must work out to 1 to 4000 points, so " + ST.plural(bad, "shape") + " kept " + (bad === 1 ? "its" : "their") + " size.", true);
+              else ST.toast(kind === "step" ? "Made the text " + (value > 0 ? "larger" : "smaller") + " in " + whereText(t) + "." : "Set the size of " + whereText(t) + ".");
+            });
+          });
+        }
+        var first = t.list[0];
+        var current = (kind === "name") ? Promise.resolve(null) : caseKey ? readCase(context, first) : (first.font.load(kind), context.sync().then(function () { var o = {}; o[kind] = first.font[kind]; return o; }));
+        return current.then(function (cur) {
+          var v = value;
+          if (v === undefined) v = kind === "underline" ? (cur.underline && cur.underline !== "None" ? "None" : "Single") : !(cur[kind] === true);
+          t.list.forEach(function (r) { r.font[kind === "name" ? "name" : kind] = v; });
+          ST.setRepeat(repeatLabel(kind, v), function () { setFont(kind, v); });
+          return context.sync().then(function () { ST.toast(doneLabel(kind, v) + " for " + whereText(t) + "."); });
+        });
+      }).then(function () { queuePreview(); });
+    });
+    if (kind === "size") ST.setRepeat("Font size " + value, function () { setFont("size", value); });
+    if (kind === "step") ST.setRepeat(value > 0 ? "Larger text" : "Smaller text", function () { setFont("step", value); });
+  }
+  var STYLE_NAMES = { bold: "Bold", italic: "Italic", underline: "Underline", allCaps: "All caps", smallCaps: "Small caps", strikethrough: "Strikethrough" };
+  function repeatLabel(kind, v) { return kind === "name" ? "Font " + v : STYLE_NAMES[kind] + (v === false || v === "None" ? " off" : " on"); }
+  function doneLabel(kind, v) { return kind === "name" ? "Set the font to " + v : (v === false || v === "None" ? "Turned " + STYLE_NAMES[kind].toLowerCase() + " off" : "Turned " + STYLE_NAMES[kind].toLowerCase() + " on"); }
+
+  // Theme fonts from the slide export, then fonts used on the slide
+  function fontsIn(doc, files) {
+    var out = [], seen = {};
+    function add(name, label) { if (!name || name.charAt(0) === "+" || seen[name]) return; seen[name] = true; out.push({ name: name, label: label }); }
+    var theme = (files || []).filter(function (f) { return /^ppt\/theme\/theme\d+\.xml$/.test(f.name); })[0];
+    if (theme) {
+      var t = new DOMParser().parseFromString(theme.text, "application/xml");
+      ["majorFont", "minorFont"].forEach(function (k, i) {
+        var el = t.getElementsByTagNameNS(NS_A, k)[0], latin = el && kid(el, NS_A, "latin");
+        if (latin) add(latin.getAttribute("typeface"), i ? "Body font (theme)" : "Heading font (theme)");
+      });
+    }
+    Array.prototype.forEach.call(doc.getElementsByTagNameNS(NS_A, "latin"), function (el) { add(el.getAttribute("typeface"), "On this slide"); });
+    return out;
+  }
+  function renderFontList() {
+    var dl = $("tyFontList");
+    if (!dl) return;
+    dl.innerHTML = "";
+    (pv.fonts || []).forEach(function (f) { var o = document.createElement("option"); o.value = f.name; o.label = f.label; dl.appendChild(o); });
+  }
+  // Shows the selection's font on the buttons: lit when on, half lit when mixed
+  function renderFontState() {
+    var f = (pv.info && pv.info.font) || {}, has = !!pv.info;
+    Array.prototype.forEach.call(document.querySelectorAll("#tyStyles [data-v], #tyCase [data-v]"), function (b) {
+      var k = b.getAttribute("data-v"), v = f[k];
+      var on = k === "underline" ? (v && v !== "None") : v === true;
+      b.classList.toggle("on", has && !!on);
+      b.classList.toggle("mixed", has && (v === null || v === undefined) && k !== "underline");
+      b.setAttribute("aria-pressed", String(has && !!on));
+    });
+    $("tyFontSize").placeholder = has && f.size && !(pv.info.mixed || {}).size ? ST.nice(f.size) + " now" : "e.g. 18, 2g or +2";
+    $("tyFontName").placeholder = has && f.name && !(pv.info.mixed || {}).name ? f.name + " now" : "Type or pick a font";
+    var sw = $("tyColour").querySelector("span");
+    sw.style.background = has && f.color ? f.color : "transparent";
+    $("tyColour").classList.toggle("empty", !(has && f.color));
+  }
+  function openColours() {
+    ST.state.colTarget = "text"; ST.save(); ST.emit("reset");
+    if (ST.pinTool) ST.pinTool("typography");
+    if (ST.openTool) ST.openTool("colours");
+  }
+  function markField(key) {
+    var el = $(key), text = String(ST.state[key] || "").trim();
+    if (!el) return;
+    var bad = text && (isPtBox(key) ? num(text, key === "tyFontSize" ? 12 : undefined) === null : plain(text) === null);
+    el.classList.toggle("err", !!bad);
+    el.title = bad ? (isPtBox(key) ? (ST.ptProblem(text, key === "tyFontSize" ? 12 : undefined) || "can't be read") : "can't be read").replace(/^./, function (c) { return c.toUpperCase(); }) + "." : "";
+  }
+
   // ---------- Panel ----------
   var MARKUP =
+    '<div class="group-label label-row">Font' + ST.info("Applies straight away to the highlighted text, or to all the text in the selected shapes. Size takes points or formulas: <code>2g</code>, <code>g/2</code>, <code>+2</code> or <code>*1.5</code>. Point boxes below take <code>g</code>, <code>col</code> and <code>gap</code> too.", "About font") + '</div>' +
+    '<label class="field">Font<input type="text" id="tyFontName" list="tyFontList" autocomplete="off" placeholder="Type or pick a font"><datalist id="tyFontList"></datalist></label>' +
+    '<div class="row">' +
+      '<label class="field">Size (pt)<div class="stepper"><input type="text" id="tyFontSize" inputmode="decimal" placeholder="e.g. 18, 2g or +2"><button id="tySizeLess" title="Smaller text">&minus;</button><button id="tySizeMore" title="Larger text">+</button></div></label>' +
+      '<div class="field">Style<div class="ty-styles" id="tyStyles"><button data-v="bold" title="Bold" aria-label="Bold"><b>B</b></button><button data-v="italic" title="Italic" aria-label="Italic"><i>I</i></button><button data-v="underline" title="Underline" aria-label="Underline"><u>U</u></button><button id="tyColour" class="ty-swatch" title="Text colour: opens Colours" aria-label="Text colour"><span></span></button></div></div>' +
+    '</div>' +
+    '<div class="field" data-min="2">Case<div class="btn-row ty-case" id="tyCase"><button class="btn small" data-v="allCaps" title="All capitals">All caps</button><button class="btn small" data-v="smallCaps" title="Small capitals">Small caps</button><button class="btn small" data-v="strikethrough" title="Strikethrough">Strike</button></div></div>' +
     '<div class="group-label label-row">Spacing' + ST.info("Exact spacing for all the text in the selected shapes. Leave a box empty to keep what each shape has. PowerPoint add-ins can\'t set spacing directly, so the slide is swapped for an identical copy with the new spacing. Slide comments may not carry over, and Undo takes more than one step.", "About spacing") + '</div>' +
     '<div class="ty-preview" id="tyPreview" aria-live="polite"></div>' +
     '<label class="field">Character spacing (pt)<input type="text" id="tySpc" inputmode="decimal" placeholder="e.g. -0.5 or 1"></label>' +
@@ -332,7 +490,17 @@
   function renderUnit() { Array.prototype.forEach.call($("tyLineUnit").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === (ST.state.tyLineUnit === "x" ? "x" : "pt")); }); }
   function build(body) {
     body.appendChild(ST.html(MARKUP));
-    ["tySpc", "tyLine", "tyBefore", "tyAfter", "tyKern", "tyBase", "tyMl", "tyMr", "tyMt", "tyMb"].forEach(function (k) { ST.bindField($(k), k); });
+    ["tyFontName", "tyFontSize", "tySpc", "tyLine", "tyBefore", "tyAfter", "tyKern", "tyBase", "tyMl", "tyMr", "tyMt", "tyMb"].forEach(function (k) { ST.bindField($(k), k, { onInput: function () { markField(k); } }); markField(k); });
+    $("tyFontName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); setFont("name", ST.state.tyFontName.trim()); } });
+    // Picking from the list applies straight away
+    $("tyFontName").addEventListener("input", function (e) { if (!e.inputType || e.inputType === "insertReplacementText") setFont("name", ST.state.tyFontName.trim()); });
+    $("tyFontSize").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); setFont("size", ST.state.tyFontSize); } });
+    $("tySizeLess").addEventListener("click", function (e) { e.preventDefault(); setFont("step", -1); });
+    $("tySizeMore").addEventListener("click", function (e) { e.preventDefault(); setFont("step", 1); });
+    Array.prototype.forEach.call(document.querySelectorAll("#tyStyles [data-v], #tyCase [data-v]"), function (b) {
+      b.addEventListener("click", function () { setFont(b.getAttribute("data-v")); });
+    });
+    $("tyColour").addEventListener("click", openColours);
     ["tySpc", "tyLine", "tyBefore", "tyAfter", "tyKern", "tyBase"].forEach(function (k) {
       $(k).addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); applySpacing(); } });
     });
@@ -357,8 +525,9 @@
     pvOn.addEventListener("change", function () { ST.state.tyPreviewOn = pvOn.checked; ST.save(); renderPreview(); if (pvOn.checked) queuePreview(); });
     renderUnit();
     renderPreview();
-    ST.on("reset", function () { renderUnit(); pvOn.checked = previewOn(); renderPreview(); });
+    ST.on("reset", function () { renderUnit(); pvOn.checked = previewOn(); renderPreview(); PT_KEYS.concat(["tyLine", "tyBase"]).forEach(markField); });
     ST.on("change", renderPreview);
+    renderFontState();
     ST.on("selection", function () { queuePreview(); });
     ST.on("layout", function () { queuePreview(); });
     ST.on("ready", function () { queuePreview(); });
@@ -371,9 +540,10 @@
     levels: [1, 2],
     defaultLevel: 1,
     defaults: defaults,
-    tip: { what: "Sets exact text spacing, margins and autofit.", steps: ["Select shapes with text.", "Fill in the spacing you want. Empty boxes are left alone.", "Click Apply spacing."] },
+    tip: { what: "Sets fonts, sizes and styles, exact text spacing, margins and autofit.", steps: ["Select text, or shapes with text.", "Pick a font, size or style. These apply straight away.", "For spacing, fill in the boxes and click Apply spacing."] },
     build: build
   });
 
-  ST._typography = { renderPreview: renderPreview, loadPreview: loadPreview, readSpec: readSpec, applyToBody: applyToBody, readBody: readBody, applySpacing: applySpacing, readSelection: readSelection };
+  ST._typography = { renderPreview: renderPreview, loadPreview: loadPreview, readSpec: readSpec, applyToBody: applyToBody, readBody: readBody, applySpacing: applySpacing, readSelection: readSelection,
+                     setFont: setFont, fontsIn: fontsIn, num: num, stepSize: stepSize };
 })();

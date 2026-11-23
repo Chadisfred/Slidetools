@@ -2,6 +2,14 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.1.0] 2026-11-23
+
+### Added
+
+1. Typography: font controls. Font (with the theme's heading and body fonts first in the list), Size with minus and plus, Bold, Italic and Underline, and at More, All caps, Small caps and Strike. They apply straight away to the highlighted text, or to all the text in the selected shapes, and show the current settings.
+2. Typography: a text colour button that opens Colours set to Text, with Typography pinned beside it.
+3. Typography: every points box takes grid formulas in points, such as `2g` for a size, `g/2` for a margin or `g` for line spacing. Size also takes `+2` or `*1.5`, worked out from each text's own size. A box that can't be read turns red and says why.
+
 ## [3.0.0] 2026-11-23
 
 ### Changed

@@ -588,3 +588,18 @@ input[type=text]:disabled { opacity: 0.6; }
   .level-btn .level-name { display: none; }
   .level-btn { padding: 0 6px; }
 }
+
+/* ---------- Typography font row ---------- */
+.ty-styles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+.ty-styles button {
+  height: 32px; min-width: 0; border: 1px solid var(--field-line); border-radius: 7px;
+  background: var(--field); color: var(--text); cursor: pointer; font-size: 14px;
+  display: grid; place-items: center;
+}
+.ty-styles button:hover { border-color: var(--accent-line); }
+.ty-styles button.on, .ty-case .btn.on { background: var(--accent-soft); border-color: var(--accent-line); color: var(--accent); }
+.ty-styles button.mixed, .ty-case .btn.mixed { background: linear-gradient(135deg, var(--accent-soft) 50%, transparent 50%); }
+.ty-swatch span { width: 16px; height: 16px; border-radius: 4px; border: 1px solid var(--field-line); display: block; }
+.ty-swatch.empty span { background: repeating-linear-gradient(45deg, var(--field-line) 0 2px, transparent 2px 5px) !important; }
+.ty-case { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ty-case .btn { white-space: nowrap; padding: 0 4px; }

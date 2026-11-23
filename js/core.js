@@ -122,6 +122,30 @@
     }
     return "can't be read";
   };
+  // Like ST.evaluate, but for boxes measured in points: plain numbers are points, the grid
+  // names are in points too, and a box starting with + * or / works from ownPt (the current value).
+  ST.ptVars = function (extra) {
+    var g = ST.grid || ST.calculate(), v = { g: g.spacing * 72, col: g.widths[0] * 72, row: g.cellH * 72, gap: g.gapH * 72, vgap: g.gapV * 72 };
+    Object.keys(extra || {}).forEach(function (k) { v[k] = extra[k]; });
+    return v;
+  };
+  function toPtText(text) {
+    return String(text || "").toLowerCase().replace(/\s+/g, "")
+      .replace(/(\d*\.?\d+)pt/g, "($1)").replace(/(\d*\.?\d+)cm/g, "($1*72/2.54)")
+      .replace(/(\d*\.?\d+)mm/g, "($1*72/25.4)").replace(/(\d*\.?\d+)(in|")/g, "($1*72)");
+  }
+  ST.evaluatePt = function (text, ownPt, extra) {
+    var vars = ST.ptVars(extra), own = typeof ownPt === "number" && isFinite(ownPt);
+    if (own) vars.size = ownPt;
+    return ST.evaluate(toPtText(text), vars, own ? "size" : null);
+  };
+  // Why a points box can't be read, or "" when it reads fine
+  ST.ptProblem = function (text, ownPt, extra) {
+    var vars = ST.ptVars(extra);
+    if (typeof ownPt === "number") vars.size = ownPt;
+    else vars.size = null;
+    return ST.formulaProblem(toPtText(text), vars).replace("needs a selected shape", "needs selected text");
+  };
   ST.num = function (text) {
     var v = ST.evaluate(text, null, null);
     return v === null ? 0 : v;
