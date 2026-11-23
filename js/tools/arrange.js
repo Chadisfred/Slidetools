@@ -37,8 +37,8 @@
       '<div class="btn-row"><button class="btn small" id="arrGuideRead" title="Read the guides from this slide\'s layout and master again">Read again</button>' +
       '<button class="btn small" id="arrGuideUse" title="Set the Layout spacing and the grid area\'s left and top from the guides">Use in Layout</button></div></div>' +
     '<button class="btn primary" id="arrSnap">Snap</button>' +
-    '<div class="group-label" data-min="3">Move</div>' +
-    '<div class="nudge-row" data-min="3">' +
+    '<div class="group-label">Move</div>' +
+    '<div class="nudge-row">' +
       '<label class="field">Nudge by<input type="text" id="arrNudge" placeholder="e.g. g"></label>' +
       '<div class="nudge-pad" id="arrNudgePad"><button class="btn small" data-nudge="-1,0" title="Left">&larr;</button><button class="btn small" data-nudge="0,-1" title="Up">&uarr;</button><button class="btn small" data-nudge="0,1" title="Down">&darr;</button><button class="btn small" data-nudge="1,0" title="Right">&rarr;</button></div>' +
     '</div>' +

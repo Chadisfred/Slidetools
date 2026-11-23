@@ -106,6 +106,22 @@
       return result;
     } catch (e) { return null; }
   };
+  // Explains why a formula can't be read, in a few words, or returns "" when it reads fine.
+  ST.formulaProblem = function (text, vars) {
+    var raw = String(text || "").trim();
+    if (!raw || ST.evaluate(raw, vars, null) !== null) return "";
+    var t = raw.toLowerCase().replace(/\s+/g, "");
+    var last = t.charAt(t.length - 1);
+    if ("+-*/(".indexOf(last) >= 0) return "ends with " + last;
+    var open = (t.match(/\(/g) || []).length, close = (t.match(/\)/g) || []).length;
+    if (open !== close) return "has a bracket that isn't closed";
+    var names = (t.replace(/(\d*\.?\d+)(pt|cm|mm|in)/g, "$1").match(/[a-z]+/g) || []);
+    for (var i = 0; i < names.length; i++) {
+      if (!vars || !(names[i] in vars)) return "uses " + names[i] + ", which isn't a name it knows";
+      if (vars[names[i]] === null) return "uses " + names[i] + ", which needs a selected shape";
+    }
+    return "can't be read";
+  };
   ST.num = function (text) {
     var v = ST.evaluate(text, null, null);
     return v === null ? 0 : v;
