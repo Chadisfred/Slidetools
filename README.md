@@ -466,6 +466,7 @@ The panel checks `version.json` when it opens. When it's out of date, a dot appe
 | --- | --- |
 | The panel shows an old version | Close PowerPoint, delete the contents of `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, reopen |
 | The panel is blank or shows an error | Check the web address above loads in a browser, then reopen the panel |
+| "Error loading add-ins" at launch | It can happen when the network is slow as PowerPoint starts. Restart PowerPoint. If it keeps happening, check the web address above loads in a browser |
 | The Grid Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
 | A slide button says the version is too old | Update Office. Draw, Fit, Snap, Resize, Select similar and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Inserting tables needs 1.8. Formatting existing tables needs 1.9. Corners need 1.10 |
 | Update all reports something you didn't expect | Click Cancel. Nothing changes until you click Update |

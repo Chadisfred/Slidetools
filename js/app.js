@@ -1,8 +1,16 @@
-/* Starts the panel once every tool file has registered itself. */
+/* Starts the panel once every tool file has registered itself. Office is told the add-in is
+   ready first thing, so a slow build can't run past the time Office allows at launch. */
 (function () {
   "use strict";
 
   var ST = window.ST, $ = ST.$;
+  var built = false, officeInfo = null, started = false;
+  function startOnce(info) {
+    officeInfo = info;
+    if (!built || started) return; // runs after the build when Office is ready first
+    started = true; start(info);
+  }
+  if (window.Office && Office.onReady) Office.onReady(function (info) { startOnce(info || { host: null }); });
 
   function setPill() {
     var pill = $("selPill"), sel = ST.selection;
@@ -49,14 +57,13 @@
   }
 
   ST.loadState();
-  ST.buildPanels();
+  try { ST.buildPanels(); } catch (e) { if (window.console) console.error(e); }
   ST.on("selection", setPill);
-  ST.changed();
+  try { ST.changed(); } catch (e) { if (window.console) console.error(e); }
   applyTheme();
-
-  var started = false;
-  function startOnce(info) { if (!started) { started = true; start(info); } }
-  if (window.Office && Office.onReady) Office.onReady(startOnce); else startOnce(null);
+  built = true;
+  if (!(window.Office && Office.onReady)) startOnce(null);
+  else if (officeInfo) startOnce(officeInfo);
 
   // Exposed for testing only
   window.__slideTools = { evaluate: ST.evaluate, grid: function () { return ST.grid; }, ST: ST };

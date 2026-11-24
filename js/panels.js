@@ -148,7 +148,7 @@
   function applyAll() {
     var stack = ST.$("stack");
     document.body.classList.toggle("stacked", !!layout.stacked);
-    displayOrder().forEach(function (id) { stack.appendChild(cards[id]); applyCard(tool(id)); });
+    displayOrder().forEach(function (id) { if (!cards[id]) return; stack.appendChild(cards[id]); try { applyCard(tool(id)); } catch (e) { if (window.console) console.error(e); } });
     var anyTool = layout.order.some(function (id) { return !layout.hidden[id]; });
     var anyShown = layout.order.some(shown);
     var note = ST.$("emptyNote");
@@ -420,8 +420,16 @@
   // ---------- Start ----------
   ST.buildPanels = function () {
     loadLayout();
-    layout.order.forEach(function (id) { buildCard(tool(id)); });
-    applyAll();
+    // A tool that fails to build shows a note in its card, and the rest of the panel still starts
+    layout.order.forEach(function (id) {
+      try { buildCard(tool(id)); }
+      catch (e) {
+        if (window.console) console.error(e);
+        var card = cards[id] || document.querySelector('section.tool[data-tool="' + id + '"]');
+        if (card) { cards[id] = card; var body = card.querySelector(".tool-body"); if (body) body.insertAdjacentHTML("afterbegin", '<div class="muted-note">This tool couldn\'t start. Close and reopen the panel.</div>'); }
+      }
+    });
+    try { applyAll(); } catch (e) { if (window.console) console.error(e); }
     ST.$("settingsBtn").addEventListener("click", function (e) { e.stopPropagation(); showSettingsMenu(e.currentTarget); });
     ST.$("repeatBtn").addEventListener("click", function () { ST.runRepeat(); });
     document.addEventListener("click", function (e) { if (openMenu && !openMenu.contains(e.target)) closeMenu(); });

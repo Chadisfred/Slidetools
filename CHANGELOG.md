@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.2.1] 2026-11-24
+
+### Fixed
+
+1. Startup is more robust. The panel tells PowerPoint it is ready straight away instead of after building every tool, its scripts load without holding up the page, and the update check waits until after launch. This makes the occasional "Error loading add-ins" message at launch less likely.
+2. A tool that fails to start shows a note in its card instead of stopping the rest of the panel and the keyboard shortcuts.
+
 ## [3.2.0] 2026-11-23
 
 ### Added
