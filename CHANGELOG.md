@@ -2,6 +2,17 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.6.0] 2026-11-24
+
+### Added
+
+1. Tables: Column widths. Pick one or more columns with chips that show their width in g, then type a width such as `2g`, `col`, `+g` or `*1.5`. Round to g and Equal adjust the chosen columns too. The change is direct, with no slide swap.
+2. Animation: 44 keyframed effects in new groups, Fade and slide, Back, Bounce, Zoom, Roll and spin, Attention and Exits, including Bounce in, Jack in the box, Rubber band, Heartbeat, Tada, Wobble and Back out. Several are inspired by Animate.css (MIT).
+
+### Changed
+
+1. Animation: presets sit in groups that fold open one at a time, so the list stays short.
+
 ## [3.5.0] 2026-11-24
 
 ### Changed

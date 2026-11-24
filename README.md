@@ -220,7 +220,7 @@ Smooth custom animations that PowerPoint's menus can't make: real easing curves,
 Tips:
 
 1. Eases use GSAP's names and settings: `none`, `power1` to `power4`, `sine`, `expo`, `circ`, `back(overshoot)`, `elastic(amplitude, period)` and `bounce`, each with `.in`, `.out` or `.inOut`. Type one such as `back.out(1.7)` or pick it from the list. The curve is written to the slide as keyframes, so it plays the same as the preview.
-2. Starters: Fade up, Pop, Slide in, Drop in, Zoom in, Swing in, Elastic grow, Rise out, Shrink out, Pulse and Gentle spin. Click one to fill the controls, then adjust.
+2. Starters sit in groups that fold open one at a time: Basics, Fade and slide, Back, Bounce, Zoom, Roll and spin, Attention, Exits, and Your presets. Basics fill the controls, so you can adjust them. The other groups are keyframed effects, such as Bounce in, Rubber band, Heartbeat, Tada or Back out, that move through several steps. Duration, delay, start and stagger still apply to them, and changing an effect or the ease goes back to your own settings. Several are inspired by [Animate.css](https://animate.style) (MIT), rewritten as PowerPoint keyframes.
 3. With several shapes selected, the first one uses Start and the rest follow by the stagger, in the order you choose.
 4. Save keeps the settings as a preset in the presentation. Capture keeps the selected shape's own animations, exactly as they are, so you can reuse an animation from any deck you can use.
 5. Replace their animations, on by default, removes a shape's earlier animations first, so applying again doesn't stack effects.
@@ -358,7 +358,7 @@ Inserts tables that are already formatted, or formats the selected table, using 
 
 | Level | Shows |
 | --- | --- |
-| Basic | Column roles for the selected table, Stack repeats, table styles, Insert table |
+| Basic | Column roles for the selected table, Column widths, Stack repeats, table styles, Insert table |
 | More | Style editor, New style, Update all, the style to insert with, which style the table uses and Unlink |
 
 Column roles. Select a table and each column appears as a chip. Click a chip to cycle its role:
@@ -366,6 +366,13 @@ Column roles. Select a table and each column appears as a chip. Click a chip to 
 1. Category: stacked labels such as a year or a team, shown once per group. Left aligned.
 2. Label: row text that doesn't repeat, such as an item name. Left aligned.
 3. Data: numbers. Right aligned, with a thin line on the left of the column.
+
+Column widths. Select a table and each column appears as a chip with its width in g, such as "B 2.5g". Click the columns to change, then type a width and press Enter or Apply. Only the chosen columns change, so the table gets wider or narrower.
+
+1. The width box takes points or formulas: `2g`, `col`, `gap`, `1in` or `36`.
+2. Starting with an operator works from each column's own width: `+g` adds a grid step, `-g/2` takes half a step off, `*1.5` makes it half as wide again.
+3. Round to g rounds each chosen column to the nearest whole g. Equal shares the chosen columns' total width equally.
+4. Widths change straight away, with no slide swap, and Repeat works on another table.
 
 The first column starts as a Category. Text columns next to it that repeat or leave blanks are guessed as Category, mostly numeric columns as Data, and the rest as Label. Roles are saved with the table.
 
