@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.4.1] 2026-11-24
+
+### Changed
+
+1. Size: steps of g show as decimals, such as 2.5g or 3.375g, which are easier to read than fractions.
+
 ## [3.4.0] 2026-11-24
 
 ### Added

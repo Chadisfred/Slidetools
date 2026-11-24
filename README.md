@@ -169,7 +169,7 @@ Tips:
 3. The reference point sets which point stays still: a corner, an edge or the centre. Copies and the size shortcuts use the same point.
 4. Match makes every selected shape the size of the largest or smallest one by area. Lines are matched to each other by length.
 5. Recent formulas keeps your last six. Click one to put it back in the boxes.
-6. At More, the line under the boxes shows the selected shape's size in inches and in steps of g, such as `6g x 2½g`. Sizes that land on whole, half, quarter or eighth steps show as fractions, and others as about, for example `about 3.33g`.
+6. At More, the line under the boxes shows the selected shape's size in inches and in steps of g, such as `6g x 2.5g`. Sizes that land on whole, half, quarter or eighth steps show exactly, such as `3.375g`, and others as about, for example `about 3.33g`.
 7. Lines are resized by length, whichever box you type in. Horizontal, vertical and diagonal lines keep their direction.
 8. With Crop pictures to fit on (in Images), a picture whose frame changes shape is cropped to fill it instead of being stretched. PowerPoint add-ins can't crop directly, so the slide is swapped for an identical copy with the new crop. This happens in memory inside the panel and nothing is sent anywhere. Slide comments may not carry over, and Undo takes more than one step. Turn it off to keep pictures in proportion instead.
 
