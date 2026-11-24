@@ -604,3 +604,29 @@ input[type=text]:disabled { opacity: 0.6; }
 .ty-case { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ty-case .btn { white-space: nowrap; padding: 0 4px; }
 .ty-caption.ty-note { color: var(--muted); font-family: inherit; line-height: 1.35; margin-top: 2px; }
+
+/* ---------- Animation ---------- */
+.an-preview { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: end; }
+.an-stage {
+  height: 96px; border-radius: 10px; background: var(--page); border: 1px solid var(--line);
+  display: grid; place-items: center; overflow: hidden;
+}
+.an-sample { width: 72px; height: 44px; border-radius: 8px; background: var(--accent); }
+.an-note { font-size: 11px; }
+.an-note.bad { color: var(--danger); }
+.an-move-group, .an-emph-group { display: grid; gap: 8px; }
+.an-move-group[hidden], .an-emph-group[hidden] { display: none; }
+.an-effect { display: grid; gap: 6px; }
+.an-sub[hidden] { display: none; }
+#anDir.seg { grid-template-columns: repeat(4, 1fr); }
+.an-ease { display: grid; grid-template-columns: 1fr 120px; gap: 8px; align-items: center; }
+.an-ease-controls { display: grid; gap: 6px; min-width: 0; }
+.an-ease select, .an-ease input { width: 100%; min-width: 0; }
+#anEase { font-family: var(--mono); font-size: 12px; }
+#anCurve { width: 120px; height: 64px; }
+#anCurve .an-axis { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+#anCurve .an-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.an-chip { position: relative; }
+.an-chip.mine { border-color: var(--accent-line); }
+.an-chip .del { margin-left: 6px; color: var(--muted); display: none; }
+.an-chip:hover .del { display: inline; }

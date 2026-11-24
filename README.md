@@ -62,7 +62,7 @@ A grid of tool buttons sits at the top of the panel, grouped by job:
 
 | Row | Tools |
 | --- | --- |
-| Placing shapes | Grid, Position, Size, Copies |
+| Placing shapes | Grid, Position, Size, Copies, Animation |
 | Text and colour | Typography, Colours, Text styles, Shape styles |
 | Content | Images, Tables, Corners, Similar |
 
@@ -204,6 +204,24 @@ Tips:
 2. The whole picture is kept, so PowerPoint's Crop button can pan or zoom it afterwards. Pasting onto a picture swaps its image and keeps its frame.
 3. Crop position sets which part of the picture stays in view. With pictures selected, clicking a point moves their crop there. Reset crop shows the whole picture again.
 4. The slide is swapped for an identical copy, in memory, to place or crop pictures, so slide comments may not carry over and Undo takes more than one step. Text in a shape is removed when a picture is placed in it.
+
+### Animation
+
+Smooth custom animations that PowerPoint's menus can't make: real easing curves, several effects at once, exact numbers, a stagger across shapes, and presets.
+
+| Level | Shows |
+| --- | --- |
+| Basic | Presets (starters and yours), Entrance, Exit or Emphasis, preview with Play, Fade, Move (travel and distance), Scale, Rotate, or Pulse, Spin and Dim for emphasis, ease and direction with a curve, ease as text, duration, delay, Start, Apply to selection |
+| More | Stagger and order, Replace their animations, preset name with Save and Capture, Remove animations from selection |
+
+Tips:
+
+1. Eases use GSAP's names and settings: `none`, `power1` to `power4`, `sine`, `expo`, `circ`, `back(overshoot)`, `elastic(amplitude, period)` and `bounce`, each with `.in`, `.out` or `.inOut`. Type one such as `back.out(1.7)` or pick it from the list. The curve is written to the slide as keyframes, so it plays the same as the preview.
+2. Starters: Fade up, Pop, Slide in, Drop in, Zoom in, Swing in, Elastic grow, Rise out, Shrink out, Pulse and Gentle spin. Click one to fill the controls, then adjust.
+3. With several shapes selected, the first one uses Start and the rest follow by the stagger, in the order you choose.
+4. Save keeps the settings as a preset in the presentation. Capture keeps the selected shape's own animations, exactly as they are, so you can reuse an animation from any deck you can use.
+5. Replace their animations, on by default, removes a shape's earlier animations first, so applying again doesn't stack effects.
+6. PowerPoint add-ins can't add animations directly, so the slide is swapped for an identical copy with the animation, in memory. The result is a normal PowerPoint animation that shows in the Animation Pane and can be retimed there.
 
 ### Typography
 
@@ -485,6 +503,8 @@ js/tools/snap.js         Snap, shown inside Grid (guides, columns, steps)
 js/tools/layout.js       Grid tool (id layout)
 js/tools/resize.js       Size tool (id resize: resize, lines, crop, match size, shared reference point)
 js/tools/copies.js       Copies tool
+js/animcore.js           Eases (GSAP-style names) and slide timing XML for animations
+js/tools/animate.js      Animation tool (custom effects, stagger, presets, capture)
 js/tools/images.js       Images tool (paste into shape, crop position, reset crop)
 js/tools/typography.js   Typography tool (spacing, kerning, baseline, margins, autofit)
 js/rebuild.js            In-memory slide rebuild used to crop pictures and make copies
