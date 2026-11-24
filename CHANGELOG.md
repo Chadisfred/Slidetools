@@ -2,6 +2,18 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.5.0] 2026-11-24
+
+### Changed
+
+1. Typography keeps only the settings that change the slide directly, so every change shows on the slide straight away: font, size, style, case, colour, margins, autofit and wrap.
+2. Position now includes Snap, the same as in Grid. The two share their settings.
+
+### Removed
+
+1. Typography: character spacing, line spacing, space before and after, kerning and baseline. Add-ins can't set these directly, so they needed a slide swap and couldn't be seen before applying. PowerPoint's own Paragraph and Font settings cover them.
+2. Typography: the live preview. It couldn't use Office cloud fonts, so it didn't match the slide.
+
 ## [3.4.2] 2026-11-24
 
 ### Fixed
