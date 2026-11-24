@@ -2,6 +2,14 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.3.0] 2026-11-24
+
+### Added
+
+1. Animation, a new tool. Build entrances, exits and emphasis that PowerPoint's menus can't make: real easing curves with GSAP's names (power, sine, expo, circ, back, elastic, bounce, with in, out and in out), several effects at once (fade, move, scale and rotate), exact durations, delays and distances (including grid names), and a preview in the panel that plays the same keyframes written to the slide.
+2. Animation: a stagger for several shapes, in picked, left to right or top to bottom order.
+3. Animation: starter presets (Fade up, Pop, Slide in, Drop in, Zoom in, Swing in, Elastic grow, Rise out, Shrink out, Pulse, Gentle spin), your own presets saved in the presentation, Capture to reuse an existing shape's animations, and Remove animations from selection.
+
 ## [3.2.1] 2026-11-24
 
 ### Fixed
