@@ -146,6 +146,19 @@
     else vars.size = null;
     return ST.formulaProblem(toPtText(text), vars).replace("needs a selected shape", "needs selected text");
   };
+  // A length in inches as steps of g: "6g", "2½g" or "3⅜g" when it lands on whole, half, quarter
+  // or eighth steps (within a quarter point), otherwise "about 3.33g".
+  var EIGHTHS = ["", "⅛", "¼", "⅜", "½", "⅝", "¾", "⅞"];
+  ST.gText = function (inches) {
+    var g = ST.grid && ST.grid.spacing;
+    if (!(g > 0) || !isFinite(inches)) return "";
+    var n = inches / g, e = Math.round(n * 8);
+    if (Math.abs(inches - e * g / 8) * 72 <= 0.25) {
+      var whole = Math.floor(e / 8), rest = e - whole * 8;
+      return e === 0 ? "0g" : (whole ? String(whole) : "") + EIGHTHS[rest] + "g";
+    }
+    return "about " + (Math.round(n * 100) / 100) + "g";
+  };
   ST.num = function (text) {
     var v = ST.evaluate(text, null, null);
     return v === null ? 0 : v;

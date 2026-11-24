@@ -98,8 +98,13 @@
       var line = sel.count && sel.line ? Math.sqrt(sel.w * sel.w + sel.h * sel.h) : 0;
       var v = ST.evaluate(text, line ? ST.formulaVars(line, line) : ST.formulaVars(sel.count ? sel.w : undefined, sel.count ? sel.h : undefined), f[2]);
       if (v === null || v <= 0) { parts.push(f[1] + ": check the formula"); bad = true; }
-      else parts.push((line ? "Length" : f[1]) + " = " + ST.nice(v) + " in");
+      else parts.push((line ? "Length" : f[1]) + " = " + ST.nice(v) + " in (" + ST.gText(v) + ")");
     });
+    // Nothing typed: show the selected shape's size, in inches and in steps of g
+    if (!parts.length && sel.count) {
+      parts.push(sel.line ? "Selected: " + ST.nice(Math.sqrt(sel.w * sel.w + sel.h * sel.h)) + " in long (" + ST.gText(Math.sqrt(sel.w * sel.w + sel.h * sel.h)) + ")"
+        : "Selected: " + ST.nice(sel.w) + " x " + ST.nice(sel.h) + " in (" + ST.gText(sel.w) + " x " + ST.gText(sel.h) + ")");
+    }
     var calc = $("calc");
     calc.textContent = parts.join("     ");
     // A problem shows at every level, so the reason is visible before clicking Resize
