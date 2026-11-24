@@ -205,6 +205,7 @@ Tips:
 2. The whole picture is kept, so PowerPoint's Crop button can pan or zoom it afterwards. Pasting onto a picture swaps its image and keeps its frame.
 3. Crop position sets which part of the picture stays in view. With pictures selected, clicking a point moves their crop there. Reset crop shows the whole picture again.
 4. The slide is swapped for an identical copy, in memory, to place or crop pictures, so slide comments may not carry over and Undo takes more than one step. Text in a shape is removed when a picture is placed in it.
+5. Pictures are placed at full resolution and in their own format. A very large photo can make PowerPoint's Crop slow; select it and use Picture Format, Compress Pictures to speed it up. Swapping a picture removes the old image from the slide, so it doesn't add to the file size.
 
 ### Animation
 

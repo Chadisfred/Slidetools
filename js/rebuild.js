@@ -121,6 +121,7 @@
   var NS_REL = "http://schemas.openxmlformats.org/package/2006/relationships";
   var NS_CT = "http://schemas.openxmlformats.org/package/2006/content-types";
   var IMAGE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
+  var NS_R_DOC = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
   var TYPES = { png: "image/png", jpeg: "image/jpeg", gif: "image/gif", bmp: "image/bmp" };
   function mediaHelper(files, slideName) {
     var relsName = slideName.replace(/slides\/(slide\d+\.xml)$/, "slides/_rels/$1.rels"), docs = {}, added = [], n = 0;
@@ -146,6 +147,22 @@
         var has = Array.prototype.some.call(types.getElementsByTagNameNS(NS_CT, "Default"), function (d) { return String(d.getAttribute("Extension")).toLowerCase() === ext; });
         if (!has) { var d = ct.createElementNS(NS_CT, "Default"); d.setAttribute("Extension", ext); d.setAttribute("ContentType", TYPES[ext]); types.insertBefore(d, types.firstChild); }
         return id;
+      },
+      // Drops picture links the slide no longer uses, such as a picture swapped for a new one,
+      // so the old image isn't carried along unseen. Returns how many were dropped.
+      dropUnused: function (doc) {
+        var used = {};
+        Array.prototype.forEach.call(doc.getElementsByTagName("*"), function (el) {
+          Array.prototype.forEach.call(el.attributes, function (a) { if (a.namespaceURI === NS_R_DOC) used[a.value] = 1; });
+        });
+        var f = files.filter(function (x) { return x.name === relsName; })[0], wasOpen = !!docs[relsName];
+        if (!f && !wasOpen) return 0;
+        var rels = open(relsName, '<Relationships xmlns="' + NS_REL + '"/>'), gone = 0;
+        Array.prototype.slice.call(rels.documentElement.getElementsByTagNameNS(NS_REL, "Relationship")).forEach(function (r) {
+          if (r.getAttribute("Type") === IMAGE_REL && r.getAttribute("TargetMode") !== "External" && !used[r.getAttribute("Id")]) { r.parentNode.removeChild(r); gone++; }
+        });
+        if (!gone && !wasOpen) delete docs[relsName]; // opened only to check: keep the original bytes
+        return gone;
       },
       changed: function () { var out = {}, enc = new TextEncoder(); Object.keys(docs).forEach(function (k) { out[k] = enc.encode(serialize(docs[k])); }); return out; },
       added: function () {
@@ -182,6 +199,7 @@
       var media = mediaHelper(files, part.name);
       result = editFn(doc, { addImage: media.addImage, files: files }) || { count: 0 };
       if (!result.count) return result;
+      media.dropUnused(doc);
       var enc = new TextEncoder(), changed = media.changed();
       changed[part.name] = enc.encode(serialize(doc));
       var list = files.map(function (f) { return { name: f.name, bytes: changed[f.name] || f.bytes }; }).concat(media.added());
