@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.4.0] 2026-11-24
+
+### Added
+
+1. Size: the line under Width and Height shows sizes in steps of g as well as inches, such as 6g x 2½g. With the boxes empty, it shows the selected shape's own size. Sizes on whole, half, quarter or eighth steps show as fractions, and others as about, for example about 3.33g.
+
 ## [3.3.0] 2026-11-24
 
 ### Added
