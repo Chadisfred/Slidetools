@@ -1,5 +1,6 @@
 /* Snap: moves shapes onto the template guides, the grid's columns and rows, or steps of g.
-   Shown inside the Grid tool (js/tools/layout.js), which calls ST._snap.build. */
+   Shown inside the Grid tool (js/tools/layout.js) and the Position tool (js/tools/arrange.js), which
+   each call ST._snap.build. Both copies share their settings and the guides read from the file. */
 (function () {
   "use strict";
 
@@ -10,13 +11,13 @@
 
   var MARKUP =
     '<div class="group-label label-row">Snap' + ST.info("Moves each shape's top left corner to the nearest line.<br><b>Guides</b> the guides on your slide.<br><b>Columns</b> the grid's column and row corners.<br><b>Steps</b> every g from the grid area's top left.", "About snap") + '</div>' +
-    '<div class="seg seg3" id="arrSnapMode"></div>' +
-    '<div class="toggle arr-cells" data-min="2">Resize to the cells it covers<label class="switch"><input type="checkbox" id="arrSnapResize"><span></span></label></div>' +
-    '<div class="toggle arr-edges" data-min="2">Snap all four edges<label class="switch"><input type="checkbox" id="arrSnapEdges"><span></span></label></div>' +
-    '<div class="arr-guides" data-min="2"><div class="help" id="arrGuideInfo"></div>' +
-      '<div class="btn-row"><button class="btn small" id="arrGuideRead" title="Read the guides from this slide\'s layout and master again">Read again</button>' +
-      '<button class="btn small" id="arrGuideUse" title="Set the grid spacing and the grid area\'s left and top from the guides">Use for grid</button></div></div>' +
-    '<button class="btn primary" id="arrSnap">Snap</button>';
+    '<div class="seg seg3" id="arrSnapMode" data-snap="mode"></div>' +
+    '<div class="toggle arr-cells" data-min="2">Resize to the cells it covers<label class="switch"><input type="checkbox" id="arrSnapResize" data-snap="arrSnapResize"><span></span></label></div>' +
+    '<div class="toggle arr-edges" data-min="2">Snap all four edges<label class="switch"><input type="checkbox" id="arrSnapEdges" data-snap="arrSnapEdges"><span></span></label></div>' +
+    '<div class="arr-guides" data-min="2"><div class="help" id="arrGuideInfo" data-snap="info"></div>' +
+      '<div class="btn-row"><button class="btn small" id="arrGuideRead" data-snap="read" title="Read the guides from this slide\'s layout and master again">Read again</button>' +
+      '<button class="btn small" id="arrGuideUse" data-snap="use" title="Set the grid spacing and the grid area\'s left and top from the guides">Use for grid</button></div></div>' +
+    '<button class="btn primary" id="arrSnap" data-snap="go">Snap</button>';
 
   // ---------- Snap ----------
   function nearest(list, v) {
@@ -211,9 +212,11 @@
     }).join(", ") + "." : (a.step ? "None off the pattern." : "");
     return text;
   }
-  function renderGuideInfo() {
-    var el = $("arrGuideInfo");
-    if (!el) return;
+  // Each built copy of the Snap section. The first keeps the element ids, later copies only data-snap.
+  var roots = [];
+  function each(key, fn) { roots.forEach(function (r) { var el = r.querySelector('[data-snap="' + key + '"]'); if (el) fn(el, r); }); }
+  function renderGuideInfo() { each("info", renderGuideInfoIn); }
+  function renderGuideInfoIn(el) {
     if (!ST.inOffice) { el.textContent = "Guides are read from your template once the panel is open in PowerPoint."; return; }
     if (!guidesSupported()) { el.textContent = "This PowerPoint version can't read template guides."; return; }
     if (!guides) { el.textContent = "Guides haven't been read yet. They're read the first time you snap."; return; }
@@ -319,7 +322,7 @@
   }
 
   function renderSegs() {
-    Array.prototype.forEach.call($("arrSnapMode").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.arrSnap); });
+    each("mode", function (seg) { Array.prototype.forEach.call(seg.children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.arrSnap); }); });
     var mode = ST.state.arrSnap;
     function show(sel, on) { Array.prototype.forEach.call(document.querySelectorAll(sel), function (el) { el.classList.toggle("off", !on); }); }
     show(".arr-cells", mode === "cells");
@@ -329,8 +332,14 @@
   }
 
   function build(body) {
-    body.appendChild(ST.html(MARKUP));
-    var el = $("arrSnapMode");
+    var root = document.createElement("div");
+    root.className = "snap-box";
+    root.appendChild(ST.html(roots.length ? MARKUP.replace(/ id="[^"]*"/g, "") : MARKUP));
+    body.appendChild(root);
+    var first = !roots.length;
+    roots.push(root);
+    var q = function (key) { return root.querySelector('[data-snap="' + key + '"]'); };
+    var el = q("mode");
     [["guides", "Guides"], ["cells", "Columns"], ["fine", "Steps"]].forEach(function (o) {
       var b = document.createElement("button");
       b.textContent = o[1];
@@ -341,20 +350,22 @@
       });
       el.appendChild(b);
     });
-    $("arrGuideRead").addEventListener("click", function () { readGuidesNow(true); });
-    $("arrGuideUse").addEventListener("click", useInLayout);
+    q("read").addEventListener("click", function () { readGuidesNow(true); });
+    q("use").addEventListener("click", useInLayout);
     ["arrSnapResize", "arrSnapEdges"].forEach(function (k) {
-      var box = $(k);
+      var box = q(k);
       box.checked = !!ST.state[k];
-      box.addEventListener("change", function () { ST.state[k] = box.checked; ST.save(); });
+      // The other copy follows through reset
+      box.addEventListener("change", function () { ST.state[k] = box.checked; ST.save(); ST.emit("reset"); });
       ST.on("reset", function () { box.checked = !!ST.state[k]; });
     });
-    $("arrSnap").addEventListener("click", function () { ST.setRepeat("Snap", function () { snap(); }); snap(); });
+    q("go").addEventListener("click", function () { ST.setRepeat("Snap", function () { snap(); }); snap(); });
     renderSegs();
+    renderGuideInfo();
+    if (!first) return;
     ST.on("change", renderSnapNote);
     ST.on("reset", renderSegs);
     ST.on("ready", renderGuideInfo);
-    renderGuideInfo();
   }
 
   ST._snap = { defaults: defaults, build: build };

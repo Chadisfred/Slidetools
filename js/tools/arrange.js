@@ -40,6 +40,7 @@
       '<div class="nudge-pad" id="arrNudgePad"><button class="btn small" data-nudge="-1,0" title="Nudge left' + hint("NudgeLeft") + '">&larr;</button><button class="btn small" data-nudge="0,-1" title="Nudge up' + hint("NudgeUp") + '">&uarr;</button><button class="btn small" data-nudge="0,1" title="Nudge down' + hint("NudgeDown") + '">&darr;</button><button class="btn small" data-nudge="1,0" title="Nudge right' + hint("NudgeRight") + '">&rarr;</button></div>' +
     '</div>' +
     '<button class="btn small" id="arrSwap" data-min="3" title="Swap the positions of two selected shapes">Swap two shapes</button>' +
+    '<div class="arr-snap-slot"></div>' +
     '<div class="group-label">Copy and paste position</div>' +
     '<div class="btn-row"><button class="btn small" id="posCopy" title="Remember the first selected shape\'s position and size">Copy</button><button class="btn small" id="posPaste" title="Apply the copied position and size to the selected shapes" disabled>Paste</button></div>' +
     '<div class="seg seg3" id="pasteWhat"></div>' +
@@ -253,6 +254,8 @@
 
   function build(body) {
     body.appendChild(ST.html(MARKUP));
+    // Snap, shared with the Grid tool (js/tools/snap.js)
+    if (ST._snap) ST._snap.build(body.querySelector(".arr-snap-slot"));
     var row = $("arrAlign");
     ALIGN.forEach(function (a) {
       var b = document.createElement("button");
@@ -296,8 +299,8 @@
     icon: ICON,
     levels: [1, 2, 3],
     defaultLevel: 1,
-    defaults: defaults,
-    tip: { what: "Lines up, spaces, nudges and copies the position of shapes.", steps: ["Select shapes.", "Click an align button, Across or Down.", "Or copy one shape's position and paste it onto others."] },
+    defaults: Object.assign({}, defaults, ST._snap ? ST._snap.defaults : {}),
+    tip: { what: "Lines up, spaces, nudges, snaps and copies the position of shapes.", steps: ["Select shapes.", "Click an align button, Across or Down.", "Or copy one shape's position and paste it onto others."] },
     build: build
   });
 })();

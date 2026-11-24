@@ -134,12 +134,12 @@ If shapes drift a little further from the guides the further they are across the
 
 ### Position
 
-Lines shapes up, spaces them exactly, nudges them by the grid step, and copies one shape's position and size onto others.
+Lines shapes up, spaces them exactly, nudges them by the grid step, snaps them to the grid or your template's guides, and copies one shape's position and size onto others.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Nudge by an amount, Copy and Paste with Position, Size or Both. Nudge has [keyboard shortcuts](#keyboard-shortcuts) |
-| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, Paste from (anchor point) |
+| Basic | Align buttons (left, centre, right, top, middle, bottom), distribute across or down with a gap, Nudge by an amount, Snap with a choice of Guides, Columns or Steps, Copy and Paste with Position, Size or Both. Nudge has [keyboard shortcuts](#keyboard-shortcuts) |
+| More | Align to the selection, the grid area or the largest shape, gap result, even gaps, snap options, template guide report, Paste from (anchor point) |
 | Full | Swap two shapes |
 
 Tips:
@@ -147,7 +147,8 @@ Tips:
 1. The gap and nudge boxes take formulas, such as `g`, `0.5g` or `gap`, using the grid's values.
 2. Distribute keeps the first shape where it is and places the rest after it with the exact gap. Even gaps keeps the outer shapes still and shares the space between them equally.
 3. Aligning a single shape to the selection aligns it to the grid area instead.
-4. Copy position and size: select a shape and click Copy. The panel shows its position and size until it is closed. Go to another slide, select one or more shapes, choose Position, Size or Both, and click Paste.
+4. Snap is the same as in [Grid](#grid), and the two share their settings, so changing the mode in one changes it in the other.
+5. Copy position and size: select a shape and click Copy. The panel shows its position and size until it is closed. Go to another slide, select one or more shapes, choose Position, Size or Both, and click Paste.
 5. At More, Paste from chooses which point lines up when the sizes differ. Centre places shapes on the copied shape's centre, and with Size only, keeps each shape's own centre still while it is resized.
 
 ### Size
@@ -227,24 +228,21 @@ Tips:
 
 ### Typography
 
-Font, size, style and case, plus exact text spacing, margins and autofit, for the highlighted text or the selected shapes.
+Font, size, style and case, plus text box margins, autofit and wrap, for the highlighted text or the selected shapes. Every change shows on the slide straight away.
 
 | Level | Shows |
 | --- | --- |
-| Basic | Font, Size with minus and plus, Bold, Italic, Underline, text colour, live preview, character spacing, line spacing in points or lines, space before and after, Apply spacing, margins, autofit, wrap |
-| More | Case (All caps, Small caps, Strike), kerning, baseline, Read from selection, Live preview switch |
+| Basic | Font, Size with minus and plus, Bold, Italic, Underline, text colour, margins, autofit, wrap |
+| More | Case (All caps, Small caps, Strike), Read from selection |
 
 Tips:
 
 1. Font, size, style and case apply straight away, to the highlighted text when there is some, otherwise to all the text in the selected shapes. The buttons light up for styles that are on, and half light when the text is mixed.
 2. The font list starts with the theme's heading and body fonts, then fonts used on the slide. Type a name and press Enter, or pick one.
-3. Every points box takes formulas with the grid names in points: `2g` in Size makes text two grid steps tall, `g/2` in a margin gives half a step, and `g` in Line spacing puts lines on the grid. Size also takes `+2` or `*1.5`, worked out from each text's own size. A box that can't be read turns red and says why.
+3. Size and the margin boxes take formulas with the grid names in points: `2g` in Size makes text two grid steps tall, and `g/2` in a margin gives half a step. Size also takes `+2` or `*1.5`, worked out from each text's own size. A box that can't be read turns red and says why.
 4. The colour button shows the text colour and opens Colours with the target set to Text, keeping Typography pinned beside it.
-5. Fill in only the spacing you want to change. Empty boxes are left as each shape has them. Each spacing box shows the value in use now, read from the shape or its template, and minus and plus step from it so the preview shows the result before you click Apply spacing.
-6. Line spacing in points keeps the same distance whatever the font size, which helps text in different boxes line up.
-7. Margins, autofit and wrap apply straight away. Spacing, kerning and baseline swap the slide for an identical copy, in memory, because add-ins can't set them directly, so Undo takes more than one step.
-8. Read from selection copies a shape's settings into the boxes, ready to apply to others.
-9. The live preview shows a scaled copy of the first selected text box with the values in the boxes, so you can see line breaks before applying. The dashed line marks the shape's height. A shape with no text shows no preview. Text that shrinks to fit is shrunk the same way in the preview. Fonts the panel can't use, such as Office cloud fonts, show as a similar font with a note.
+5. Read from selection copies a shape's margins into the boxes, ready to apply to others.
+6. Add-ins can't set line spacing, character spacing or space before and after directly, so Typography leaves them to PowerPoint's Paragraph and Font settings on the Home tab.
 
 ### Corners
 
