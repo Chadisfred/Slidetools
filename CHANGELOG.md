@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.4.2] 2026-11-24
+
+### Fixed
+
+1. Images: pasting a new picture onto an existing one no longer keeps the old image in the file unseen. Any slide change made by the panel now drops picture links the slide no longer uses, which keeps files smaller.
+
 ## [3.4.1] 2026-11-24
 
 ### Changed
