@@ -103,6 +103,8 @@
     _: { compare: compare, parseChanges: parseChanges, installVersion: installVersion }
   };
 
-  // Check quietly once the panel has loaded
-  setTimeout(function () { check(true); }, 1500);
+  // Check quietly a little after Office is ready, so launch isn't slowed
+  var queued = false;
+  function later() { if (!queued) { queued = true; setTimeout(function () { check(true); }, 3000); } }
+  if (window.Office && Office.onReady) Office.onReady(later); else later();
 })();

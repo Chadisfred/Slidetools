@@ -310,7 +310,7 @@
     pv.timer = setTimeout(loadPreview, 200);
   }
   function loadPreview() {
-    if (!ST.inOffice || !previewVisible() || !ST.supports("1.4")) { renderPreview(); return; }
+    if (!ST.inOffice || !previewVisible() || !ST.supports("1.4") || document.hidden) { renderPreview(); return; }
     if (pv.busy) { pv.again = true; return; }
     pv.busy = true;
     PowerPoint.run(function (context) {
