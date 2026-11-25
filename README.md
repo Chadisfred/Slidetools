@@ -358,7 +358,7 @@ Inserts tables that are already formatted, or formats the selected table, using 
 
 | Level | Shows |
 | --- | --- |
-| Basic | Column roles for the selected table, Column widths, Stack repeats, table styles, Insert table |
+| Basic | Column roles for the selected table, Column widths, Row heights, Stack repeats, table styles, Insert table |
 | More | Style editor, New style, Update all, the style to insert with, which style the table uses and Unlink |
 
 Column roles. Select a table and each column appears as a chip. Click a chip to cycle its role:
@@ -373,6 +373,8 @@ Column widths. Select a table and each column appears as a chip with its width i
 2. Starting with an operator works from each column's own width: `+g` adds a grid step, `-g/2` takes half a step off, `*1.5` makes it half as wide again.
 3. Round to g rounds each chosen column to the nearest whole g. Equal shares the chosen columns' total width equally.
 4. Widths change straight away, with no slide swap, and Repeat works on another table.
+
+Row heights work the same way, with rows numbered from 1 and heights such as `g`, `g/2` or `+g`. PowerPoint keeps a row tall enough for its text, so a row can stay taller than the height you set, and the panel says which ones did.
 
 The first column starts as a Category. Text columns next to it that repeat or leave blanks are guessed as Category, mostly numeric columns as Data, and the rest as Label. Roles are saved with the table.
 

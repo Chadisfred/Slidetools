@@ -17,7 +17,7 @@
   var LINES = [["header", "Rule under header"], ["bottom", "Rule under table"], ["group", "Rule above a new group"],
                ["total", "Rule above total rows"], ["row", "Lines between rows"], ["vertical", "Lines left of data columns"]];
 
-  var defaults = { tblRows: "6", tblCols: "4", tblColW: "" };
+  var defaults = { tblRows: "6", tblCols: "4", tblColW: "", tblRowH: "" };
   ST.addDefaults(defaults);
 
   var ICON = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M2 4.5h14" stroke-width="2"/><path d="M2 8.5h14M2 12h14" stroke-width="0.9"/><path d="M2 15.5h14" stroke-width="2"/><rect x="7" y="5.5" width="4" height="9.5" fill="currentColor" fill-opacity="0.22" stroke="none"/></svg>';
@@ -321,14 +321,20 @@
       return { table: table, shape: shape, rows: table.rowCount, cols: table.columnCount, values: table.values, merged: merged, anchors: anchors, tag: t };
     });
   }
-  // Each column's width in points, or nulls when this PowerPoint can't report them
-  function readWidths(context, table, cols) {
+  // Each column's width or each row's height in points, or nulls when this PowerPoint can't
+  // report them. A row's height is the height it shows, which text can make taller than set.
+  function readSizes(context, table, n, kind) {
     var list = [];
-    try { for (var c = 0; c < cols; c++) { var col = table.columns.getItemAt(c); col.load("width"); list.push(col); } }
-    catch (e) { return Promise.resolve(list.map(function () { return null; })); }
-    return context.sync().then(function () { return list.map(function (col) { return typeof col.width === "number" ? col.width : null; }); },
-                               function () { return list.map(function () { return null; }); });
+    try {
+      for (var i = 0; i < n; i++) {
+        var it = kind === "row" ? table.rows.getItemAt(i) : table.columns.getItemAt(i);
+        it.load(kind === "row" ? "height,currentHeight" : "width"); list.push(it);
+      }
+    } catch (e) { return Promise.resolve(list.map(function () { return null; })); }
+    var size = function (it) { var v = kind === "row" ? (typeof it.currentHeight === "number" ? it.currentHeight : it.height) : it.width; return typeof v === "number" ? v : null; };
+    return context.sync().then(function () { return list.map(size); }, function () { return list.map(function () { return null; }); });
   }
+  function readWidths(context, table, cols) { return readSizes(context, table, cols, "col"); }
   // ---------- Line check ----------
   // Some PowerPoint versions apply table line transparency the opposite way round, so a
   // line meant to show is hidden and the other way round. A one-time check finds out.
@@ -879,10 +885,12 @@
         return readTable(context, shape).then(function (info) {
           var roles = info.tag.r ? normRoles(info.tag.r.split(""), info.cols) : guessRoles(info.values || []);
           if (roles.length !== info.cols) roles = normRoles(roles, info.cols);
-          var same = current && current.shapeId === shape.id && current.cols === info.cols;
-          current = { shapeId: shape.id, cols: info.cols, values: info.values, roles: roles, styleId: info.tag.s || 0, saved: !!info.tag.r, widths: [] };
-          if (!same) colPick = {};
-          return readWidths(context, info.table, info.cols).then(function (w) { current.widths = w; });
+          var same = current && current.shapeId === shape.id && current.cols === info.cols, sameRows = same && current.rows === info.rows;
+          current = { shapeId: shape.id, cols: info.cols, rows: info.rows, values: info.values, roles: roles, styleId: info.tag.s || 0, saved: !!info.tag.r, widths: [], heights: [] };
+          if (!same) DIMS.col.pick = {};
+          if (!sameRows) DIMS.row.pick = {};
+          return readSizes(context, info.table, info.cols, "col").then(function (w) { current.widths = w; return readSizes(context, info.table, info.rows, "row"); })
+            .then(function (h) { current.heights = h; });
         });
       });
     }).catch(function (e) {
@@ -891,96 +899,129 @@
     }).then(renderRoles);
   }
 
-  // ---------- Column widths ----------
-  // Chosen columns get a width from a points formula: 2g, col, 36, or +g and *1.5 from each
-  // column's own width. Only those columns change, so the table grows or shrinks.
-  var colPick = {}; // column index: true
-  function picked() { return current ? Object.keys(colPick).map(Number).filter(function (c) { return c < current.cols; }).sort(function (a, b) { return a - b; }) : []; }
+  // ---------- Column widths and row heights ----------
+  // Chosen columns or rows get a size from a points formula: 2g, col, 36, or +g and *1.5 from
+  // each one's own size. Only those change, so the table grows or shrinks. PowerPoint treats a
+  // row height as a minimum: a row whose text needs more room stays taller.
+  var DIMS = {
+    col: { key: "tblColW", ids: "tblCol", word: "column", Word: "Column", size: "width", list: "widths", count: "cols", name: function (c) { return colName(c); }, pick: {} },
+    row: { key: "tblRowH", ids: "tblRow", word: "row", Word: "Row", size: "height", list: "heights", count: "rows", name: function (r) { return String(r + 1); }, pick: {} }
+  };
+  function picked(D) { var n = current ? current[D.count] : 0; return Object.keys(D.pick).map(Number).filter(function (i) { return i < n; }).sort(function (a, b) { return a - b; }); }
   function inG(pt) { return ST.gText(pt / PT); }
-  // The new widths for the chosen columns. mode: "set" (formula), "round" or "equal". Returns { widths: {c: pt} } or { bad }.
-  function plannedWidths(mode, text, cols, widths) {
-    if (!cols.length) return { bad: "Click one or more column chips first." };
+  // The new sizes for the chosen items. mode: "set" (formula), "round" or "equal". Returns { sizes: {i: pt} } or { bad }.
+  function plannedSizes(D, mode, text, items, sizes) {
+    if (!items.length) return { bad: "Click one or more " + D.word + " chips first." };
     var out = {}, g = ST.calculate().spacing * PT;
+    if (mode !== "set" && items.some(function (i) { return !(sizes[i] > 0); })) return { bad: "Couldn't read the " + D.word + " " + D.size + "s." };
     if (mode === "equal") {
-      if (cols.some(function (c) { return !(widths[c] > 0); })) return { bad: "Couldn't read the column widths." };
-      var each = cols.reduce(function (m, c) { return m + widths[c]; }, 0) / cols.length;
-      cols.forEach(function (c) { out[c] = each; });
+      var each = items.reduce(function (m, i) { return m + sizes[i]; }, 0) / items.length;
+      items.forEach(function (i) { out[i] = each; });
     } else if (mode === "round") {
       if (!(g > 0)) return { bad: "Grid spacing needs to be more than 0." };
-      if (cols.some(function (c) { return !(widths[c] > 0); })) return { bad: "Couldn't read the column widths." };
-      cols.forEach(function (c) { out[c] = Math.max(1, Math.round(widths[c] / g)) * g; });
+      items.forEach(function (i) { out[i] = Math.max(1, Math.round(sizes[i] / g)) * g; });
     } else {
       var t = String(text || "").trim();
-      if (!t) return { bad: "Type a width first, such as 2g, col or +g." };
-      for (var i = 0; i < cols.length; i++) {
-        var c = cols[i], v = ST.evaluatePt(t, widths[c] > 0 ? widths[c] : undefined);
-        if (v === null || !isFinite(v)) return { bad: "Width " + (ST.ptProblem(t, widths[c] > 0 ? widths[c] : undefined) || "can't be read") + ". Use points or names such as g, col or +g." };
-        if (!(v >= 1 && v <= 4000)) return { bad: "Column widths must work out to 1 to 4000 points." };
-        out[c] = v;
+      if (!t) return { bad: "Type a " + D.size + " first, such as 2g, " + (D.word === "row" ? "g/2" : "col") + " or +g." };
+      for (var k = 0; k < items.length; k++) {
+        var i = items[k], own = sizes[i] > 0 ? sizes[i] : undefined, v = ST.evaluatePt(t, own);
+        if (v === null || !isFinite(v)) return { bad: D.Word + " " + D.size + " " + (ST.ptProblem(t, own) || "can't be read") + ". Use points or names such as g, col or +g." };
+        if (!(v >= 1 && v <= 4000)) return { bad: D.Word + " " + D.size + "s must work out to 1 to 4000 points." };
+        out[i] = v;
       }
     }
-    Object.keys(out).forEach(function (c) { out[c] = Math.round(out[c] * 100) / 100; });
-    return { widths: out };
+    Object.keys(out).forEach(function (i) { out[i] = Math.round(out[i] * 100) / 100; });
+    return { sizes: out };
   }
-  function describeWidths(cols, out) {
-    var vals = cols.map(function (c) { return out[c]; }), same = vals.every(function (v) { return Math.abs(v - vals[0]) < 0.01; });
-    var names = cols.map(colName).join(", ");
-    return same ? names + " = " + ST.nice(vals[0] / PT) + " in (" + inG(vals[0]) + ")" + (cols.length > 1 ? " each" : "")
-                : cols.map(function (c) { return colName(c) + " " + inG(out[c]); }).join(", ");
+  function describeSizes(D, items, out) {
+    var vals = items.map(function (i) { return out[i]; }), same = vals.every(function (v) { return Math.abs(v - vals[0]) < 0.01; });
+    var names = (items.length > 1 ? D.word + "s " : D.word + " ") + items.map(D.name).join(", ");
+    return same ? names + " = " + ST.nice(vals[0] / PT) + " in (" + inG(vals[0]) + ")" + (items.length > 1 ? " each" : "")
+                : items.map(function (i) { return D.name(i) + " " + inG(out[i]); }).join(", ");
   }
-  function setWidths(mode, text) {
+  function setSizes(kind, mode, text) {
+    var D = DIMS[kind];
     if (!ST.needOffice()) return;
-    if (!canInsert()) { ST.toast("Column widths need PowerPoint API 1.8. Update PowerPoint.", true); return; }
+    if (!canInsert()) { ST.toast(D.Word + " sizes need PowerPoint API 1.8. Update PowerPoint.", true); return; }
     if (!current) { ST.toast("Select a table first.", true); return; }
-    var cols = picked(), r = plannedWidths(mode, text, cols, current.widths || []);
+    var items = picked(D), r = plannedSizes(D, mode, text, items, current[D.list] || []);
     if (r.bad) { ST.toast(r.bad, true); return; }
-    var label = mode === "equal" ? "Equal column widths" : mode === "round" ? "Round columns to g" : "Column widths " + text;
-    ST.setRepeat(label, function () { setWidths(mode, text); });
+    var label = mode === "equal" ? "Equal " + D.word + " " + D.size + "s" : mode === "round" ? "Round " + D.word + "s to g" : D.Word + " " + D.size + "s " + text;
+    ST.setRepeat(label, function () { setSizes(kind, mode, text); });
     ST.run(function (context) {
       return findTable(context).then(function (shape) {
         if (!shape) { ST.toast("Select a table first.", true); return; }
         var table = shape.getTable();
-        table.load("columnCount");
+        table.load("rowCount,columnCount");
         return context.sync().then(function () {
-          var use = cols.filter(function (c) { return c < table.columnCount; });
-          if (!use.length) { ST.toast("This table doesn't have those columns. Pick them again.", true); return; }
-          var src = use.length === cols.length ? r : null;
-          return (src ? Promise.resolve(src) : readWidths(context, table, table.columnCount).then(function (w) { return plannedWidths(mode, text, use, w); })).then(function (plan) {
-            if (plan.bad) { ST.toast(plan.bad, true); return; }
-            use.forEach(function (c) { table.columns.getItemAt(c).width = plan.widths[c]; });
-            return context.sync().then(function () { ST.toast("Set " + describeWidths(use, plan.widths) + "."); });
+          var n = kind === "row" ? table.rowCount : table.columnCount, use = items.filter(function (i) { return i < n; });
+          if (!use.length) { ST.toast("This table doesn't have those " + D.word + "s. Pick them again.", true); return; }
+          var plan = use.length === items.length ? Promise.resolve(r) : readSizes(context, table, n, kind).then(function (sz) { return plannedSizes(D, mode, text, use, sz); });
+          return plan.then(function (pl) {
+            if (pl.bad) { ST.toast(pl.bad, true); return; }
+            use.forEach(function (i) { if (kind === "row") table.rows.getItemAt(i).height = pl.sizes[i]; else table.columns.getItemAt(i).width = pl.sizes[i]; });
+            return context.sync().then(function () {
+              if (kind !== "row") { ST.toast("Set " + describeSizes(D, use, pl.sizes) + "."); return; }
+              // Rows whose text needs more room keep their own height
+              return readSizes(context, table, n, "row").then(function (now) {
+                var taller = use.filter(function (i) { return now[i] > pl.sizes[i] + 0.5; });
+                ST.toast("Set " + describeSizes(D, use, pl.sizes) + "." + (taller.length ? " " + (taller.length === 1 ? "Row " + D.name(taller[0]) + " needs more room for its text, so it stays taller." : "Rows " + taller.map(D.name).join(", ") + " need more room for their text, so they stay taller.") : ""), false);
+              });
+            });
           });
         });
       });
     });
     setTimeout(refreshTable, 300);
   }
-  function renderWidths() {
-    var box = $("tblColChips"), calc = $("tblColCalc"), wrap = $("tblColWrap");
+  function renderSizes() { renderDim(DIMS.col); renderDim(DIMS.row); }
+  function renderDim(D) {
+    var box = $(D.ids + "Chips"), calc = $(D.ids + "Calc"), wrap = $(D.ids + "Wrap");
     if (!box) return;
     wrap.hidden = !current;
     if (!current) return;
     box.innerHTML = "";
-    for (var c = 0; c < current.cols; c++) (function (c) {
-      var w = current.widths && current.widths[c], b = document.createElement("button");
-      b.className = "mini-chip colw-chip" + (colPick[c] ? " on" : "");
-      b.innerHTML = "<b>" + colName(c) + "</b> " + (w > 0 ? inG(w).replace(/^about /, "~") : "");
-      b.title = w > 0 ? "Column " + colName(c) + ": " + ST.nice(w / PT) + " in (" + inG(w) + "). Click to choose it." : "Column " + colName(c) + ". Click to choose it.";
-      b.setAttribute("aria-pressed", String(!!colPick[c]));
-      b.addEventListener("click", function () { if (colPick[c]) delete colPick[c]; else colPick[c] = true; renderWidths(); });
+    var list = current[D.list] || [];
+    for (var i = 0; i < current[D.count]; i++) (function (i) {
+      var v = list[i], b = document.createElement("button");
+      b.className = "mini-chip colw-chip" + (D.pick[i] ? " on" : "");
+      b.innerHTML = "<b>" + D.name(i) + "</b> " + (v > 0 ? inG(v).replace(/^about /, "~") : "");
+      b.title = D.Word + " " + D.name(i) + (v > 0 ? ": " + ST.nice(v / PT) + " in (" + inG(v) + ")" : "") + ". Click to choose it.";
+      b.setAttribute("aria-pressed", String(!!D.pick[i]));
+      b.addEventListener("click", function () { if (D.pick[i]) delete D.pick[i]; else D.pick[i] = true; renderDim(D); });
       box.appendChild(b);
-    })(c);
-    var cols = picked(), text = String(ST.state.tblColW || "").trim();
-    if (!cols.length) { calc.textContent = "Click columns to choose them."; return; }
-    var r = text ? plannedWidths("set", text, cols, current.widths || []) : null;
-    calc.textContent = !r ? ST.plural(cols.length, "column") + " chosen." : r.bad ? r.bad : describeWidths(cols, r.widths);
+    })(i);
+    var items = picked(D), text = String(ST.state[D.key] || "").trim();
+    if (!items.length) { calc.textContent = "Click " + D.word + "s to choose them."; return; }
+    var r = text ? plannedSizes(D, "set", text, items, list) : null;
+    calc.textContent = !r ? ST.plural(items.length, D.word) + " chosen." : r.bad ? r.bad : describeSizes(D, items, r.sizes).replace(/^./, function (ch) { return ch.toUpperCase(); });
   }
-  function markColW() {
-    var el = $("tblColW"), t = String(ST.state.tblColW || "").trim();
+  function markSize(D) {
+    var el = $(D.key), t = String(ST.state[D.key] || "").trim();
     if (!el) return;
     var bad = t && ST.evaluatePt(t, 72) === null;
     el.classList.toggle("err", !!bad);
     el.title = bad ? (ST.ptProblem(t, 72) || "can't be read").replace(/^./, function (ch) { return ch.toUpperCase(); }) + "." : "";
+  }
+  function sizeMarkup(D, label, info, placeholder, roundTip, equalTip) {
+    var x = D.ids;
+    return '<div id="' + x + 'Wrap" class="tbl-colw" hidden><div class="group-label label-row">' + label + ST.info(info, "About " + label.toLowerCase()) + '</div>' +
+      '<div class="mini-chips" id="' + x + 'Chips"></div>' +
+      '<div class="tbl-col-links"><button class="link-btn" id="' + x + 'All">All</button><button class="link-btn" id="' + x + 'None">None</button></div>' +
+      '<div class="inline"><label class="field">' + D.size.charAt(0).toUpperCase() + D.size.slice(1) + '<input type="text" id="' + D.key + '" placeholder="' + placeholder + '"></label><button class="btn small" id="' + x + 'Set">Apply</button></div>' +
+      '<div class="calc" id="' + x + 'Calc"></div>' +
+      '<div class="btn-row"><button class="btn small" id="' + x + 'Round" title="' + roundTip + '">Round to g</button><button class="btn small" id="' + x + 'Equal" title="' + equalTip + '">Equal</button></div></div>';
+  }
+  function wireSizes(kind) {
+    var D = DIMS[kind], x = D.ids;
+    ST.bindField($(D.key), D.key, { onInput: function () { markSize(D); renderDim(D); } });
+    markSize(D);
+    $(D.key).addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); setSizes(kind, "set", ST.state[D.key]); } });
+    $(x + "Set").addEventListener("click", function () { setSizes(kind, "set", ST.state[D.key]); });
+    $(x + "Round").addEventListener("click", function () { setSizes(kind, "round"); });
+    $(x + "Equal").addEventListener("click", function () { setSizes(kind, "equal"); });
+    $(x + "All").addEventListener("click", function () { if (current) for (var i = 0; i < current[D.count]; i++) D.pick[i] = true; renderDim(D); });
+    $(x + "None").addEventListener("click", function () { D.pick = {}; renderDim(D); });
   }
 
   // ---------- Rendering ----------
@@ -988,7 +1029,7 @@
   function renderRoles() {
     var box = $("tblRoles"), status = $("tblStatus"), diag = $("tblDiag");
     if (!box) return;
-    renderWidths();
+    renderSizes();
     if (diag) diag.textContent = ST.inOffice ? lastFind.report : "";
     if (!current) {
       box.innerHTML = '<div class="muted-note">Select a table to see its columns</div>';
@@ -1191,12 +1232,8 @@
     '<div class="sublabel label-row">Columns' + ST.info("Click a chip to switch it. <b>Category</b> stacked labels such as a year. <b>Label</b> row names. <b>Data</b> numbers, right aligned.", "About column roles") + '</div>' +
     '<div class="mini-chips" id="tblRoles"></div>' +
     '<div class="help tbl-diag" id="tblDiag" data-min="2"></div>' +
-    '<div id="tblColWrap" class="tbl-colw" hidden><div class="group-label label-row">Column widths' + ST.info("Click the columns to change, then type a width. Takes points or formulas: <code>2g</code>, <code>col</code>, <code>gap</code>, <code>1in</code>, or <code>+g</code> and <code>*1.5</code> from each column\'s own width. Only the chosen columns change, so the table gets wider or narrower.", "About column widths") + '</div>' +
-      '<div class="mini-chips" id="tblColChips"></div>' +
-      '<div class="tbl-col-links"><button class="link-btn" id="tblColAll">All</button><button class="link-btn" id="tblColNone">None</button></div>' +
-      '<div class="inline"><label class="field">Width<input type="text" id="tblColW" placeholder="e.g. 2g, col or +g"></label><button class="btn small" id="tblColSet">Apply</button></div>' +
-      '<div class="calc" id="tblColCalc"></div>' +
-      '<div class="btn-row"><button class="btn small" id="tblColRound" title="Round each chosen column to the nearest whole g">Round to g</button><button class="btn small" id="tblColEqual" title="Share the chosen columns\' total width equally">Equal</button></div></div>' +
+    sizeMarkup(DIMS.col, "Column widths", "Click the columns to change, then type a width. Takes points or formulas: <code>2g</code>, <code>col</code>, <code>gap</code>, <code>1in</code>, or <code>+g</code> and <code>*1.5</code> from each column\'s own width. Only the chosen columns change, so the table gets wider or narrower.", "e.g. 2g, col or +g", "Round each chosen column to the nearest whole g", "Share the chosen columns\' total width equally") +
+    sizeMarkup(DIMS.row, "Row heights", "Click the rows to change, then type a height. Takes points or formulas: <code>g</code>, <code>g/2</code>, <code>0.5in</code>, or <code>+g</code> and <code>*1.5</code> from each row\'s own height. PowerPoint keeps a row tall enough for its text, so a row can stay taller than the height you set.", "e.g. g, g/2 or +g", "Round each chosen row to the nearest whole g", "Share the chosen rows\' total height equally") +
     '<div class="btn-row"><button class="btn small" id="tblStack" title="Blank category labels that repeat the row above">Stack repeats</button>' +
       '<button class="btn small" id="tblTrim" title="Remove spaces at the start and end of every cell">Trim spaces</button></div>' +
     '<div class="group-label">Table styles</div>' +
@@ -1237,15 +1274,9 @@
     $("tblUpdate").addEventListener("click", updateAll);
     ST.on("ready", loadStyles);
     ST.on("selection", refreshTable);
-    ST.bindField($("tblColW"), "tblColW", { onInput: function () { markColW(); renderWidths(); } });
-    markColW();
-    $("tblColW").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); setWidths("set", ST.state.tblColW); } });
-    $("tblColSet").addEventListener("click", function () { setWidths("set", ST.state.tblColW); });
-    $("tblColRound").addEventListener("click", function () { setWidths("round"); });
-    $("tblColEqual").addEventListener("click", function () { setWidths("equal"); });
-    $("tblColAll").addEventListener("click", function () { if (current) for (var c = 0; c < current.cols; c++) colPick[c] = true; renderWidths(); });
-    $("tblColNone").addEventListener("click", function () { colPick = {}; renderWidths(); });
-    ST.on("change", renderWidths);
+    wireSizes("col");
+    wireSizes("row");
+    ST.on("change", renderSizes);
     ST.on("textstyles", function () { if (!editing) render(); });
     render();
   }
