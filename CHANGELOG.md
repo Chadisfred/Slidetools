@@ -2,6 +2,13 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.7.1] 2026-11-25
+
+### Fixed
+
+1. Animation, Images and Copies find the selected shape more reliably in the slide: by its box, then by its name when its position reads slightly differently, then by its id. Shapes that use newer PowerPoint features with a fallback are found too.
+2. When a shape still can't be found, the message names it and says why, for example when it sits inside a group and the whole group needs selecting.
+
 ## [3.7.0] 2026-11-25
 
 ### Added

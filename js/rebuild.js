@@ -96,20 +96,52 @@
 
   // Finds the slide element for each API shape: by frame within 1 pt, then by name, then id.
   // tags: element names to look at (top level of the shape tree only).
+  // Finds the slide XML element for each selected shape. Tries, in turn: the same box (within 1 pt),
+  // the same name with a box within 5 pt, a name that only one shape has, then the same id.
+  // Shapes wrapped in mc:AlternateContent (newer features with a fallback) are found inside it.
+  // lastMiss describes the last shape that couldn't be found, for messages.
+  var NS_MC = "http://schemas.openxmlformats.org/markup-compatibility/2006", lastMiss = null;
+  function topShapes(tree, tags) {
+    var out = [];
+    Array.prototype.forEach.call(tree.childNodes, function (el) {
+      if (el.nodeType !== 1) return;
+      if (el.namespaceURI === NS_P && tags.indexOf(el.localName) >= 0) { out.push(el); return; }
+      if (el.namespaceURI === NS_MC && el.localName === "AlternateContent") {
+        var branch = Array.prototype.filter.call(el.childNodes, function (n) { return n.nodeType === 1 && (n.localName === "Choice" || n.localName === "Fallback"); })[0];
+        if (branch) kids(branch, NS_P).forEach(function (k) { if (tags.indexOf(k.localName) >= 0) out.push(k); });
+      }
+    });
+    return out;
+  }
   function matchShapes(doc, shapes, tags) {
     var tree = doc.getElementsByTagNameNS(NS_P, "spTree")[0];
-    var all = tree ? kids(tree, NS_P).filter(function (el) { return tags.indexOf(el.localName) >= 0; }) : [];
+    var all = tree ? topShapes(tree, tags) : [];
     var info = all.map(function (el) { var c = cNvPr(el); return { el: el, name: c ? c.getAttribute("name") : "", id: c ? c.getAttribute("id") : "", box: readBox(el), used: false }; });
+    lastMiss = null;
     return shapes.map(function (p) {
-      var near = function (i) { return i.box && Math.abs(i.box.left - p.left) < 1 && Math.abs(i.box.top - p.top) < 1 && Math.abs(i.box.width - p.width) < 1 && Math.abs(i.box.height - p.height) < 1; };
-      var hit = info.filter(function (i) { return !i.used && near(i); });
+      var near = function (i, tol) { return i.box && Math.abs(i.box.left - p.left) < tol && Math.abs(i.box.top - p.top) < tol && Math.abs(i.box.width - p.width) < tol && Math.abs(i.box.height - p.height) < tol; };
+      var free = info.filter(function (i) { return !i.used; });
+      var hit = free.filter(function (i) { return near(i, 1); });
       if (hit.length > 1) hit = hit.filter(function (i) { return i.name === p.name; }).concat(hit).slice(0, 1);
-      if (!hit.length) hit = info.filter(function (i) { return !i.used && !i.box && p.name && i.name === p.name; });
-      if (!hit.length) hit = info.filter(function (i) { return !i.used && p.id && i.id === String(p.id); });
-      if (!hit.length) return null;
+      if (!hit.length && p.name) hit = free.filter(function (i) { return i.name === p.name && (!i.box || near(i, 5)); });
+      if (!hit.length && p.name) { var named = info.filter(function (i) { return i.name === p.name; }); if (named.length === 1 && !named[0].used) hit = named; }
+      if (!hit.length && p.id) hit = free.filter(function (i) { return i.id === String(p.id); });
+      if (!hit.length) {
+        var inGroup = p.name && Array.prototype.some.call(doc.getElementsByTagNameNS(NS_P, "cNvPr"), function (c) { return c.getAttribute("name") === p.name; });
+        lastMiss = { name: p.name || "", inGroup: !!inGroup, count: info.length };
+        if (window.console) console.warn("Slide Tools: couldn't match", p, info.map(function (i) { return { name: i.name, id: i.id, box: i.box }; }));
+        return null;
+      }
       hit[0].used = true;
       return hit[0].el;
     });
+  }
+  // A plain sentence for a shape matchShapes couldn't find
+  function missText() {
+    var m = lastMiss;
+    if (!m) return "Couldn't find the selected shapes in the slide.";
+    var who = m.name ? m.name : "the selected shape";
+    return m.inGroup ? "Couldn't change " + who + " on its own, because it's inside a group. Select the whole group." : "Couldn't find " + who + " in the slide. Select it again, or try it on its own.";
   }
 
   function serialize(doc) {
@@ -224,5 +256,5 @@
 
   ST.rebuild = { NS_P: NS_P, NS_A: NS_A, EMU: EMU, crc32: crc32, writeZip: writeZip, bytesToB64: bytesToB64,
                  kids: kids, kid: kid, make: make, cNvPr: cNvPr, xfrmOf: xfrmOf, readBox: readBox, writeBox: writeBox,
-                 matchShapes: matchShapes, supported: supported, edit: edit, _mediaHelper: mediaHelper };
+                 matchShapes: matchShapes, missText: missText, supported: supported, edit: edit, _mediaHelper: mediaHelper };
 })();

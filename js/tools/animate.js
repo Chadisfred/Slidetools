@@ -180,7 +180,7 @@
         });
       }).then(function (res) {
         if (res === null) { ST.toast("Nothing was changed."); return; }
-        ST.toast(res.count ? "Animated " + ST.plural(res.count, "shape") + (res.count > 1 && secs(ST.state.anStagger) > 0 ? ", " + ST.nice(secs(ST.state.anStagger)) + " s apart" : "") + "." : "Couldn't find the selected shapes in the slide.", !res.count);
+        ST.toast(res.count ? "Animated " + ST.plural(res.count, "shape") + (res.count > 1 && secs(ST.state.anStagger) > 0 ? ", " + ST.nice(secs(ST.state.anStagger)) + " s apart" : "") + "." : R.missText(), !res.count);
         ST.refreshSelection();
       }, function (e) { ST.toast("Couldn't change the slide. " + (ST.errorText ? ST.errorText(e) : ""), true); });
     });
