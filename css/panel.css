@@ -648,3 +648,6 @@ input[type=text]:disabled { opacity: 0.6; }
 .an-keyed-note .link-btn { margin-left: 4px; }
 .an-dim { opacity: 0.45; }
 .tbl-col-links { display: flex; gap: 16px; margin-top: -4px; }
+/* Animation: repeat and copy and paste */
+.an-repeat { display: grid; gap: 8px; }
+.an-repeat[hidden], .an-repeat-count[hidden] { display: none; }

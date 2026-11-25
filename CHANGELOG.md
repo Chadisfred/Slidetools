@@ -2,6 +2,14 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.8.0] 2026-11-25
+
+### Added
+
+1. Animation: Repeat for emphasis. Play a pulse, spin, dim or Attention effect such as Flash a number of times, until the next click, or until the end of the slide.
+2. Animation: Copy animations and Paste animations. Copy the selected shapes' animations as a set, keeping their order, clicks, with and after, and delays, and paste the set onto other shapes on any slide.
+3. Animation: Repeat set adds the selected shapes' animations again, after themselves.
+
 ## [3.7.1] 2026-11-25
 
 ### Fixed

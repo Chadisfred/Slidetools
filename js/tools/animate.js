@@ -15,7 +15,7 @@
   var defaults = {
     anKind: "entr", anFade: true, anMove: true, anDir: "up", anDist: "20", anScale: false, anScaleVal: "90", anRotate: false, anRotVal: "-12",
     anPulse: true, anPulseVal: "106", anSpin: false, anSpinVal: "360", anDim: false, anDimVal: "40",
-    anEase: "power2.out", anDur: "0.5", anDelay: "0", anStart: "click", anStagger: "0.08", anOrder: "selection", anReplace: true, anPresetName: "", anKeys: "", anGroup: "basics"
+    anEase: "power2.out", anDur: "0.5", anDelay: "0", anStart: "click", anStagger: "0.08", anOrder: "selection", anReplace: true, anPresetName: "", anKeys: "", anGroup: "basics", anRepeat: "1", anRepeatMode: "count"
   };
   ST.addDefaults(defaults);
   var KEYS = Object.keys(defaults).filter(function (k) { return k !== "anPresetName" && k !== "anReplace" && k !== "anOrder" && k !== "anGroup"; });
@@ -97,13 +97,20 @@
     var dur = secs(St.anDur), delay = secs(St.anDelay);
     if (!(dur > 0 && dur <= 60)) return { bad: "Duration must be more than 0 and up to 60 seconds." };
     if (delay === null || delay < 0) return { bad: "Delay must be 0 or more seconds." };
+    var repeat = 1;
+    if (St.anRepeatMode === "click" || St.anRepeatMode === "slide") repeat = St.anRepeatMode;
+    else {
+      var rc = plainNum(St.anRepeat === undefined || St.anRepeat === "" ? "1" : St.anRepeat);
+      if (!(rc >= 1 && rc <= 99 && Math.round(rc) === rc)) { if (kind === "emph" || (St.anKeys && keyed(St.anKeys) && keyed(St.anKeys).kind === "emph")) return { bad: "Repeat must be a whole number from 1 to 99." }; rc = 1; }
+      repeat = rc;
+    }
     if (St.anKeys) {
       var def = keyed(St.anKeys);
       if (!def) return { bad: "That keyframed effect isn't available in this version. Pick another." };
-      return { spec: { kind: def.kind, keys: def.keys, ease: def.e, dur: Math.round(dur * 1000), delay: Math.round(delay * 1000), keyed: def.id } };
+      return { spec: { kind: def.kind, keys: def.keys, ease: def.e, dur: Math.round(dur * 1000), delay: Math.round(delay * 1000), keyed: def.id, repeat: def.kind === "emph" ? repeat : 1 } };
     }
     if (!A.parseEase(St.anEase)) return { bad: "Ease " + St.anEase + " isn't one it knows. Try power2.out, back.out(1.7) or bounce.out." };
-    var spec = { kind: kind, ease: A.easeText(A.readEase(St.anEase)), dur: Math.round(dur * 1000), delay: Math.round(delay * 1000) };
+    var spec = { kind: kind, ease: A.easeText(A.readEase(St.anEase)), dur: Math.round(dur * 1000), delay: Math.round(delay * 1000), repeat: kind === "emph" ? repeat : 1 };
     if (kind === "emph") {
       if (St.anPulse) { var p = plainNum(St.anPulseVal); if (!(p > 0 && p <= 1000)) return { bad: "Pulse must be a percentage, such as 106." }; spec.pulse = p / 100; }
       if (St.anSpin) { var sp = plainNum(St.anSpinVal); if (sp === null) return { bad: "Spin must be a number of degrees, such as 360." }; spec.spin = sp; }
@@ -125,7 +132,16 @@
     return { spec: spec };
   }
   function snapshot() { var o = {}; KEYS.forEach(function (k) { o[k] = ST.state[k]; }); return o; }
+  function repeatText(St) {
+    if (St.anRepeatMode === "click") return ", until the next click";
+    if (St.anRepeatMode === "slide") return ", until the end of the slide";
+    var n = plainNum(St.anRepeat); return n > 1 ? ", " + n + " times" : "";
+  }
   function describe(St) {
+    var em = St.anKind === "emph" || (St.anKeys && keyed(St.anKeys) && keyed(St.anKeys).kind === "emph");
+    return describeBase(St) + (em ? repeatText(St) : "");
+  }
+  function describeBase(St) {
     var kind = { entr: "Entrance", exit: "Exit", emph: "Emphasis" }[St.anKind] || "Entrance", parts = [];
     var def = St.anKeys && keyed(St.anKeys);
     if (def) return ({ entr: "Entrance", exit: "Exit", emph: "Emphasis" })[def.kind] + ": " + def.name;
@@ -203,6 +219,88 @@
       }, function (e) { ST.toast("Couldn't change the slide. " + (ST.errorText ? ST.errorText(e) : ""), true); });
     });
   }
+
+  // ---------- Copy, paste and repeat sets ----------
+  // The copied set lives in memory and in this session's storage, so it can be pasted on another slide.
+  var COPY_KEY = "slideToolsAnimSet", copied = null;
+  try { copied = JSON.parse(sessionStorage.getItem(COPY_KEY) || "null"); } catch (e) { copied = null; }
+  function renderCopied() {
+    var el = $("anCopied"), b = $("anPaste");
+    if (!el) return;
+    b.disabled = !copied;
+    el.textContent = copied ? "Copied: " + ST.plural(copied.effects.length, "animation") + ", " + ST.plural(copied.shapes, "shape") + "." : "Nothing copied yet.";
+  }
+  function spidsOf(doc, items) {
+    return R.matchShapes(doc, boxesOf(items), SHAPE_KINDS).map(function (el) {
+      if (!el) return null;
+      var c = R.cNvPr(el);
+      return c ? { spid: c.getAttribute("id"), hasText: el.localName === "sp" && !!R.kid(el, A.NS_P, "txBody") } : null;
+    });
+  }
+  function copySet() {
+    if (!ST.needOffice()) return;
+    if (!R.supported()) { ST.toast("Copying animations needs PowerPoint API 1.8.", true); return; }
+    ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
+      items = orderItems(items, ST.state.anOrder);
+      var set = null, missing = false;
+      return R.edit(context, function (doc) {
+        var t = spidsOf(doc, items);
+        missing = t.some(function (x) { return !x; });
+        // The set's shapes follow the panel's order rather than the order they first animate
+        var got = t.filter(Boolean).map(function (x) { return x.spid; });
+        set = A.captureSet(doc, got);
+        if (set.effects.length) {
+          var remap = set.order.map(function (sp) { return got.indexOf(sp); });
+          set.effects.forEach(function (fx) { fx.src = remap[fx.src]; });
+          set.shapes = Math.max.apply(null, remap) + 1;
+        }
+        return { count: 0 }; // read only: nothing is swapped
+      }).then(function () {
+        if (!set || !set.effects.length) { ST.toast(missing ? R.missText() : "The selected shapes have no animations of their own.", true); return; }
+        copied = { effects: set.effects, shapes: set.shapes };
+        try { sessionStorage.setItem(COPY_KEY, JSON.stringify(copied)); } catch (e) { /* kept in memory for now */ }
+        renderCopied();
+        ST.toast("Copied " + ST.plural(set.effects.length, "animation") + " from " + ST.plural(set.shapes, "shape") + ".");
+      });
+    }, "Select the shapes whose animations you want to copy.");
+  }
+  // set: a set to add, or null to paste the copied one. same: add each shape's own set again.
+  function pasteSet(set, same) {
+    if (!same && !(set || copied)) { ST.toast("Copy a set of animations first.", true); return; }
+    if (!ST.needOffice()) return;
+    if (!R.supported()) { ST.toast("This version of PowerPoint can't change animations. It needs PowerPoint API 1.8.", true); return; }
+    var use = set || copied;
+    ST.setRepeat(same ? "Repeat animation set" : "Paste animations", function () { if (same) repeatSet(); else pasteSet(use); });
+    ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
+      items = orderItems(items, ST.state.anOrder);
+      var added = 0, shapes = 0, missing = false, nothing = false;
+      return ST.confirmSwap(same ? "repeat animations" : "paste animations").then(function (ok) {
+        if (!ok) return null;
+        return R.edit(context, function (doc) {
+          var t = spidsOf(doc, items), targets = t.filter(Boolean);
+          missing = t.some(function (x) { return !x; });
+          if (!targets.length) return { count: 0 };
+          var s = use;
+          if (same) {
+            s = A.captureSet(doc, targets.map(function (x) { return x.spid; }));
+            if (!s.effects.length) { nothing = true; return { count: 0 }; }
+            var ids = targets.map(function (x) { return x.spid; });
+            s.effects.forEach(function (fx) { fx.src = ids.indexOf(s.order[fx.src]); });
+          }
+          added = A.addSet(doc, s, targets); shapes = targets.length;
+          return { count: added ? targets.length : 0 };
+        });
+      }).then(function (res) {
+        if (res === null) { ST.toast("Nothing was changed."); return; }
+        if (nothing) { ST.toast("The selected shapes have no animations of their own to repeat.", true); return; }
+        if (!added) { ST.toast(missing ? R.missText() : "Select the shapes to paste onto first.", true); return; }
+        var note = !same && use.shapes !== shapes ? " (the copied set had " + ST.plural(use.shapes, "shape") + ", so it " + (use.shapes > shapes ? "wraps round" : "repeats across them") + ")" : "";
+        ST.toast((same ? "Repeated " : "Pasted ") + ST.plural(added, "animation") + (same ? "" : " onto " + ST.plural(shapes, "shape")) + note + ".");
+        ST.refreshSelection();
+      }, function (e) { ST.toast("Couldn't change the slide. " + (ST.errorText ? ST.errorText(e) : ""), true); });
+    }, same ? "Select the shapes whose animations you want to repeat." : "Select the shapes to paste onto.");
+  }
+  function repeatSet() { pasteSet(null, true); }
 
   // ---------- Capture ----------
   function captureSelection() {
@@ -332,7 +430,8 @@
       var sx = f.sx || f.scale, sy = f.sy || f.scale;
       return { offset: f.t, opacity: f.opacity, transform: "translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px) scale(" + sx.toFixed(4) + "," + sy.toFixed(4) + ") rotate(" + f.rot.toFixed(2) + "deg)" };
     });
-    running = box.animate(kf, { duration: r.spec.dur, delay: 150, fill: "both", easing: "linear" });
+    var its = typeof r.spec.repeat === "number" ? r.spec.repeat : r.spec.kind === "emph" && r.spec.repeat ? 3 : 1;
+    running = box.animate(kf, { duration: r.spec.dur, delay: 150, fill: "both", easing: "linear", iterations: its });
     // An exit leaves the sample hidden, so bring it back after a moment
     if (r.spec.kind === "exit") running.onfinish = function () { setTimeout(function () { if (running) { running.cancel(); running = null; } }, 600); };
     drawCurve(r.spec.keys ? "none" : r.spec.ease);
@@ -367,6 +466,8 @@
       toggle("anSpin", "Spin", '<label class="field an-sub">Degrees<input type="text" id="anSpinVal" inputmode="decimal"></label>') +
       toggle("anDim", "Dim", '<label class="field an-sub">Fade to %<input type="text" id="anDimVal" inputmode="decimal"></label>') +
     '</div>' +
+    '<div class="an-repeat"><div class="field"><span class="label-row">Repeat' + ST.info("How many times the emphasis plays, or until the next click or the end of the slide, like PowerPoint\'s Timing settings.", "About repeat") + '</span>' + seg("anRepeatMode", [["count", "Times"], ["click", "Until click", "Until the next click"], ["slide", "Until end", "Until the end of the slide"]]) + '</div>' +
+      '<label class="field an-repeat-count">Times<div class="stepper"><input type="text" id="anRepeat" inputmode="numeric"><button id="anRepeatLess" title="Fewer times">&minus;</button><button id="anRepeatMore" title="More times">+</button></div></label></div>' +
     '<div class="group-label label-row">Ease' + ST.info("Named the way GSAP names them. Power 1 to 4 get stronger, Back overshoots, Elastic springs and Bounce bounces. In starts slowly, Out ends slowly. You can also type a name such as <code>back.out(1.7)</code>.", "About eases") + '</div>' +
     '<div class="an-ease"><div class="an-ease-controls"><select id="anFamily" aria-label="Ease">' + FAMILIES.map(function (f) { return '<option value="' + f[0] + '">' + f[1] + '</option>'; }).join("") + '</select>' +
       seg("anEaseDir", [["in", "In"], ["out", "Out"], ["inOut", "In out"]]) +
@@ -377,6 +478,10 @@
       '<label class="field">Order' + seg("anOrder", [["selection", "Picked", "In the order PowerPoint gives the selection"], ["lr", "&rarr;", "Left to right"], ["tb", "&darr;", "Top to bottom"]]) + '</label></div>' +
     '<div class="toggle" data-min="2"><span class="label-row">Replace their animations' + ST.info("Removes the shapes\' earlier animations first, so applying again doesn\'t add another.", "About replacing") + '</span><label class="switch"><input type="checkbox" id="anReplace"><span></span></label></div>' +
     '<button class="btn primary" id="anApply">Apply to selection</button>' +
+    '<div class="group-label label-row">Copy and paste' + ST.info("<b>Copy animations</b> keeps the selected shapes\' animations as a set, in order, with their clicks, with and after, and delays. <b>Paste animations</b> adds the set to the selected shapes, on this or another slide, after their own animations: the first copied shape\'s animations go to the first selected shape, and so on, in the Order chosen below. <b>Repeat set</b> plays the selected shapes\' animations again after themselves.", "About copy and paste") + '</div>' +
+    '<div class="btn-row an-copy-row"><button class="btn small" id="anCopy" title="Copy the selected shapes\' animations as a set">Copy animations</button><button class="btn small" id="anPaste" title="Add the copied set to the selected shapes" disabled>Paste animations</button></div>' +
+    '<button class="btn small" id="anRepeatSet" title="Add the selected shapes\' animations again, after themselves">Repeat set</button>' +
+    '<div class="help" id="anCopied">Nothing copied yet.</div>' +
     '<div class="inline" data-min="2"><label class="field">Preset name<input type="text" id="anPresetName" maxlength="32" placeholder="e.g. Card in"></label>' +
       '<div class="pair"><button class="btn small" id="anSave" title="Save these settings as a preset in this presentation">Save</button><button class="btn small" id="anCapture" title="Save the selected shape\'s own animations as a preset">Capture</button></div></div>' +
     '<button class="btn small" id="anRemove" data-min="2" title="Remove the selected shapes\' animations">Remove animations from selection</button>';
@@ -389,6 +494,10 @@
     $("anFamily").value = e.family === "power0" ? "none" : e.family;
     Array.prototype.forEach.call($("anEaseDir").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === e.dir); b.disabled = e.family === "none"; });
     var emph = ST.state.anKind === "emph", exit = ST.state.anKind === "exit";
+    var mode = ST.state.anRepeatMode || "count";
+    Array.prototype.forEach.call($("anRepeatMode").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === mode); });
+    document.querySelector(".an-repeat").hidden = !emph;
+    document.querySelector(".an-repeat-count").hidden = mode !== "count";
     document.querySelector(".an-move-group").hidden = emph;
     document.querySelector(".an-emph-group").hidden = !emph;
     $("anScaleLabel").textContent = exit ? "To %" : "From %";
@@ -432,6 +541,17 @@
     $("anFamily").addEventListener("change", function () { setEaseFromControls(); });
     Array.prototype.forEach.call($("anEaseDir").children, function (b) { b.addEventListener("click", function (e) { e.preventDefault(); setEaseFromControls(b.getAttribute("data-v")); }); });
     $("anPlay").addEventListener("click", play);
+    ST.bindField($("anRepeat"), "anRepeat", { onInput: function () { queuePlay(); } });
+    Array.prototype.forEach.call($("anRepeatMode").children, function (b) {
+      b.addEventListener("click", function (e) { e.preventDefault(); ST.state.anRepeatMode = b.getAttribute("data-v"); ST.save(); renderSegs(); ST.changed(); play(); });
+    });
+    [["anRepeatLess", -1], ["anRepeatMore", 1]].forEach(function (x) {
+      $(x[0]).addEventListener("click", function (e) { e.preventDefault(); var n = Math.round(plainNum(ST.state.anRepeat) || 1) + x[1]; ST.state.anRepeat = String(Math.max(1, Math.min(99, n))); $("anRepeat").value = ST.state.anRepeat; ST.save(); ST.changed(); queuePlay(); });
+    });
+    $("anCopy").addEventListener("click", copySet);
+    $("anPaste").addEventListener("click", function () { pasteSet(null); });
+    $("anRepeatSet").addEventListener("click", repeatSet);
+    renderCopied();
     $("anApply").addEventListener("click", function () { apply(null); });
     $("anSave").addEventListener("click", savePreset);
     $("anCapture").addEventListener("click", captureSelection);
@@ -457,5 +577,5 @@
     build: build
   });
 
-  ST._animate = { specFrom: specFrom, STARTERS: STARTERS, KEYED: KEYED, GROUPS: GROUPS, apply: apply, presets: function () { return presets; }, setPresets: function (p) { presets = p; renderPresets(); }, usePreset: usePreset, play: play };
+  ST._animate = { copySet: copySet, pasteSet: pasteSet, repeatSet: repeatSet, copied: function () { return copied; }, specFrom: specFrom, STARTERS: STARTERS, KEYED: KEYED, GROUPS: GROUPS, apply: apply, presets: function () { return presets; }, setPresets: function (p) { presets = p; renderPresets(); }, usePreset: usePreset, play: play };
 })();

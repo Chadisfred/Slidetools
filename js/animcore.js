@@ -247,9 +247,12 @@
   function finishEffect(doc, spec, opts, dur, kids) {
     var spid = String(opts.spid), kind = spec.kind;
     if (kind === "exit") kids.push(setVisibility(doc, spid, "hidden", Math.max(0, dur - 1)));
-    var ctn = P(doc, "cTn", { id: 0, presetID: 0, presetClass: kind, presetSubtype: 0, fill: "hold", grpId: opts.grpId || 0, nodeType: opts.nodeType || "clickEffect" },
-      [cond(doc, Math.max(0, Math.round(opts.delay || 0))), P(doc, "childTnLst", null, kids)]);
-    return { node: P(doc, "par", null, [ctn]), end: Math.round(opts.delay || 0) + dur };
+    // Repeat: a count, or until the next click or the end of the slide (emphasis only)
+    var rep = kind === "emph" ? spec.repeat : null, count = typeof rep === "number" && rep > 1 ? rep : 0, forever = rep === "click" || rep === "slide";
+    var attrs = { id: 0, presetID: 0, presetClass: kind, presetSubtype: 0, repeatCount: count ? count * 1000 : forever ? "indefinite" : null, fill: "hold", grpId: opts.grpId || 0, nodeType: opts.nodeType || "clickEffect" };
+    var endOnClick = rep === "click" ? P(doc, "endCondLst", null, [P(doc, "cond", { evt: "onNext", delay: 0 }, [P(doc, "tgtEl", null, [P(doc, "sldTgt")])])]) : null;
+    var ctn = P(doc, "cTn", attrs, [cond(doc, Math.max(0, Math.round(opts.delay || 0))), endOnClick, P(doc, "childTnLst", null, kids)].filter(Boolean));
+    return { node: P(doc, "par", null, [ctn]), end: Math.round(opts.delay || 0) + dur * (count || 1) };
   }
 
   // ---------- Timing tree ----------
@@ -284,13 +287,13 @@
   function condDelay(ctn) { var s = kidP(ctn, "stCondLst"), c = s && kidP(s, "cond"); var d = c ? c.getAttribute("delay") : "0"; return d === "indefinite" ? 0 : (+d || 0); }
   // When an effect ends, from its own delay and its behaviours' delays and durations
   function effectEnd(effectPar) {
-    var ctn = kidP(effectPar, "cTn"), start = condDelay(ctn), end = start;
+    var ctn = kidP(effectPar, "cTn"), start = condDelay(ctn), end = start, times = Math.max(1, (+ctn.getAttribute("repeatCount") || 1000) / 1000);
     Array.prototype.forEach.call(effectPar.getElementsByTagNameNS(NS_P, "cBhvr"), function (b) {
       var c = kidP(b, "cTn"); if (!c) return;
       var d = +c.getAttribute("dur") || 0; if (c.getAttribute("autoRev") === "1") d *= 2;
       end = Math.max(end, start + condDelay(c) + d);
     });
-    return end;
+    return start + (end - start) * times;
   }
   function clickGroups(list) { return kidsP(list, "par"); }
   function stepsOf(group) { var c = kidP(group, "cTn"), l = c && kidP(c, "childTnLst"); return l ? kidsP(l, "par") : []; }
@@ -342,11 +345,12 @@
     return max + 1;
   }
   // Shapes with text need a build entry so PowerPoint treats the whole shape as one
-  function addBuild(doc, spid, grpId) {
+  // build "p" when effects target paragraphs, otherwise the whole shape with its text
+  function addBuild(doc, spid, grpId, build) {
     var t = timingOf(doc), bld = kidP(t, "bldLst");
     if (!bld) { bld = P(doc, "bldLst"); t.appendChild(bld); }
     if (kidsP(bld).some(function (b) { return b.getAttribute("spid") === String(spid) && b.getAttribute("grpId") === String(grpId); })) return;
-    bld.appendChild(P(doc, "bldP", { spid: spid, grpId: grpId, animBg: 1 }));
+    bld.appendChild(P(doc, "bldP", build === "p" ? { spid: spid, grpId: grpId, build: "p" } : { spid: spid, grpId: grpId, animBg: 1 }));
   }
 
   // ---------- Remove ----------
@@ -405,6 +409,40 @@
   }
   // Puts captured effects on shapes. The first effect of each shape follows its job's start and
   // delay. Later effects keep how they began.
+  // ---------- Sets of animations ----------
+  // A set: the effects of several shapes in sequence order, with their starts and delays. Shape k
+  // is the k-th shape to appear in the sequence. Pasting maps it to target k (round again when
+  // there are fewer targets) and adds the effects after the slide's own.
+  function captureSet(doc, spids) {
+    var want = spids.map(String), order = [], ser = new XMLSerializer(), effects = [];
+    effectNodes(doc).forEach(function (p) {
+      var on = spidsIn(p);
+      if (!on.length || !on.every(function (s) { return want.indexOf(s) >= 0; })) return;
+      if (order.indexOf(on[0]) < 0) order.push(on[0]);
+      var k = order.indexOf(on[0]), c = p.cloneNode(true), nt = kidP(c, "cTn").getAttribute("nodeType");
+      Array.prototype.forEach.call(c.getElementsByTagNameNS(NS_P, "spTgt"), function (s) { s.setAttribute("spid", "__SPID_" + k + "__"); });
+      effects.push({ src: k, xml: ser.serializeToString(c), start: nt === "withEffect" ? "with" : nt === "afterEffect" ? "after" : "click", text: c.getElementsByTagNameNS(NS_P, "txEl").length > 0 });
+    });
+    return { effects: effects, shapes: order.length, order: order };
+  }
+  // targets: [{ spid, hasText }] in order. Returns the number of effects added.
+  function addSet(doc, set, targets) {
+    if (!set || !set.effects.length || !targets.length) return 0;
+    var list = mainSeqList(doc, true), n = 0;
+    set.effects.forEach(function (fx) {
+      var t = targets[fx.src % targets.length];
+      var text = fx.xml.replace(/__SPID_\d+__/g, String(t.spid));
+      var parsed = new DOMParser().parseFromString(text, "application/xml").documentElement;
+      if (!parsed || parsed.localName !== "par") return;
+      var node = doc.importNode(parsed, true), ctn = kidP(node, "cTn"), grp = nextGrpId(doc, t.spid);
+      ctn.setAttribute("grpId", String(grp));
+      placeEffect(doc, list, node, fx.start);
+      if (t.hasText || fx.text) addBuild(doc, t.spid, grp, fx.text ? "p" : null);
+      n++;
+    });
+    renumber(doc);
+    return n;
+  }
   function addCaptured(doc, effects, jobs) {
     var list = mainSeqList(doc, true), n = 0;
     jobs.forEach(function (j) {
@@ -436,5 +474,5 @@
 
   ST.anim = { readEase: readEase, easeText: easeText, parseEase: parseEase, samples: samples, frames: frames, keyFrames: keyFrames, buildEffect: buildEffect,
               addEffects: addEffects, removeFor: removeFor, capture: capture, addCaptured: addCaptured, slideSize: slideSize,
-              effectNodes: effectNodes, renumber: renumber, NS_P: NS_P, NS_A: NS_A };
+              effectNodes: effectNodes, renumber: renumber, captureSet: captureSet, addSet: addSet, NS_P: NS_P, NS_A: NS_A };
 })();
