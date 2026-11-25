@@ -163,7 +163,7 @@
           });
         }).then(function (r) {
           if (r.cancelled) { ST.toast("The picture wasn't placed."); return; }
-          if (!r.placed) { ST.toast("Couldn't find the selected shapes in the slide.", true); return; }
+          if (!r.placed) { ST.toast(R.missText(), true); return; }
           ST.toast("Placed the picture in " + ST.plural(r.placed, "shape") + ". Use PowerPoint's Crop button to pan or zoom it." + (r.text ? " Text in the shape was removed, since pictures can't hold text." : ""));
           ST.refreshSelection();
         }, function (e) { ST.toast(failText(e), true); });
