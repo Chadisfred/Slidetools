@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.7.0] 2026-11-25
+
+### Added
+
+1. Tables: Row heights, alongside Column widths. Pick rows with chips that show their height in g, then type a height such as `g`, `g/2`, `+g` or `*1.5`. Round to g and Equal work on rows too. A row whose text needs more room stays taller, and the panel says which rows did.
+
 ## [3.6.0] 2026-11-24
 
 ### Added
