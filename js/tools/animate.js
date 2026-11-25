@@ -50,15 +50,16 @@
   var KEYED = [];
   function add(group, k) { k.group = group; KEYED.push(k); }
   DIRS.forEach(function (d) {
-    add("fade", K("bigfade-" + d[0], "Big fade " + d[1], "entr", 0.8, "power2.out", Object.assign({ o: [[0, 0], [1, 1]] }, moveTrack(d[0], [[0, 0.5], [1, 0]], true, true))));
-    add("fade", K("slide-" + d[0], "Slide " + d[1], "entr", 0.6, "power3.out", moveTrack(d[0], [[0, 1], [1, 0]], false, true)));
-    add("back", K("backin-" + d[0], "Back in " + d[1], "entr", 1, "power1.inOut", Object.assign({ o: [[0, 0.7], [0.8, 0.7], [1, 1]], s: [[0, 0.7], [0.8, 0.7], [1, 1]] }, moveTrack(d[0], [[0, 0.8], [0.8, 0], [1, 0]], true, true))));
-    add("bounce", K("bouncein-" + d[0], "Bounce in " + d[1], "entr", 1, "power2.out", Object.assign({ o: [[0, 0], [0.6, 1]] }, moveTrack(d[0], [[0, 3], [0.6, -0.25], [0.75, 0.1], [0.9, -0.05], [1, 0]], false, true))));
-    add("zoom", K("zoomin-" + d[0], "Zoom in " + d[1], "entr", 0.8, "power2.out", Object.assign({ o: [[0, 0], [0.6, 1]], s: [[0, 0.1], [0.6, 0.48, "power2.in"], [1, 1]] }, moveTrack(d[0], [[0, 3], [0.6, -0.3, "power2.in"], [1, 0]], false, true))));
-    add("exit", K("slideout-" + d[0], "Slide out " + d[1], "exit", 0.6, "power3.in", moveTrack(d[0], [[0, 0], [1, 1]], false, false)));
+    // One long GSAP curve per motion, or overlapping phases, so the speed never stalls at a keyframe
+    add("fade", K("bigfade-" + d[0], "Big fade " + d[1], "entr", 0.9, "power3.out", Object.assign({ o: [[0, 0], [0.6, 1, "power1.out"]] }, moveTrack(d[0], [[0, 0.5], [1, 0, "power3.out"]], true, true))));
+    add("fade", K("slide-" + d[0], "Slide " + d[1], "entr", 0.7, "expo.out", moveTrack(d[0], [[0, 1], [1, 0, "expo.out"]], false, true)));
+    add("back", K("backin-" + d[0], "Back in " + d[1], "entr", 1, "power3.out", Object.assign({ o: [[0, 0.7], [0.75, 1, "power1.out"]], s: [[0, 0.7], [0.55, 0.7], [1, 1, "back.out(1.7)"]] }, moveTrack(d[0], [[0, 0.8], [0.75, 0, "power3.out"]], true, true))));
+    add("bounce", K("bouncein-" + d[0], "Bounce in " + d[1], "entr", 1, "elastic.out(1, 0.5)", Object.assign({ o: [[0, 0], [0.35, 1, "power1.out"]] }, moveTrack(d[0], [[0, 2], [1, 0, "elastic.out(1, 0.5)"]], false, true))));
+    add("zoom", K("zoomin-" + d[0], "Zoom in " + d[1], "entr", 0.8, "power3.out", Object.assign({ o: [[0, 0], [0.4, 1, "power1.out"]], s: [[0, 0.1], [1, 1, "power3.out"]] }, moveTrack(d[0], [[0, 2], [1, 0, "back.out(1.4)"]], false, true))));
+    add("exit", K("slideout-" + d[0], "Slide out " + d[1], "exit", 0.6, "expo.in", moveTrack(d[0], [[0, 0], [1, 1, "expo.in"]], false, false)));
   });
-  add("bounce", K("bouncein", "Bounce in", "entr", 0.75, "power2.out", { o: [[0, 0], [0.6, 1]], s: [[0, 0.3], [0.2, 1.1], [0.4, 0.9], [0.6, 1.03], [0.8, 0.97], [1, 1]] }));
-  add("zoom", K("jackbox", "Jack in the box", "entr", 1, "power1.inOut", { o: [[0, 0], [1, 1]], s: [[0, 0.1], [0.5, 0.8], [1, 1]], r: [[0, 30], [0.5, -10], [0.7, 3], [1, 0]] }));
+  add("bounce", K("bouncein", "Bounce in", "entr", 0.9, "elastic.out(1, 0.45)", { o: [[0, 0], [0.35, 1, "power1.out"]], s: [[0, 0.3], [1, 1, "elastic.out(1, 0.45)"]] }));
+  add("zoom", K("jackbox", "Jack in the box", "entr", 1, "back.out(1.6)", { o: [[0, 0], [0.3, 1, "power1.out"]], s: [[0, 0.1], [1, 1, "back.out(1.6)"]], r: [[0, 30], [1, 0, "elastic.out(1, 0.35)"]] }));
   add("roll", K("rollin", "Roll in", "entr", 0.8, "power1.out", { o: [[0, 0], [1, 1]], x: [[0, -1], [1, 0]], r: [[0, -120], [1, 0]] }));
   add("roll", K("rotatein", "Rotate in", "entr", 0.8, "power2.out", { o: [[0, 0], [1, 1]], r: [[0, -200], [1, 0]] }));
   add("roll", K("spinin", "Spin in", "entr", 1, "power3.out", { o: [[0, 0], [0.3, 1]], s: [[0, 0.05], [1, 1]], r: [[0, -360], [1, 0]] }));
@@ -74,11 +75,11 @@
   add("attention", K("swing", "Swing", "emph", 1, "power1.inOut", { r: [[0, 0], [0.2, 15], [0.4, -10], [0.6, 5], [0.8, -5], [1, 0]] }));
   add("attention", K("tada", "Tada", "emph", 1, "power1.inOut", { s: [[0, 1], [0.1, 0.9], [0.2, 0.9], [0.3, 1.1], [0.9, 1.1], [1, 1]], r: [[0, 0], [0.1, -3], [0.2, -3], [0.3, 3], [0.4, -3], [0.5, 3], [0.6, -3], [0.7, 3], [0.8, -3], [0.9, 3], [1, 0]] }));
   add("attention", K("wobble", "Wobble", "emph", 1, "power1.inOut", { x: [[0, 0], [0.15, -0.25], [0.3, 0.2], [0.45, -0.15], [0.6, 0.1], [0.75, -0.05], [1, 0]], r: [[0, 0], [0.15, -5], [0.3, 3], [0.45, -3], [0.6, 2], [0.75, -1], [1, 0]] }));
-  add("exit", K("backout", "Back out", "exit", 1, "power1.inOut", { o: [[0, 1], [0.2, 0.7], [1, 0.7]], s: [[0, 1], [0.2, 0.7], [1, 0.7]], Y: [[0, 0], [0.2, 0], [1, 0.8]] }));
+  add("exit", K("backout", "Back out", "exit", 1, "power3.in", { o: [[0, 1], [0.45, 0.7, "power1.in"]], s: [[0, 1], [0.45, 0.7, "back.in(1.7)"]], Y: [[0, 0], [0.25, 0], [1, 0.8, "power3.in"]] }));
   add("exit", K("bounceout", "Bounce out", "exit", 0.75, "power1.inOut", { o: [[0, 1], [0.55, 1], [1, 0]], s: [[0, 1], [0.2, 0.9], [0.5, 1.1], [0.55, 1.1], [1, 0.3]] }));
   add("exit", K("zoomout", "Zoom out", "exit", 0.6, "power2.in", { o: [[0, 1], [0.5, 0], [1, 0]], s: [[0, 1], [0.5, 0.3], [1, 0.3]] }));
   add("exit", K("rollout", "Roll out", "exit", 0.8, "power1.in", { o: [[0, 1], [1, 0]], x: [[0, 0], [1, 1]], r: [[0, 0], [1, 120]] }));
-  add("exit", K("bigfadeout", "Big fade out", "exit", 0.8, "power2.in", { o: [[0, 1], [1, 0]], Y: [[0, 0], [1, 0.5]] }));
+  add("exit", K("bigfadeout", "Big fade out", "exit", 0.8, "power3.in", { o: [[0, 1], [1, 0, "power2.in"]], Y: [[0, 0], [1, 0.5, "power3.in"]] }));
   var GROUPS = [["basics", "Basics"], ["fade", "Fade and slide"], ["back", "Back"], ["bounce", "Bounce"], ["zoom", "Zoom"], ["roll", "Roll and spin"], ["attention", "Attention"], ["exit", "Exits"], ["mine", "Your presets"]];
   function keyed(id) { return KEYED.filter(function (k) { return k.id === id; })[0] || null; }
 

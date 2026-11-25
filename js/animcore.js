@@ -70,8 +70,16 @@
     return e.dir === "in" ? fin : e.dir === "inOut" ? inOutOf(fin) : outOf(fin);
   }
   // Time points to sample: more for springy eases so the wobble survives
-  function samples(text) {
-    var e = readEase(text), n = !e || e.family === "none" || e.family === "power0" ? 1 : (e.family === "elastic" || e.family === "bounce" ? 24 : 12);
+  // Points along a curve for a move lasting ms: about one every 20 ms, more for springy curves.
+  // PowerPoint draws straight lines between them, so enough points make the curve look smooth.
+  function pointsFor(e, ms, lo, springLo, hi) {
+    if (!e || e.family === "none" || e.family === "power0") return 1;
+    var springy = e.family === "elastic" || e.family === "bounce" || e.family === "back";
+    var n = Math.round((ms > 0 ? ms : 500) / 20);
+    return Math.max(springy ? springLo : lo, Math.min(hi, n));
+  }
+  function samples(text, dur) {
+    var e = readEase(text), n = pointsFor(e, dur, 12, e && (e.family === "elastic" || e.family === "bounce") ? 24 : 12, e && (e.family === "elastic" || e.family === "bounce") ? 60 : 50);
     var out = []; for (var i = 0; i <= n; i++) out.push(i / n);
     return out;
   }
@@ -84,7 +92,7 @@
   // Each frame: { t, opacity, dx, dy, dxPt, dyPt, scale, rot } relative to the shape at rest.
   function frames(spec) {
     if (spec.keys) return keyFrames(spec);
-    var ease = parseEase(spec.ease) || parseEase("power2.out"), ts = samples(spec.ease), kind = spec.kind;
+    var ease = parseEase(spec.ease) || parseEase("power2.out"), ts = samples(spec.ease, spec.dur), kind = spec.kind;
     var mv = spec.move || { dx: 0, dy: 0 }, mp = spec.movePt || { dx: 0, dy: 0 };
     return ts.map(function (t) {
       var f = { t: t, opacity: 1, dx: 0, dy: 0, dxPt: 0, dyPt: 0, scale: 1, rot: 0 };
@@ -124,7 +132,7 @@
     }
     return track[track.length - 1][1];
   }
-  function keyTimes(keys, ease) {
+  function keyTimes(keys, ease, dur) {
     var seen = {}, out = [];
     function add(t) { var k = Math.round(t * 10000) / 10000; if (!seen[k]) { seen[k] = true; out.push(k); } }
     add(0); add(1);
@@ -133,7 +141,7 @@
       for (var i = 0; i < tr.length; i++) {
         add(tr[i][0]);
         if (!i) continue;
-        var e = readEase(tr[i][2] || ease), n = !e || e.family === "none" ? 1 : (e.family === "elastic" || e.family === "bounce" ? 12 : 6);
+        var e = readEase(tr[i][2] || ease), n = tr[i][1] === tr[i - 1][1] ? 1 : pointsFor(e, (tr[i][0] - tr[i - 1][0]) * (dur || 1000), 8, 24, 60);
         for (var j = 1; j < n; j++) add(tr[i - 1][0] + (tr[i][0] - tr[i - 1][0]) * j / n);
       }
     });
@@ -143,7 +151,7 @@
   function keyFrames(spec) {
     var k = spec.keys || {};
     trackAt.ease = spec.ease || "power1.inOut";
-    return keyTimes(k, trackAt.ease).map(function (t) {
+    return keyTimes(k, trackAt.ease, spec.dur).map(function (t) {
       var s = trackAt(k.s, t, 1), sx = trackAt(k.sx, t, s), sy = trackAt(k.sy, t, s);
       return { t: t, opacity: Math.min(1, Math.max(0, trackAt(k.o, t, 1))), dxW: trackAt(k.x, t, 0), dyH: trackAt(k.y, t, 0), dx: trackAt(k.X, t, 0), dy: trackAt(k.Y, t, 0),
                sx: Math.max(0.01, sx), sy: Math.max(0.01, sy), scale: Math.max(0.01, sx), rot: trackAt(k.r, t, 0), dxPt: 0, dyPt: 0 };
@@ -189,6 +197,9 @@
   // A keyframed <p:anim> on one attribute. values: one per frame, as strings (formulas) or numbers.
   function anim(doc, spid, dur, attrName, fs, values, isStr) {
     var b = behaviour(doc, spid, dur, true); setAttrName(b, attrName);
+    // Inside a run of equal values only the run's ends matter, since PowerPoint draws straight lines
+    var keep = values.map(function (v, i) { return i === 0 || i === values.length - 1 || !(values[i - 1] === v && values[i + 1] === v); });
+    fs = fs.filter(function (f, i) { return keep[i]; }); values = values.filter(function (v, i) { return keep[i]; });
     var tav = P(doc, "tavLst", null, fs.map(function (f, i) {
       var v = isStr ? P(doc, "strVal", { val: values[i] }) : P(doc, "fltVal", { val: num(values[i]) });
       return P(doc, "tav", { tm: Math.round(f.t * 100000) }, [P(doc, "val", null, [v])]);

@@ -12,6 +12,7 @@ All notable changes to Slide Tools are listed here, newest first. Version number
 ### Changed
 
 1. Animation: presets sit in groups that fold open one at a time, so the list stays short.
+2. Animation: keyframed effects use GSAP's elastic, back, expo and power curves, so overshoots and slides move smoothly instead of in stops and starts. Curves are written with about one point every 20 ms, which adds around 1 KB per effect to a saved file.
 
 ## [3.5.0] 2026-11-24
 
