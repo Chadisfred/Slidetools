@@ -625,3 +625,26 @@ input[type=text]:disabled { opacity: 0.6; }
 .an-chip.mine { border-color: var(--accent-line); }
 .an-chip .del { margin-left: 6px; color: var(--muted); display: none; }
 .an-chip:hover .del { display: inline; }
+/* Tables: column widths */
+.tbl-colw { display: grid; gap: 10px; }
+.tbl-colw[hidden] { display: none; }
+.colw-chip b { margin-right: 2px; }
+/* Animation: folding starter groups and keyframed effects */
+.an-groups { display: grid; gap: 4px; }
+.an-group {
+  display: grid; grid-template-columns: 12px 1fr auto; align-items: center; gap: 6px; width: 100%;
+  padding: 5px 8px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); color: var(--text);
+  font: inherit; font-size: 12px; text-align: left; cursor: pointer;
+}
+.an-group:hover { border-color: var(--accent-line); }
+.an-group.open { border-color: var(--accent-line); background: var(--accent-soft); }
+.an-caret { width: 0; height: 0; border-left: 5px solid var(--muted); border-top: 4px solid transparent; border-bottom: 4px solid transparent; transition: transform .15s; }
+.an-group.open .an-caret { transform: rotate(90deg); border-left-color: var(--accent); }
+.an-count { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.an-group-chips { padding: 4px 0 6px; }
+.an-chip.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.an-keyed-note { font-size: 11px; color: var(--muted); line-height: 1.4; }
+.an-keyed-note[hidden] { display: none; }
+.an-keyed-note .link-btn { margin-left: 4px; }
+.an-dim { opacity: 0.45; }
+.tbl-col-links { display: flex; gap: 16px; margin-top: -4px; }

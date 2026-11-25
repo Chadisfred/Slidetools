@@ -1,5 +1,6 @@
 /* Animation tool (id "animate"): custom entrances, exits and emphasis with GSAP-style eases,
-   combined effects, exact numbers, a stagger, starter and saved presets, and Capture.
+   combined effects, exact numbers, a stagger, starter and saved presets, and Capture. Keyframed
+   starters (bounces, attention seekers and more) sit in folding groups.
    PowerPoint add-ins have no animation API, so effects are written to the slide's timing XML
    through the shared slide rebuild (js/rebuild.js), in memory. The XML and the eases live in
    js/animcore.js. Presets are saved in the presentation as tags, like shape styles. */
@@ -14,13 +15,13 @@
   var defaults = {
     anKind: "entr", anFade: true, anMove: true, anDir: "up", anDist: "20", anScale: false, anScaleVal: "90", anRotate: false, anRotVal: "-12",
     anPulse: true, anPulseVal: "106", anSpin: false, anSpinVal: "360", anDim: false, anDimVal: "40",
-    anEase: "power2.out", anDur: "0.5", anDelay: "0", anStart: "click", anStagger: "0.08", anOrder: "selection", anReplace: true, anPresetName: ""
+    anEase: "power2.out", anDur: "0.5", anDelay: "0", anStart: "click", anStagger: "0.08", anOrder: "selection", anReplace: true, anPresetName: "", anKeys: "", anGroup: "basics"
   };
   ST.addDefaults(defaults);
-  var KEYS = Object.keys(defaults).filter(function (k) { return k !== "anPresetName" && k !== "anReplace" && k !== "anOrder"; });
+  var KEYS = Object.keys(defaults).filter(function (k) { return k !== "anPresetName" && k !== "anReplace" && k !== "anOrder" && k !== "anGroup"; });
 
   // Built in starters, read only. Each one fills the controls.
-  function S(o) { return Object.assign({ anKind: "entr", anFade: false, anMove: false, anScale: false, anRotate: false, anPulse: false, anSpin: false, anDim: false, anDelay: "0" }, o); }
+  function S(o) { return Object.assign({ anKind: "entr", anKeys: "", anFade: false, anMove: false, anScale: false, anRotate: false, anPulse: false, anSpin: false, anDim: false, anDelay: "0" }, o); }
   var STARTERS = [
     { name: "Fade up", s: S({ anFade: true, anMove: true, anDir: "up", anDist: "20", anEase: "power2.out", anDur: "0.5" }) },
     { name: "Pop", s: S({ anFade: true, anScale: true, anScaleVal: "80", anEase: "back.out(1.7)", anDur: "0.45" }) },
@@ -34,6 +35,54 @@
     { name: "Pulse", s: S({ anKind: "emph", anPulse: true, anPulseVal: "106", anEase: "sine.inOut", anDur: "0.6" }) },
     { name: "Gentle spin", s: S({ anKind: "emph", anSpin: true, anSpinVal: "360", anEase: "power2.inOut", anDur: "1" }) }
   ];
+  var TRAVEL = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+  // Keyframed starters: our own keyframes, several inspired by the effects in Animate.css (MIT).
+  // Tracks are described in js/animcore.js: o, x and y (shape sizes), X and Y (slide), s, sx, sy, r.
+  // TRAVEL gives each direction's unit step: an entrance starts back along its travel.
+  function along(dir, d, entering) { var v = TRAVEL[dir], k = entering ? -d : d; return { h: !!v[0], v: v[0] ? v[0] * k : v[1] * k }; }
+  function moveTrack(dir, pairs, slide, entering) {
+    var a = along(dir, 1, entering), out = {}, name = a.h ? (slide ? "X" : "x") : (slide ? "Y" : "y");
+    out[name] = pairs.map(function (p) { return [p[0], p[1] * a.v].concat(p[2] ? [p[2]] : []); });
+    return out;
+  }
+  function K(id, name, kind, dur, ease, keys) { return { id: id, name: name, kind: kind, dur: dur, e: ease, keys: keys }; }
+  var DIRS = [["up", "up"], ["down", "down"], ["left", "left"], ["right", "right"]];
+  var KEYED = [];
+  function add(group, k) { k.group = group; KEYED.push(k); }
+  DIRS.forEach(function (d) {
+    // One long GSAP curve per motion, or overlapping phases, so the speed never stalls at a keyframe
+    add("fade", K("bigfade-" + d[0], "Big fade " + d[1], "entr", 0.9, "power3.out", Object.assign({ o: [[0, 0], [0.6, 1, "power1.out"]] }, moveTrack(d[0], [[0, 0.5], [1, 0, "power3.out"]], true, true))));
+    add("fade", K("slide-" + d[0], "Slide " + d[1], "entr", 0.7, "expo.out", moveTrack(d[0], [[0, 1], [1, 0, "expo.out"]], false, true)));
+    add("back", K("backin-" + d[0], "Back in " + d[1], "entr", 1, "power3.out", Object.assign({ o: [[0, 0.7], [0.75, 1, "power1.out"]], s: [[0, 0.7], [0.55, 0.7], [1, 1, "back.out(1.7)"]] }, moveTrack(d[0], [[0, 0.8], [0.75, 0, "power3.out"]], true, true))));
+    add("bounce", K("bouncein-" + d[0], "Bounce in " + d[1], "entr", 1, "elastic.out(1, 0.5)", Object.assign({ o: [[0, 0], [0.35, 1, "power1.out"]] }, moveTrack(d[0], [[0, 2], [1, 0, "elastic.out(1, 0.5)"]], false, true))));
+    add("zoom", K("zoomin-" + d[0], "Zoom in " + d[1], "entr", 0.8, "power3.out", Object.assign({ o: [[0, 0], [0.4, 1, "power1.out"]], s: [[0, 0.1], [1, 1, "power3.out"]] }, moveTrack(d[0], [[0, 2], [1, 0, "back.out(1.4)"]], false, true))));
+    add("exit", K("slideout-" + d[0], "Slide out " + d[1], "exit", 0.6, "expo.in", moveTrack(d[0], [[0, 0], [1, 1, "expo.in"]], false, false)));
+  });
+  add("bounce", K("bouncein", "Bounce in", "entr", 0.9, "elastic.out(1, 0.45)", { o: [[0, 0], [0.35, 1, "power1.out"]], s: [[0, 0.3], [1, 1, "elastic.out(1, 0.45)"]] }));
+  add("zoom", K("jackbox", "Jack in the box", "entr", 1, "back.out(1.6)", { o: [[0, 0], [0.3, 1, "power1.out"]], s: [[0, 0.1], [1, 1, "back.out(1.6)"]], r: [[0, 30], [1, 0, "elastic.out(1, 0.35)"]] }));
+  add("roll", K("rollin", "Roll in", "entr", 0.8, "power1.out", { o: [[0, 0], [1, 1]], x: [[0, -1], [1, 0]], r: [[0, -120], [1, 0]] }));
+  add("roll", K("rotatein", "Rotate in", "entr", 0.8, "power2.out", { o: [[0, 0], [1, 1]], r: [[0, -200], [1, 0]] }));
+  add("roll", K("spinin", "Spin in", "entr", 1, "power3.out", { o: [[0, 0], [0.3, 1]], s: [[0, 0.05], [1, 1]], r: [[0, -360], [1, 0]] }));
+  var UP = "power2.out", DOWN = "power2.in";
+  add("attention", K("bounce", "Bounce", "emph", 1, "power1.inOut", { y: [[0, 0], [0.2, 0], [0.4, -0.3, UP], [0.43, -0.3], [0.53, 0, DOWN], [0.7, -0.15, UP], [0.8, 0, DOWN], [0.9, -0.04, UP], [1, 0, DOWN]], sy: [[0, 1], [0.4, 1.1], [0.53, 0.95], [0.7, 1.05], [0.8, 0.97], [1, 1]] }));
+  add("attention", K("flash", "Flash", "emph", 1, "none", { o: [[0, 1], [0.25, 0], [0.5, 1], [0.75, 0], [1, 1]] }));
+  add("attention", K("heartbeat", "Heartbeat", "emph", 1.3, "power1.inOut", { s: [[0, 1], [0.14, 1.3], [0.28, 1], [0.42, 1.3], [0.7, 1]] }));
+  add("attention", K("rubberband", "Rubber band", "emph", 1, "power1.inOut", { sx: [[0, 1], [0.3, 1.25], [0.4, 0.75], [0.5, 1.15], [0.65, 0.95], [0.75, 1.05], [1, 1]], sy: [[0, 1], [0.3, 0.75], [0.4, 1.25], [0.5, 0.85], [0.65, 1.05], [0.75, 0.95], [1, 1]] }));
+  function shake(n, a) { var out = [[0, 0]]; for (var i = 1; i < n; i++) out.push([i / n, i % 2 ? -a : a]); out.push([1, 0]); return out; }
+  add("attention", K("shakex", "Shake across", "emph", 1, "none", { x: shake(10, 0.05) }));
+  add("attention", K("shakey", "Shake down", "emph", 1, "none", { y: shake(10, 0.08) }));
+  add("attention", K("headshake", "Head shake", "emph", 1, "power1.inOut", { x: [[0, 0], [0.065, -0.06], [0.185, 0.05], [0.315, -0.03], [0.435, 0.02], [0.5, 0], [1, 0]], r: [[0, 0], [0.065, -4], [0.185, 3], [0.315, -2], [0.435, 1], [0.5, 0], [1, 0]] }));
+  add("attention", K("swing", "Swing", "emph", 1, "power1.inOut", { r: [[0, 0], [0.2, 15], [0.4, -10], [0.6, 5], [0.8, -5], [1, 0]] }));
+  add("attention", K("tada", "Tada", "emph", 1, "power1.inOut", { s: [[0, 1], [0.1, 0.9], [0.2, 0.9], [0.3, 1.1], [0.9, 1.1], [1, 1]], r: [[0, 0], [0.1, -3], [0.2, -3], [0.3, 3], [0.4, -3], [0.5, 3], [0.6, -3], [0.7, 3], [0.8, -3], [0.9, 3], [1, 0]] }));
+  add("attention", K("wobble", "Wobble", "emph", 1, "power1.inOut", { x: [[0, 0], [0.15, -0.25], [0.3, 0.2], [0.45, -0.15], [0.6, 0.1], [0.75, -0.05], [1, 0]], r: [[0, 0], [0.15, -5], [0.3, 3], [0.45, -3], [0.6, 2], [0.75, -1], [1, 0]] }));
+  add("exit", K("backout", "Back out", "exit", 1, "power3.in", { o: [[0, 1], [0.45, 0.7, "power1.in"]], s: [[0, 1], [0.45, 0.7, "back.in(1.7)"]], Y: [[0, 0], [0.25, 0], [1, 0.8, "power3.in"]] }));
+  add("exit", K("bounceout", "Bounce out", "exit", 0.75, "power1.inOut", { o: [[0, 1], [0.55, 1], [1, 0]], s: [[0, 1], [0.2, 0.9], [0.5, 1.1], [0.55, 1.1], [1, 0.3]] }));
+  add("exit", K("zoomout", "Zoom out", "exit", 0.6, "power2.in", { o: [[0, 1], [0.5, 0], [1, 0]], s: [[0, 1], [0.5, 0.3], [1, 0.3]] }));
+  add("exit", K("rollout", "Roll out", "exit", 0.8, "power1.in", { o: [[0, 1], [1, 0]], x: [[0, 0], [1, 1]], r: [[0, 0], [1, 120]] }));
+  add("exit", K("bigfadeout", "Big fade out", "exit", 0.8, "power3.in", { o: [[0, 1], [1, 0, "power2.in"]], Y: [[0, 0], [1, 0.5, "power3.in"]] }));
+  var GROUPS = [["basics", "Basics"], ["fade", "Fade and slide"], ["back", "Back"], ["bounce", "Bounce"], ["zoom", "Zoom"], ["roll", "Roll and spin"], ["attention", "Attention"], ["exit", "Exits"], ["mine", "Your presets"]];
+  function keyed(id) { return KEYED.filter(function (k) { return k.id === id; })[0] || null; }
+
   var FAMILIES = [["none", "None"], ["power1", "Power 1"], ["power2", "Power 2"], ["power3", "Power 3"], ["power4", "Power 4"], ["sine", "Sine"], ["expo", "Expo"], ["circ", "Circ"], ["back", "Back"], ["elastic", "Elastic"], ["bounce", "Bounce"]];
 
   var presets = [], presetsLoaded = false, captured = null; // captured: effects of the last applied captured preset
@@ -41,7 +90,6 @@
   // ---------- Settings to an effect ----------
   function secs(text) { var v = ST.evaluate(String(text || "").trim(), null, null); return v === null || !isFinite(v) ? null : v; }
   function plainNum(text) { var t = String(text || "").trim().replace(/\s*(%|°|deg)$/i, ""); if (!t) return null; var v = ST.evaluate(t, null, null); return v === null || !isFinite(v) ? null : v; }
-  var TRAVEL = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
   // Returns { spec } or { bad }. size: the slide size in points.
   function specFrom(St, size) {
     size = size || { w: 960, h: 540 };
@@ -49,6 +97,11 @@
     var dur = secs(St.anDur), delay = secs(St.anDelay);
     if (!(dur > 0 && dur <= 60)) return { bad: "Duration must be more than 0 and up to 60 seconds." };
     if (delay === null || delay < 0) return { bad: "Delay must be 0 or more seconds." };
+    if (St.anKeys) {
+      var def = keyed(St.anKeys);
+      if (!def) return { bad: "That keyframed effect isn't available in this version. Pick another." };
+      return { spec: { kind: def.kind, keys: def.keys, ease: def.e, dur: Math.round(dur * 1000), delay: Math.round(delay * 1000), keyed: def.id } };
+    }
     if (!A.parseEase(St.anEase)) return { bad: "Ease " + St.anEase + " isn't one it knows. Try power2.out, back.out(1.7) or bounce.out." };
     var spec = { kind: kind, ease: A.easeText(A.readEase(St.anEase)), dur: Math.round(dur * 1000), delay: Math.round(delay * 1000) };
     if (kind === "emph") {
@@ -74,6 +127,8 @@
   function snapshot() { var o = {}; KEYS.forEach(function (k) { o[k] = ST.state[k]; }); return o; }
   function describe(St) {
     var kind = { entr: "Entrance", exit: "Exit", emph: "Emphasis" }[St.anKind] || "Entrance", parts = [];
+    var def = St.anKeys && keyed(St.anKeys);
+    if (def) return ({ entr: "Entrance", exit: "Exit", emph: "Emphasis" })[def.kind] + ": " + def.name;
     if (St.anKind === "emph") { if (St.anPulse) parts.push("pulse"); if (St.anSpin) parts.push("spin"); if (St.anDim) parts.push("dim"); }
     else { if (St.anFade) parts.push("fade"); if (St.anMove) parts.push("move " + St.anDir); if (St.anScale) parts.push("scale"); if (St.anRotate) parts.push("rotate"); }
     return kind + ": " + parts.join(", ");
@@ -216,26 +271,49 @@
   // Clicking a preset fills the controls (a captured one is applied as it is)
   function usePreset(p) {
     if (p.captured) { apply(p); return; }
+    if (p.keys) {
+      ST.state.anKeys = p.id; ST.state.anKind = p.kind; ST.state.anDur = String(p.dur);
+      ST.save(); ST.emit("reset"); ST.changed(); play(); return;
+    }
     Object.keys(p.s).forEach(function (k) { if (k in defaults) ST.state[k] = p.s[k]; });
     ST.save(); ST.emit("reset"); ST.changed(); play();
   }
+  function presetChip(p) {
+    var b = document.createElement("button"), on = p.keys ? ST.state.anKeys === p.id : false;
+    b.className = "mini-chip an-chip" + (p.id && !p.keys ? " mine" : "") + (on ? " on" : "");
+    b.textContent = p.name;
+    b.title = p.captured ? "Apply this captured animation to the selected shapes" : p.keys ? "Use " + p.name + ", a keyframed " + ({ entr: "entrance", exit: "exit", emph: "emphasis" })[p.kind] : p.id ? "Your preset: fill the controls" : "Fill the controls with " + p.name;
+    b.addEventListener("click", function () { usePreset(p); });
+    if (p.id && !p.keys) {
+      var del = document.createElement("span");
+      del.className = "del"; del.textContent = "×"; del.title = "Delete this preset";
+      del.addEventListener("click", function (e) { e.stopPropagation(); presets = presets.filter(function (x) { return x.id !== p.id; }); savePresets(); });
+      b.appendChild(del);
+    }
+    return b;
+  }
+  // Starters sit in groups that fold open one at a time, so the list stays short
   function renderPresets() {
     var el = $("anPresets");
     if (!el) return;
     el.innerHTML = "";
-    STARTERS.concat(presets).forEach(function (p) {
-      var b = document.createElement("button");
-      b.className = "mini-chip an-chip" + (p.id ? " mine" : "");
-      b.textContent = p.name;
-      b.title = p.captured ? "Apply this captured animation to the selected shapes" : p.id ? "Your preset: fill the controls" : "Fill the controls with " + p.name;
-      b.addEventListener("click", function () { usePreset(p); });
-      if (p.id) {
-        var del = document.createElement("span");
-        del.className = "del"; del.textContent = "×"; del.title = "Delete this preset";
-        del.addEventListener("click", function (e) { e.stopPropagation(); presets = presets.filter(function (x) { return x.id !== p.id; }); savePresets(); });
-        b.appendChild(del);
-      }
-      el.appendChild(b);
+    var open = ST.state.anGroup || "basics";
+    GROUPS.forEach(function (g) {
+      var list = g[0] === "basics" ? STARTERS : g[0] === "mine" ? presets : KEYED.filter(function (k) { return k.group === g[0]; });
+      if (g[0] === "mine" && !list.length) return;
+      var isOpen = open === g[0], head = document.createElement("button");
+      head.className = "an-group" + (isOpen ? " open" : "");
+      head.setAttribute("aria-expanded", String(isOpen));
+      head.setAttribute("data-group", g[0]);
+      head.innerHTML = '<span class="an-caret" aria-hidden="true"></span><span class="an-group-name"></span><span class="an-count">' + list.length + "</span>";
+      head.querySelector(".an-group-name").textContent = g[1];
+      head.addEventListener("click", function () { ST.state.anGroup = isOpen ? "" : g[0]; ST.save(); renderPresets(); });
+      el.appendChild(head);
+      if (!isOpen) return;
+      var chips = document.createElement("div");
+      chips.className = "mini-chips an-group-chips";
+      list.forEach(function (p) { chips.appendChild(presetChip(p)); });
+      el.appendChild(chips);
     });
   }
 
@@ -247,15 +325,17 @@
     var r = specFrom(snapshot());
     if (running) { try { running.cancel(); } catch (e) { /* already done */ } running = null; }
     if (r.bad) { note.textContent = r.bad; note.classList.add("bad"); return; }
-    note.textContent = describe(snapshot()) + ", " + ST.nice(r.spec.dur / 1000) + " s, " + r.spec.ease; note.classList.remove("bad");
-    var fs = A.frames(r.spec);
+    note.textContent = describe(snapshot()) + ", " + ST.nice(r.spec.dur / 1000) + " s" + (r.spec.keys ? ", keyframed" : ", " + r.spec.ease); note.classList.remove("bad");
+    var fs = A.frames(r.spec), stage = box.parentNode, bw = box.offsetWidth || 40, bh = box.offsetHeight || 28, sw = (stage && stage.offsetWidth) || 240, sh = (stage && stage.offsetHeight) || 90;
     var kf = fs.map(function (f) {
-      return { offset: f.t, opacity: f.opacity, transform: "translate(" + (f.dxPt * PX_PER_PT).toFixed(2) + "px," + (f.dyPt * PX_PER_PT).toFixed(2) + "px) scale(" + f.scale.toFixed(4) + ") rotate(" + f.rot.toFixed(2) + "deg)" };
+      var x = r.spec.keys ? f.dxW * bw + f.dx * sw : f.dxPt * PX_PER_PT, y = r.spec.keys ? f.dyH * bh + f.dy * sh : f.dyPt * PX_PER_PT;
+      var sx = f.sx || f.scale, sy = f.sy || f.scale;
+      return { offset: f.t, opacity: f.opacity, transform: "translate(" + x.toFixed(2) + "px," + y.toFixed(2) + "px) scale(" + sx.toFixed(4) + "," + sy.toFixed(4) + ") rotate(" + f.rot.toFixed(2) + "deg)" };
     });
     running = box.animate(kf, { duration: r.spec.dur, delay: 150, fill: "both", easing: "linear" });
     // An exit leaves the sample hidden, so bring it back after a moment
     if (r.spec.kind === "exit") running.onfinish = function () { setTimeout(function () { if (running) { running.cancel(); running = null; } }, 600); };
-    drawCurve(r.spec.ease);
+    drawCurve(r.spec.keys ? "none" : r.spec.ease);
   }
   function drawCurve(text) {
     var svg = $("anCurve"), f = A.parseEase(text);
@@ -271,10 +351,11 @@
   function toggle(id, label, field) { return '<div class="an-effect"><div class="toggle">' + label + '<label class="switch"><input type="checkbox" id="' + id + '"><span></span></label></div>' + (field || "") + '</div>'; }
   var MARKUP =
     '<div class="sublabel">Presets</div>' +
-    '<div class="mini-chips" id="anPresets"></div>' +
+    '<div class="an-groups" id="anPresets"></div>' +
     seg("anKind", [["entr", "Entrance"], ["exit", "Exit"], ["emph", "Emphasis"]]) +
     '<div class="an-preview"><div class="an-stage"><div class="an-sample" id="anSample"></div></div><button class="btn small" id="anPlay">Play</button></div>' +
     '<div class="help an-note" id="anPreviewNote"></div>' +
+    '<div class="an-keyed-note" id="anKeyedNote" hidden><span></span><button class="link-btn" id="anKeyedOff">Use my own settings</button></div>' +
     '<div class="an-move-group">' +
       toggle("anFade", "Fade") +
       toggle("anMove", "Move", '<div class="row an-sub"><label class="field">Travel' + seg("anDir", [["up", "&uarr;", "Up"], ["down", "&darr;", "Down"], ["left", "&larr;", "Left"], ["right", "&rarr;", "Right"]]) + '</label><label class="field"><span class="label-row">Distance (pt)' + ST.info("Points, or grid names in points such as <code>g</code> or <code>g/2</code>.", "About distance") + '</span><input type="text" id="anDist" inputmode="decimal"></label></div>') +
@@ -318,8 +399,15 @@
       if (sub) sub.hidden = !box.checked;
     });
     $("anEase").classList.toggle("err", !A.parseEase(ST.state.anEase));
+    var def = ST.state.anKeys && keyed(ST.state.anKeys), note = $("anKeyedNote");
+    note.hidden = !def;
+    if (def) note.querySelector("span").textContent = "Keyframed effect: " + def.name + ". Duration, delay, start and stagger apply. Changing an effect or the ease goes back to your own settings.";
+    Array.prototype.forEach.call(document.querySelectorAll(".an-move-group, .an-emph-group, .an-ease"), function (n) { n.classList.toggle("an-dim", !!def); });
   }
+  // Leaves a keyframed starter: the panel's own effect settings apply again
+  function dropKeys() { if (ST.state.anKeys) { ST.state.anKeys = ""; renderPresets(); } }
   function setEaseFromControls(dir) {
+    dropKeys();
     var fam = $("anFamily").value, cur = A.readEase(ST.state.anEase) || { dir: "out", params: [] };
     var e = { family: fam, dir: dir || cur.dir || "out", params: fam === cur.family ? cur.params : (fam === "back" ? [1.7] : fam === "elastic" ? [1, 0.3] : []) };
     ST.state.anEase = A.easeText(e); $("anEase").value = ST.state.anEase;
@@ -330,14 +418,16 @@
     ["anDist", "anScaleVal", "anRotVal", "anPulseVal", "anSpinVal", "anDimVal", "anDur", "anDelay", "anStagger", "anPresetName"].forEach(function (k) {
       ST.bindField($(k), k, { onInput: function () { if (k !== "anPresetName") queuePlay(); } });
     });
-    ST.bindField($("anEase"), "anEase", { onInput: function () { renderSegs(); queuePlay(); } });
+    ST.bindField($("anEase"), "anEase", { onInput: function () { dropKeys(); renderSegs(); queuePlay(); } });
+    $("anKeyedOff").addEventListener("click", function () { dropKeys(); ST.save(); renderSegs(); ST.changed(); play(); });
+    ["anDist", "anScaleVal", "anRotVal", "anPulseVal", "anSpinVal", "anDimVal"].forEach(function (k) { $(k).addEventListener("input", function () { if (ST.state.anKeys) { dropKeys(); renderSegs(); } }); });
     [["anKind", "anKind"], ["anDir", "anDir"], ["anStart", "anStart"], ["anOrder", "anOrder"]].forEach(function (p) {
       Array.prototype.forEach.call($(p[0]).children, function (b) {
-        b.addEventListener("click", function (e) { e.preventDefault(); ST.state[p[1]] = b.getAttribute("data-v"); ST.save(); renderSegs(); ST.changed(); if (p[0] !== "anOrder" && p[0] !== "anStart") play(); });
+        b.addEventListener("click", function (e) { e.preventDefault(); if (p[0] === "anKind" || p[0] === "anDir") dropKeys(); ST.state[p[1]] = b.getAttribute("data-v"); ST.save(); renderSegs(); ST.changed(); if (p[0] !== "anOrder" && p[0] !== "anStart") play(); });
       });
     });
     ["anFade", "anMove", "anScale", "anRotate", "anPulse", "anSpin", "anDim", "anReplace"].forEach(function (k) {
-      $(k).addEventListener("change", function () { ST.state[k] = $(k).checked; ST.save(); renderSegs(); ST.changed(); if (k !== "anReplace") play(); });
+      $(k).addEventListener("change", function () { if (k !== "anReplace") dropKeys(); ST.state[k] = $(k).checked; ST.save(); renderSegs(); ST.changed(); if (k !== "anReplace") play(); });
     });
     $("anFamily").addEventListener("change", function () { setEaseFromControls(); });
     Array.prototype.forEach.call($("anEaseDir").children, function (b) { b.addEventListener("click", function (e) { e.preventDefault(); setEaseFromControls(b.getAttribute("data-v")); }); });
@@ -348,8 +438,8 @@
     $("anRemove").addEventListener("click", removeFromSelection);
     $("anPresetName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); savePreset(); } });
     renderSegs(); renderPresets(); drawCurve(ST.state.anEase);
-    var r = specFrom(snapshot()); $("anPreviewNote").textContent = r.bad || describe(snapshot()) + ", " + ST.nice(r.spec.dur / 1000) + " s, " + r.spec.ease;
-    ST.on("reset", function () { renderSegs(); drawCurve(ST.state.anEase); });
+    var r = specFrom(snapshot()); $("anPreviewNote").textContent = r.bad || describe(snapshot()) + ", " + ST.nice(r.spec.dur / 1000) + " s" + (r.spec.keys ? ", keyframed" : ", " + r.spec.ease);
+    ST.on("reset", function () { renderSegs(); renderPresets(); drawCurve(ST.state.anEase); });
     ST.on("ready", loadPresets);
     ST.on("layout", function () { if (ST.isOpen && ST.isOpen("animate") && !document.hidden) queuePlay(); });
   }
@@ -367,5 +457,5 @@
     build: build
   });
 
-  ST._animate = { specFrom: specFrom, STARTERS: STARTERS, apply: apply, presets: function () { return presets; }, setPresets: function (p) { presets = p; renderPresets(); }, usePreset: usePreset, play: play };
+  ST._animate = { specFrom: specFrom, STARTERS: STARTERS, KEYED: KEYED, GROUPS: GROUPS, apply: apply, presets: function () { return presets; }, setPresets: function (p) { presets = p; renderPresets(); }, usePreset: usePreset, play: play };
 })();

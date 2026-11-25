@@ -70,8 +70,16 @@
     return e.dir === "in" ? fin : e.dir === "inOut" ? inOutOf(fin) : outOf(fin);
   }
   // Time points to sample: more for springy eases so the wobble survives
-  function samples(text) {
-    var e = readEase(text), n = !e || e.family === "none" || e.family === "power0" ? 1 : (e.family === "elastic" || e.family === "bounce" ? 24 : 12);
+  // Points along a curve for a move lasting ms: about one every 20 ms, more for springy curves.
+  // PowerPoint draws straight lines between them, so enough points make the curve look smooth.
+  function pointsFor(e, ms, lo, springLo, hi) {
+    if (!e || e.family === "none" || e.family === "power0") return 1;
+    var springy = e.family === "elastic" || e.family === "bounce" || e.family === "back";
+    var n = Math.round((ms > 0 ? ms : 500) / 20);
+    return Math.max(springy ? springLo : lo, Math.min(hi, n));
+  }
+  function samples(text, dur) {
+    var e = readEase(text), n = pointsFor(e, dur, 12, e && (e.family === "elastic" || e.family === "bounce") ? 24 : 12, e && (e.family === "elastic" || e.family === "bounce") ? 60 : 50);
     var out = []; for (var i = 0; i <= n; i++) out.push(i / n);
     return out;
   }
@@ -83,7 +91,8 @@
   // pulse (fraction), spin (degrees), dim (opacity fraction), ease, dur (ms) }.
   // Each frame: { t, opacity, dx, dy, dxPt, dyPt, scale, rot } relative to the shape at rest.
   function frames(spec) {
-    var ease = parseEase(spec.ease) || parseEase("power2.out"), ts = samples(spec.ease), kind = spec.kind;
+    if (spec.keys) return keyFrames(spec);
+    var ease = parseEase(spec.ease) || parseEase("power2.out"), ts = samples(spec.ease, spec.dur), kind = spec.kind;
     var mv = spec.move || { dx: 0, dy: 0 }, mp = spec.movePt || { dx: 0, dy: 0 };
     return ts.map(function (t) {
       var f = { t: t, opacity: 1, dx: 0, dy: 0, dxPt: 0, dyPt: 0, scale: 1, rot: 0 };
@@ -102,6 +111,68 @@
       if (spec.rotate) f.rot = spec.rotate * k;
       return f;
     });
+  }
+
+  // ---------- Keyframed effects ----------
+  // spec.keys holds tracks of keyframes [[t, value, ease?], ...], t from 0 to 1. The ease shapes
+  // the segment that ends at that key (spec.ease when it has none). Tracks:
+  //   o opacity, x and y offsets in shape widths and heights, X and Y offsets as fractions of the
+  //   slide, s scale (both ways), sx and sy scale one way (they win over s), r degrees.
+  // Values are absolute: an entrance ends at rest (o 1, offsets 0, scale 1, r 0), an exit starts there.
+  var REST = { o: 1, x: 0, y: 0, X: 0, Y: 0, s: 1, sx: 1, sy: 1, r: 0 };
+  function trackAt(track, t, fallback) {
+    if (!track || !track.length) return fallback;
+    if (t <= track[0][0]) return track[0][1];
+    for (var i = 1; i < track.length; i++) {
+      var a = track[i - 1], b = track[i];
+      if (t <= b[0]) {
+        var span = b[0] - a[0], u = span > 0 ? (t - a[0]) / span : 1, e = parseEase(b[2] || trackAt.ease) || function (v) { return v; };
+        return a[1] + (b[1] - a[1]) * e(u);
+      }
+    }
+    return track[track.length - 1][1];
+  }
+  function keyTimes(keys, ease, dur) {
+    var seen = {}, out = [];
+    function add(t) { var k = Math.round(t * 10000) / 10000; if (!seen[k]) { seen[k] = true; out.push(k); } }
+    add(0); add(1);
+    Object.keys(keys).forEach(function (name) {
+      var tr = keys[name] || [];
+      for (var i = 0; i < tr.length; i++) {
+        add(tr[i][0]);
+        if (!i) continue;
+        var e = readEase(tr[i][2] || ease), n = tr[i][1] === tr[i - 1][1] ? 1 : pointsFor(e, (tr[i][0] - tr[i - 1][0]) * (dur || 1000), 8, 24, 60);
+        for (var j = 1; j < n; j++) add(tr[i - 1][0] + (tr[i][0] - tr[i - 1][0]) * j / n);
+      }
+    });
+    return out.sort(function (a, b) { return a - b; });
+  }
+  // Each frame: { t, opacity, dxW, dyH (shape sizes), dx, dy (slide fractions), sx, sy, scale, rot }
+  function keyFrames(spec) {
+    var k = spec.keys || {};
+    trackAt.ease = spec.ease || "power1.inOut";
+    return keyTimes(k, trackAt.ease, spec.dur).map(function (t) {
+      var s = trackAt(k.s, t, 1), sx = trackAt(k.sx, t, s), sy = trackAt(k.sy, t, s);
+      return { t: t, opacity: Math.min(1, Math.max(0, trackAt(k.o, t, 1))), dxW: trackAt(k.x, t, 0), dyH: trackAt(k.y, t, 0), dx: trackAt(k.X, t, 0), dy: trackAt(k.Y, t, 0),
+               sx: Math.max(0.01, sx), sy: Math.max(0.01, sy), scale: Math.max(0.01, sx), rot: trackAt(k.r, t, 0), dxPt: 0, dyPt: 0 };
+    });
+  }
+  function used(track) { return !!(track && track.length); }
+  function offsetFormula(name, size, inSize, slide) {
+    var f = "#" + name;
+    if (Math.abs(inSize) > 1e-7) f += (inSize >= 0 ? "+" : "-") + "#" + size + "*" + num(Math.abs(inSize));
+    if (Math.abs(slide) > 1e-7) f += (slide >= 0 ? "+" : "-") + num(Math.abs(slide));
+    return f;
+  }
+  function keyBehaviours(doc, spec, opts, dur) {
+    var spid = String(opts.spid), k = spec.keys || {}, fs = keyFrames(spec), kids = [];
+    if (used(k.o)) kids.push(anim(doc, spid, dur, "style.opacity", fs, fs.map(function (f) { return f.opacity; }), false));
+    if (used(k.x) || used(k.X)) kids.push(anim(doc, spid, dur, "ppt_x", fs, fs.map(function (f) { return offsetFormula("ppt_x", "ppt_w", f.dxW, f.dx); }), true));
+    if (used(k.y) || used(k.Y)) kids.push(anim(doc, spid, dur, "ppt_y", fs, fs.map(function (f) { return offsetFormula("ppt_y", "ppt_h", f.dyH, f.dy); }), true));
+    if (used(k.s) || used(k.sx)) kids.push(anim(doc, spid, dur, "ppt_w", fs, fs.map(function (f) { return timesFormula("ppt_w", f.sx); }), true));
+    if (used(k.s) || used(k.sy)) kids.push(anim(doc, spid, dur, "ppt_h", fs, fs.map(function (f) { return timesFormula("ppt_h", f.sy); }), true));
+    if (used(k.r)) { var r0 = opts.rot0 || 0; kids.push(anim(doc, spid, dur, "style.rotation", fs, fs.map(function (f) { return r0 + f.rot; }), false)); }
+    return kids;
   }
 
   // ---------- XML helpers ----------
@@ -126,6 +197,9 @@
   // A keyframed <p:anim> on one attribute. values: one per frame, as strings (formulas) or numbers.
   function anim(doc, spid, dur, attrName, fs, values, isStr) {
     var b = behaviour(doc, spid, dur, true); setAttrName(b, attrName);
+    // Inside a run of equal values only the run's ends matter, since PowerPoint draws straight lines
+    var keep = values.map(function (v, i) { return i === 0 || i === values.length - 1 || !(values[i - 1] === v && values[i + 1] === v); });
+    fs = fs.filter(function (f, i) { return keep[i]; }); values = values.filter(function (v, i) { return keep[i]; });
     var tav = P(doc, "tavLst", null, fs.map(function (f, i) {
       var v = isStr ? P(doc, "strVal", { val: values[i] }) : P(doc, "fltVal", { val: num(values[i]) });
       return P(doc, "tav", { tm: Math.round(f.t * 100000) }, [P(doc, "val", null, [v])]);
@@ -143,8 +217,12 @@
   // Builds the effect <p:par> for one shape. opts: { spid, rot0 (the shape's own rotation),
   // nodeType, delay (ms), grpId }. Returns { node, end } where end is delay + duration in ms.
   function buildEffect(doc, spec, opts) {
-    var spid = String(opts.spid), dur = Math.max(1, Math.round(spec.dur)), fs = frames(spec), kids = [], kind = spec.kind;
+    var spid = String(opts.spid), dur = Math.max(1, Math.round(spec.dur)), fs = spec.keys ? [] : frames(spec), kids = [], kind = spec.kind;
     if (kind === "entr") kids.push(setVisibility(doc, spid, "visible", 0));
+    if (spec.keys) {
+      kids = kids.concat(keyBehaviours(doc, spec, opts, dur));
+      return finishEffect(doc, spec, opts, dur, kids);
+    }
     var fadeUsed = (kind !== "emph" && spec.fade) || (kind === "emph" && spec.dim !== undefined && spec.dim !== null);
     if (fadeUsed && spec.fadeMode === "effect" && kind !== "emph") {
       // PowerPoint's own fade filter, eased with its accelerate and decelerate settings
@@ -164,6 +242,10 @@
     }
     var turned = (kind !== "emph" && spec.rotate) || (kind === "emph" && spec.spin);
     if (turned) { var r0 = opts.rot0 || 0; kids.push(anim(doc, spid, dur, "style.rotation", fs, fs.map(function (f) { return r0 + f.rot; }), false)); }
+    return finishEffect(doc, spec, opts, dur, kids);
+  }
+  function finishEffect(doc, spec, opts, dur, kids) {
+    var spid = String(opts.spid), kind = spec.kind;
     if (kind === "exit") kids.push(setVisibility(doc, spid, "hidden", Math.max(0, dur - 1)));
     var ctn = P(doc, "cTn", { id: 0, presetID: 0, presetClass: kind, presetSubtype: 0, fill: "hold", grpId: opts.grpId || 0, nodeType: opts.nodeType || "clickEffect" },
       [cond(doc, Math.max(0, Math.round(opts.delay || 0))), P(doc, "childTnLst", null, kids)]);
@@ -352,7 +434,7 @@
     return { w: 960, h: 540 };
   }
 
-  ST.anim = { readEase: readEase, easeText: easeText, parseEase: parseEase, samples: samples, frames: frames, buildEffect: buildEffect,
+  ST.anim = { readEase: readEase, easeText: easeText, parseEase: parseEase, samples: samples, frames: frames, keyFrames: keyFrames, buildEffect: buildEffect,
               addEffects: addEffects, removeFor: removeFor, capture: capture, addCaptured: addCaptured, slideSize: slideSize,
               effectNodes: effectNodes, renumber: renumber, NS_P: NS_P, NS_A: NS_A };
 })();
