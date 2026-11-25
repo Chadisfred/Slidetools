@@ -214,7 +214,7 @@ Smooth custom animations that PowerPoint's menus can't make: real easing curves,
 
 | Level | Shows |
 | --- | --- |
-| Basic | Presets (starters and yours), Entrance, Exit or Emphasis, preview with Play, Fade, Move (travel and distance), Scale, Rotate, or Pulse, Spin and Dim for emphasis, ease and direction with a curve, ease as text, duration, delay, Start, Apply to selection |
+| Basic | Presets (starters and yours), Entrance, Exit or Emphasis, preview with Play, Fade, Move (travel and distance), Scale, Rotate, or Pulse, Spin and Dim for emphasis, ease and direction with a curve, ease as text, duration, delay, Start, Repeat for emphasis, Apply to selection, Copy animations, Paste animations, Repeat set |
 | More | Stagger and order, Replace their animations, preset name with Save and Capture, Remove animations from selection |
 
 Tips:
@@ -222,6 +222,8 @@ Tips:
 1. Eases use GSAP's names and settings: `none`, `power1` to `power4`, `sine`, `expo`, `circ`, `back(overshoot)`, `elastic(amplitude, period)` and `bounce`, each with `.in`, `.out` or `.inOut`. Type one such as `back.out(1.7)` or pick it from the list. The curve is written to the slide as keyframes, so it plays the same as the preview.
 2. Starters sit in groups that fold open one at a time: Basics, Fade and slide, Back, Bounce, Zoom, Roll and spin, Attention, Exits, and Your presets. Basics fill the controls, so you can adjust them. The other groups are keyframed effects, such as Bounce in, Rubber band, Heartbeat, Tada or Back out, that move through several steps. Duration, delay, start and stagger still apply to them, and changing an effect or the ease goes back to your own settings. Several are inspired by [Animate.css](https://animate.style) (MIT), rewritten as PowerPoint keyframes.
 3. With several shapes selected, the first one uses Start and the rest follow by the stagger, in the order you choose.
+4. Emphasis can repeat: a number of times (1 to 99), until the next click, or until the end of the slide. This works for Pulse, Spin, Dim and the Attention effects such as Flash.
+5. Copy and paste. Select shapes and click Copy animations to keep their animations as a set, with their order, clicks, with and after, and delays. Select other shapes, on this slide or another, and click Paste animations: the first copied shape's animations go to the first selected shape, and so on, after their own animations. Repeat set adds the selected shapes' animations again, after themselves.
 4. Save keeps the settings as a preset in the presentation. Capture keeps the selected shape's own animations, exactly as they are, so you can reuse an animation from any deck you can use.
 5. Replace their animations, on by default, removes a shape's earlier animations first, so applying again doesn't stack effects.
 6. PowerPoint add-ins can't add animations directly, so the slide is swapped for an identical copy with the animation, in memory. The result is a normal PowerPoint animation that shows in the Animation Pane and can be retimed there.
