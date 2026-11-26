@@ -33,13 +33,15 @@
   function e(pt) { return Math.round(pt * 12700); }
   function x(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   // A theme colour, optionally darker (lumMod) or lighter (lumMod plus lumOff)
-  function clr(slot, mod, off) {
-    return '<a:schemeClr val="' + slot + '">' + (mod ? '<a:lumMod val="' + mod + '"/>' : "") + (off ? '<a:lumOff val="' + off + '"/>' : "") + "</a:schemeClr>";
+  function clr(slot, mod, off, alpha) {
+    return '<a:schemeClr val="' + slot + '">' + (mod ? '<a:lumMod val="' + mod + '"/>' : "") + (off ? '<a:lumOff val="' + off + '"/>' : "") + (alpha ? '<a:alpha val="' + alpha + '"/>' : "") + "</a:schemeClr>";
   }
   function palette(slot) {
     return {
       dark: clr(slot, 75000), base: clr(slot), mid: clr(slot, 60000, 40000), light: clr(slot, 40000, 60000), pale: clr(slot, 20000, 80000),
-      grey: clr("bg1", 95000), rule: clr("bg1", 75000), white: clr("bg1"), text: clr("tx1"), soft: clr("tx1", 65000, 35000)
+      grey: clr("bg1", 95000), rule: clr("bg1", 75000), white: clr("bg1"), text: clr("tx1"), soft: clr("tx1", 65000, 35000),
+      // See-through bands, so a picture or texture behind the card shows a little
+      tint: clr(slot, null, null, 30000), mist: clr("bg1", 95000, null, 85000)
     };
   }
   // runs: [{ t, b, i, sz, c (colour XML), mj (heading font) }]
@@ -100,14 +102,14 @@
     return heights;
   }
   function statCard(S, b, slot, ids) {
-    var k = scaleFor(b.w), c = palette(slot), pad = Math.round(10 * k), W = b.w, inW = W - 2 * pad;
-    var tSz = 18 * k, sSz = 13 * k, bSz = 12 * k, fSz = 12 * k, valW = Math.round(W * 0.38);
+    var k = scaleFor(b.w), c = palette(slot), pad = Math.round(12 * k), W = b.w, inW = W - 2 * pad;
+    var tSz = 22 * k, sSz = 14 * k, bSz = 14 * k, fSz = 14 * k, valW = Math.round(W * 0.38), gap = 8 * k;
     var arrow = S.elStArrow !== false ? arrowFor(S.elStValue) : "";
-    var list = bullets(S.elStBullets), marL = 13 * k;
+    var list = bullets(S.elStBullets), marL = 16 * k;
     var hHead = Math.max(textH(S.elStTitle, tSz, W - valW - 2 * pad), (arrow ? 2 : 1) * tSz * 1.2) + 2 * pad;
     var hSub = textH(S.elStSub, sSz, inW) + 2 * pad;
-    var hList = list.reduce(function (n, t) { return n + textH(t, bSz, inW - marL) + 6 * k; }, 0) + 2 * pad;
-    var hFoot = fSz * 1.2 + 2 * pad;
+    var hList = list.reduce(function (n, t) { return n + textH(t, bSz, inW - marL) + gap; }, 0) - gap + 2.4 * pad;
+    var hFoot = fSz * 1.2 + 2.4 * pad;
     var hs = fit([hHead, hSub, hList, hFoot], 2, b.h), y = b.y, kids = [];
     var inset = { l: pad, t: pad, r: pad, b: pad };
     kids.push(sp(ids.next++, "Header", { x: b.x, y: y, w: W, h: hs[0] }, { fill: c.dark, text: txBody([para([{ t: S.elStTitle, b: true, sz: tSz, c: c.white, mj: true }])], { l: pad, t: pad, r: valW, b: pad }) }));
@@ -115,18 +117,18 @@
     if (arrow) valParas.push(para([{ t: arrow, sz: tSz * 0.8, c: c.white }], { align: "r" }));
     kids.push(sp(ids.next++, "Value", { x: b.x + W - valW, y: y, w: valW, h: hs[0] }, { text: txBody(valParas, inset) }));
     y += hs[0];
-    kids.push(sp(ids.next++, "Summary", { x: b.x, y: y, w: W, h: hs[1] }, { fill: c.pale, text: txBody([para([{ t: S.elStSub, i: true, sz: sSz, c: c.text }])], inset, "ctr") }));
+    kids.push(sp(ids.next++, "Summary", { x: b.x, y: y, w: W, h: hs[1] }, { fill: c.tint, text: txBody([para([{ t: S.elStSub, i: true, sz: sSz, c: c.text }])], inset, "ctr") }));
     y += hs[1];
-    kids.push(sp(ids.next++, "Points", { x: b.x, y: y, w: W, h: hs[2] }, { fill: c.grey, text: txBody(list.map(function (t, i) { return para([{ t: t, sz: bSz, c: c.text }], { bullet: { ch: "▪", c: c.base }, marL: marL, spcBef: i ? 6 * k : 0 }); }), inset) }));
+    kids.push(sp(ids.next++, "Points", { x: b.x, y: y, w: W, h: hs[2] }, { fill: c.mist, text: txBody(list.map(function (t, i) { return para([{ t: t, sz: bSz, c: c.text }], { bullet: { ch: "▪", c: c.dark }, marL: marL, spcBef: i ? gap : 0 }); }), { l: pad, t: pad * 1.2, r: pad, b: pad * 1.2 }) }));
     y += hs[2];
-    // Rules between the bands, in the card's colour
-    var rule = Math.max(0.75, Math.round(k * 4) / 4);
-    kids.push(sp(ids.next++, "Rule", { x: b.x, y: b.y + hs[0] + hs[1] - rule / 2, w: W, h: rule }, { fill: c.mid }));
-    kids.push(sp(ids.next++, "Rule", { x: b.x, y: y - rule / 2, w: W, h: rule }, { fill: c.mid }));
-    kids.push(sp(ids.next++, "Footer", { x: b.x, y: y, w: W, h: hs[3] }, { fill: c.grey, text: txBody([para([{ t: S.elStFootB, b: true, sz: fSz, c: c.text, mj: true }, { t: S.elStFootN ? " " + S.elStFootN : "", sz: fSz, c: c.text }].filter(function (r) { return r.t; }))], inset, "ctr") }));
+    // Rules between the bands: the header colour, as thick as the outline
+    var rule = Math.max(1, Math.round(k * 4) / 4 + 0.25);
+    kids.push(sp(ids.next++, "Rule", { x: b.x, y: b.y + hs[0] + hs[1] - rule / 2, w: W, h: rule }, { fill: c.dark }));
+    kids.push(sp(ids.next++, "Rule", { x: b.x, y: y - rule / 2, w: W, h: rule }, { fill: c.dark }));
+    kids.push(sp(ids.next++, "Footer", { x: b.x, y: y, w: W, h: hs[3] }, { fill: c.mist, text: txBody([para([{ t: S.elStFootB, b: true, sz: fSz, c: c.text, mj: true }, { t: S.elStFootN ? " " + S.elStFootN : "", sz: fSz, c: c.text }].filter(function (r) { return r.t; }))], inset, "ctr") }));
     y += hs[3];
     // An outline round the whole card, on top
-    kids.push(sp(ids.next++, "Border", { x: b.x, y: b.y, w: W, h: y - b.y }, { line: { c: c.dark, w: Math.max(1, Math.round(k * 4) / 4 + 0.25) } }));
+    kids.push(sp(ids.next++, "Border", { x: b.x, y: b.y, w: W, h: y - b.y }, { line: { c: c.dark, w: rule } }));
     return { name: "Stat card", kids: kids, h: y - b.y };
   }
   function pointerCard(S, b, slot, ids) {
