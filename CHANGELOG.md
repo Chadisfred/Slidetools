@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.9.0] 2026-11-26
+
+### Changed
+
+1. Animation is laid out like an inspector: Entrance, Emphasis or Exit first, then a searchable gallery of effects with category chips, the preview, and folding Effect, Motion, Timing and Presets sections that show a summary when closed. Copy, Paste, Repeat and Remove sit in one row, and Apply to selection stays at the bottom while you scroll.
+
 ## [3.8.0] 2026-11-25
 
 ### Added
