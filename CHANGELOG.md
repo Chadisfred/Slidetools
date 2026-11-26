@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.10.0] 2026-11-26
+
+### Added
+
+1. Elements, a new tool for prebuilt design elements in theme colours and fonts: Stat card (a header with a title and a value with an automatic up, down or flat arrow, a summary band, bullets and a footer figure), Pointer card (a dark header, a band of bullets and a light footer joined by small pointers) and Big number. An element replaces the selected shape at its size and place, or takes a typed width such as `3col` at the grid area's top left.
+
 ## [3.9.0] 2026-11-26
 
 ### Changed
