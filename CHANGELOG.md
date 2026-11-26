@@ -11,7 +11,13 @@ All notable changes to Slide Tools are listed here, newest first. Version number
 
 ### Changed
 
-1. The Home tab button is now called Slide Tools Panel, in a Slide Tools group, instead of Grid Panel in Slide Panel. Run the installer once more to get the new name and the new shortcut.
+1. Elements opens with a picture of each element, all the same size and drawn in the chosen colour. Picking one shows its settings.
+2. Elements: white text and white bands are always white, even when a template's Light 1 theme colour is grey or mapped to a dark colour.
+3. The Home tab button is now called Slide Tools Panel, in a Slide Tools group, instead of Grid Panel in Slide Panel. Run the installer once more to get the new name and the new shortcut.
+
+### Fixed
+
+1. Elements: Type a size places the element when nothing is selected. It used to ask for a selection first.
 
 ## [3.10.0] 2026-11-26
 
