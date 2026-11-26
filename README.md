@@ -212,10 +212,19 @@ Tips:
 
 Smooth custom animations that PowerPoint's menus can't make: real easing curves, several effects at once, exact numbers, a stagger across shapes, and presets.
 
+The panel reads top to bottom like an inspector:
+
+1. Entrance, Emphasis or Exit.
+2. Search effects, then category chips (All, Simple, Fade and slide, Back, Bounce, Zoom, Roll and spin, Attention, Exits, Mine) and the effects themselves. Custom builds your own.
+3. The preview with Play.
+4. Folding sections, each with a one-line summary when closed: Effect (the switches and Repeat), Motion (ease and duration), Timing (start, delay, stagger, order, replace) and Presets (save and Capture).
+5. Copy, Paste, Repeat and Remove for the selected shapes' animations.
+6. Apply to selection, which stays at the bottom of the panel while you scroll.
+
 | Level | Shows |
 | --- | --- |
-| Basic | Presets (starters and yours), Entrance, Exit or Emphasis, preview with Play, Fade, Move (travel and distance), Scale, Rotate, or Pulse, Spin and Dim for emphasis, ease and direction with a curve, ease as text, duration, delay, Start, Repeat for emphasis, Apply to selection, Copy animations, Paste animations, Repeat set |
-| More | Stagger and order, Replace their animations, preset name with Save and Capture, Remove animations from selection |
+| Basic | Everything above |
+| More | Stagger, Order and Replace their animations in Timing, and Capture in Presets |
 
 Tips:
 

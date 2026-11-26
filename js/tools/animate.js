@@ -15,10 +15,10 @@
   var defaults = {
     anKind: "entr", anFade: true, anMove: true, anDir: "up", anDist: "20", anScale: false, anScaleVal: "90", anRotate: false, anRotVal: "-12",
     anPulse: true, anPulseVal: "106", anSpin: false, anSpinVal: "360", anDim: false, anDimVal: "40",
-    anEase: "power2.out", anDur: "0.5", anDelay: "0", anStart: "click", anStagger: "0.08", anOrder: "selection", anReplace: true, anPresetName: "", anKeys: "", anGroup: "basics", anRepeat: "1", anRepeatMode: "count"
+    anEase: "power2.out", anDur: "0.5", anDelay: "0", anStart: "click", anStagger: "0.08", anOrder: "selection", anReplace: true, anPresetName: "", anKeys: "", anGroup: "basics", anRepeat: "1", anRepeatMode: "count", anOpen: null
   };
   ST.addDefaults(defaults);
-  var KEYS = Object.keys(defaults).filter(function (k) { return k !== "anPresetName" && k !== "anReplace" && k !== "anOrder" && k !== "anGroup"; });
+  var KEYS = Object.keys(defaults).filter(function (k) { return k !== "anPresetName" && k !== "anReplace" && k !== "anOrder" && k !== "anGroup" && k !== "anOpen"; });
 
   // Built in starters, read only. Each one fills the controls.
   function S(o) { return Object.assign({ anKind: "entr", anKeys: "", anFade: false, anMove: false, anScale: false, anRotate: false, anPulse: false, anSpin: false, anDim: false, anDelay: "0" }, o); }
@@ -381,7 +381,8 @@
     b.className = "mini-chip an-chip" + (p.id && !p.keys ? " mine" : "") + (on ? " on" : "");
     b.textContent = p.name;
     b.title = p.captured ? "Apply this captured animation to the selected shapes" : p.keys ? "Use " + p.name + ", a keyframed " + ({ entr: "entrance", exit: "exit", emph: "emphasis" })[p.kind] : p.id ? "Your preset: fill the controls" : "Fill the controls with " + p.name;
-    b.addEventListener("click", function () { usePreset(p); });
+    if (!p.keys && !p.id && pickedName === p.name && !ST.state.anKeys) b.classList.add("on");
+    b.addEventListener("click", function () { pickedName = p.keys ? "" : p.name; usePreset(p); });
     if (p.id && !p.keys) {
       var del = document.createElement("span");
       del.className = "del"; del.textContent = "×"; del.title = "Delete this preset";
@@ -390,28 +391,75 @@
     }
     return b;
   }
-  // Starters sit in groups that fold open one at a time, so the list stays short
+  // ---------- Effect gallery ----------
+  // Effects for the chosen kind, in categories, with a search across them
+  var CATS = {
+    entr: [["all", "All"], ["simple", "Simple"], ["fade", "Fade and slide"], ["back", "Back"], ["bounce", "Bounce"], ["zoom", "Zoom"], ["roll", "Roll and spin"], ["mine", "Mine"]],
+    emph: [["all", "All"], ["simple", "Simple"], ["attention", "Attention"], ["mine", "Mine"]],
+    exit: [["all", "All"], ["simple", "Simple"], ["exit", "Exits"], ["mine", "Mine"]]
+  };
+  var search = "", pickedName = "";
+  function kindOf(p) { if (p.captured) return "any"; if (p.keys) return p.kind; var k = p.s && p.s.anKeys && keyed(p.s.anKeys); return k ? k.kind : (p.s && p.s.anKind) || "entr"; }
+  function effectsFor(kind, cat) {
+    var fits = function (p) { var k = kindOf(p); return k === "any" || k === kind; };
+    var simple = STARTERS.filter(fits), keyedList = KEYED.filter(fits), mine = presets.filter(fits);
+    if (cat === "simple") return simple;
+    if (cat === "mine") return mine;
+    if (cat === "all" || !cat) return simple.concat(keyedList, mine);
+    return keyedList.filter(function (k) { return k.group === cat; });
+  }
   function renderPresets() {
-    var el = $("anPresets");
-    if (!el) return;
-    el.innerHTML = "";
-    var open = ST.state.anGroup || "basics";
-    GROUPS.forEach(function (g) {
-      var list = g[0] === "basics" ? STARTERS : g[0] === "mine" ? presets : KEYED.filter(function (k) { return k.group === g[0]; });
-      if (g[0] === "mine" && !list.length) return;
-      var isOpen = open === g[0], head = document.createElement("button");
-      head.className = "an-group" + (isOpen ? " open" : "");
-      head.setAttribute("aria-expanded", String(isOpen));
-      head.setAttribute("data-group", g[0]);
-      head.innerHTML = '<span class="an-caret" aria-hidden="true"></span><span class="an-group-name"></span><span class="an-count">' + list.length + "</span>";
-      head.querySelector(".an-group-name").textContent = g[1];
-      head.addEventListener("click", function () { ST.state.anGroup = isOpen ? "" : g[0]; ST.save(); renderPresets(); });
-      el.appendChild(head);
-      if (!isOpen) return;
-      var chips = document.createElement("div");
-      chips.className = "mini-chips an-group-chips";
-      list.forEach(function (p) { chips.appendChild(presetChip(p)); });
-      el.appendChild(chips);
+    var cats = $("anCats"), gal = $("anGallery");
+    if (!cats) return;
+    var kind = ST.state.anKind === "exit" ? "exit" : ST.state.anKind === "emph" ? "emph" : "entr";
+    var list = CATS[kind].filter(function (c) { return c[0] !== "mine" || effectsFor(kind, "mine").length; });
+    var cat = ST.state.anGroup;
+    if (!list.some(function (c) { return c[0] === cat; })) cat = "all";
+    cats.innerHTML = "";
+    list.forEach(function (c) {
+      var b = document.createElement("button");
+      b.className = "mini-chip an-cat" + (c[0] === cat && !search ? " on" : "");
+      b.textContent = c[1]; b.setAttribute("data-cat", c[0]);
+      b.addEventListener("click", function () { ST.state.anGroup = c[0]; ST.save(); search = ""; $("anSearch").value = ""; renderPresets(); });
+      cats.appendChild(b);
+    });
+    var q = search.trim().toLowerCase();
+    var items = q ? effectsFor(kind, "all").filter(function (p) { return p.name.toLowerCase().indexOf(q) >= 0; }) : effectsFor(kind, cat);
+    gal.innerHTML = "";
+    if (!q && cat === "all") {
+      var custom = document.createElement("button");
+      custom.className = "mini-chip an-chip an-custom" + (!ST.state.anKeys && !pickedName ? " on" : "");
+      custom.textContent = "Custom"; custom.title = "Build your own from Fade, Move, Scale and Rotate (or Pulse, Spin and Dim)";
+      custom.addEventListener("click", function () { pickedName = ""; dropKeys(); setOpen("custom", true); ST.save(); renderSegs(); ST.changed(); play(); });
+      gal.appendChild(custom);
+    }
+    items.forEach(function (p) { gal.appendChild(presetChip(p)); });
+    if (!items.length) { var none = document.createElement("div"); none.className = "muted-note"; none.textContent = q ? "No effects match " + search.trim() + "." : "Nothing here yet."; gal.appendChild(none); }
+  }
+
+  // ---------- Folding sections ----------
+  function openState() { var o = ST.state.anOpen; return o && typeof o === "object" ? o : {}; }
+  function setOpen(id, on) { var o = Object.assign({}, openState()); o[id] = on; ST.state.anOpen = o; renderSections(); }
+  function sectionMarkup(id, title, body) {
+    return '<div class="an-sec" data-sec="' + id + '"><button class="an-sec-head" aria-expanded="false"><span class="an-caret" aria-hidden="true"></span><span class="an-sec-title">' + title + '</span><span class="an-sec-sum" id="anSum_' + id + '"></span></button><div class="an-sec-body">' + body + '</div></div>';
+  }
+  function summaries() {
+    var S = ST.state, def = S.anKeys && keyed(S.anKeys), emph = S.anKind === "emph", out = {};
+    out.custom = def ? "Keyframed: " + def.name : describeBase(S).replace(/^[^:]+:\s*/, "") || "Nothing on";
+    if (emph) out.custom += repeatText(S);
+    out.motion = (def ? "keyframed" : S.anEase) + " · " + ST.nice(secs(S.anDur) || 0) + " s";
+    var d = secs(S.anDelay) || 0;
+    out.timing = ({ click: "On click", "with": "With previous", after: "After previous" })[S.anStart] + " · " + (d ? ST.nice(d) + " s delay" : "no delay") + ((ST.selection && ST.selection.count > 1) ? " · stagger " + ST.nice(secs(S.anStagger) || 0) + " s" : "");
+    out.presets = presets.length ? ST.plural(presets.length, "preset") + " saved" : "None yet";
+    return out;
+  }
+  function renderSections() {
+    var o = openState(), sum = summaries();
+    Array.prototype.forEach.call(document.querySelectorAll("[data-tool=animate] .an-sec"), function (sec) {
+      var id = sec.getAttribute("data-sec"), on = !!o[id];
+      sec.classList.toggle("open", on);
+      sec.querySelector(".an-sec-head").setAttribute("aria-expanded", String(on));
+      var el = $("anSum_" + id); if (el) el.textContent = on ? "" : sum[id] || "";
     });
   }
 
@@ -448,43 +496,58 @@
   // ---------- Panel ----------
   function seg(id, opts) { return '<div class="seg seg' + opts.length + '" id="' + id + '">' + opts.map(function (o) { return '<button data-v="' + o[0] + '"' + (o[2] ? ' title="' + o[2] + '"' : '') + '>' + o[1] + '</button>'; }).join("") + '</div>'; }
   function toggle(id, label, field) { return '<div class="an-effect"><div class="toggle">' + label + '<label class="switch"><input type="checkbox" id="' + id + '"><span></span></label></div>' + (field || "") + '</div>'; }
+  var ICONS = {
+    copy: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="5" y="5" width="8.5" height="8.5" rx="1.5"/><path d="M3.5 10.5h-.5A1.5 1.5 0 0 1 1.5 9V3A1.5 1.5 0 0 1 3 1.5h6A1.5 1.5 0 0 1 10.5 3v.5"/></svg>',
+    paste: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><rect x="3" y="3" width="10" height="11.5" rx="1.5"/><path d="M6 3V1.8h4V3M5.5 7.5h5M5.5 10.5h3.5"/></svg>',
+    repeat: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 0 1 9.4-3.9L13.5 6M13.5 2.5V6H10M13.5 8a5.5 5.5 0 0 1-9.4 3.9L2.5 10M2.5 13.5V10H6"/></svg>',
+    remove: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" aria-hidden="true"><path d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4"/></svg>'
+  };
+  function actionBtn(id, icon, label, title, disabled) { return '<button class="btn small an-act" id="' + id + '" title="' + title + '"' + (disabled ? " disabled" : "") + '>' + ICONS[icon] + '<span>' + label + '</span></button>'; }
   var MARKUP =
-    '<div class="sublabel">Presets</div>' +
-    '<div class="an-groups" id="anPresets"></div>' +
-    seg("anKind", [["entr", "Entrance"], ["exit", "Exit"], ["emph", "Emphasis"]]) +
+    seg("anKind", [["entr", "Entrance"], ["emph", "Emphasis"], ["exit", "Exit"]]) +
+    '<div class="an-search"><input type="search" id="anSearch" placeholder="Search effects" aria-label="Search effects" autocomplete="off"></div>' +
+    '<div class="an-cats" id="anCats"></div>' +
+    '<div class="mini-chips an-gallery" id="anGallery"></div>' +
     '<div class="an-preview"><div class="an-stage"><div class="an-sample" id="anSample"></div></div><button class="btn small" id="anPlay">Play</button></div>' +
     '<div class="help an-note" id="anPreviewNote"></div>' +
-    '<div class="an-keyed-note" id="anKeyedNote" hidden><span></span><button class="link-btn" id="anKeyedOff">Use my own settings</button></div>' +
-    '<div class="an-move-group">' +
-      toggle("anFade", "Fade") +
-      toggle("anMove", "Move", '<div class="row an-sub"><label class="field">Travel' + seg("anDir", [["up", "&uarr;", "Up"], ["down", "&darr;", "Down"], ["left", "&larr;", "Left"], ["right", "&rarr;", "Right"]]) + '</label><label class="field"><span class="label-row">Distance (pt)' + ST.info("Points, or grid names in points such as <code>g</code> or <code>g/2</code>.", "About distance") + '</span><input type="text" id="anDist" inputmode="decimal"></label></div>') +
-      toggle("anScale", "Scale", '<label class="field an-sub">' + '<span id="anScaleLabel">From %</span><input type="text" id="anScaleVal" inputmode="decimal"></label>') +
-      toggle("anRotate", "Rotate", '<label class="field an-sub"><span id="anRotLabel">From degrees</span><input type="text" id="anRotVal" inputmode="decimal"></label>') +
+    sectionMarkup("custom", "Effect",
+      '<div class="an-keyed-note" id="anKeyedNote" hidden><span></span><button class="link-btn" id="anKeyedOff">Use my own settings</button></div>' +
+      '<div class="an-move-group">' +
+        toggle("anFade", "Fade") +
+        toggle("anMove", "Move", '<div class="row an-sub"><label class="field">Travel' + seg("anDir", [["up", "&uarr;", "Up"], ["down", "&darr;", "Down"], ["left", "&larr;", "Left"], ["right", "&rarr;", "Right"]]) + '</label><label class="field"><span class="label-row">Distance (pt)' + ST.info("Points, or grid names in points such as <code>g</code> or <code>g/2</code>.", "About distance") + '</span><input type="text" id="anDist" inputmode="decimal"></label></div>') +
+        toggle("anScale", "Scale", '<label class="field an-sub">' + '<span id="anScaleLabel">From %</span><input type="text" id="anScaleVal" inputmode="decimal"></label>') +
+        toggle("anRotate", "Rotate", '<label class="field an-sub"><span id="anRotLabel">From degrees</span><input type="text" id="anRotVal" inputmode="decimal"></label>') +
+      '</div>' +
+      '<div class="an-emph-group">' +
+        toggle("anPulse", "Pulse", '<label class="field an-sub">Grow to %<input type="text" id="anPulseVal" inputmode="decimal"></label>') +
+        toggle("anSpin", "Spin", '<label class="field an-sub">Degrees<input type="text" id="anSpinVal" inputmode="decimal"></label>') +
+        toggle("anDim", "Dim", '<label class="field an-sub">Fade to %<input type="text" id="anDimVal" inputmode="decimal"></label>') +
+      '</div>' +
+      '<div class="an-repeat"><div class="field"><span class="label-row">Repeat' + ST.info("How many times the emphasis plays, or until the next click or the end of the slide, like PowerPoint\'s Timing settings.", "About repeat") + '</span>' + seg("anRepeatMode", [["count", "Times"], ["click", "Until click", "Until the next click"], ["slide", "Until end", "Until the end of the slide"]]) + '</div>' +
+        '<label class="field an-repeat-count">Times<div class="stepper"><input type="text" id="anRepeat" inputmode="numeric"><button id="anRepeatLess" title="Fewer times">&minus;</button><button id="anRepeatMore" title="More times">+</button></div></label></div>') +
+    sectionMarkup("motion", "Motion",
+      '<div class="an-ease"><div class="an-ease-controls"><span class="label-row sublabel">Ease' + ST.info("Named the way GSAP names them. Power 1 to 4 get stronger, Back overshoots, Elastic springs and Bounce bounces. In starts slowly, Out ends slowly. You can also type a name such as <code>back.out(1.7)</code>.", "About eases") + '</span><select id="anFamily" aria-label="Ease">' + FAMILIES.map(function (f) { return '<option value="' + f[0] + '">' + f[1] + '</option>'; }).join("") + '</select>' +
+        seg("anEaseDir", [["in", "In"], ["out", "Out"], ["inOut", "In out"]]) +
+        '<input type="text" id="anEase" spellcheck="false" aria-label="Ease as text"></div><svg id="anCurve" viewBox="0 0 120 64" aria-hidden="true"></svg></div>' +
+      '<label class="field">Duration (s)<input type="text" id="anDur" inputmode="decimal"></label>') +
+    sectionMarkup("timing", "Timing",
+      '<div class="field">Start' + seg("anStart", [["click", "On click"], ["with", "With previous"], ["after", "After previous"]]) + '</div>' +
+      '<label class="field">Delay (s)<input type="text" id="anDelay" inputmode="decimal"></label>' +
+      '<div class="row" data-min="2"><label class="field"><span class="label-row">Stagger (s)' + ST.info("With several shapes selected, each one starts this much after the one before.", "About stagger") + '</span><input type="text" id="anStagger" inputmode="decimal"></label>' +
+        '<label class="field">Order' + seg("anOrder", [["selection", "Picked", "In the order PowerPoint gives the selection"], ["lr", "&rarr;", "Left to right"], ["tb", "&darr;", "Top to bottom"]]) + '</label></div>' +
+      '<div class="toggle" data-min="2"><span class="label-row">Replace their animations' + ST.info("Removes the shapes\' earlier animations first, so applying again doesn\'t add another.", "About replacing") + '</span><label class="switch"><input type="checkbox" id="anReplace"><span></span></label></div>') +
+    sectionMarkup("presets", "Presets",
+      '<div class="inline"><label class="field">Preset name<input type="text" id="anPresetName" maxlength="32" placeholder="e.g. Card in"></label>' +
+        '<div class="pair"><button class="btn small" id="anSave" title="Save these settings as a preset in this presentation">Save</button><button class="btn small" id="anCapture" data-min="2" title="Save the selected shape\'s own animations as a preset">Capture</button></div></div>' +
+      '<div class="help">Saved presets appear under Mine in the effects above.</div>') +
+    '<div class="an-actions">' +
+      actionBtn("anCopy", "copy", "Copy", "Copy the selected shapes\' animations as a set, with their order and timing") +
+      actionBtn("anPaste", "paste", "Paste", "Add the copied set to the selected shapes, after their own animations", true) +
+      actionBtn("anRepeatSet", "repeat", "Repeat", "Add the selected shapes\' animations again, after themselves") +
+      actionBtn("anRemove", "remove", "Remove", "Remove the selected shapes\' animations") +
     '</div>' +
-    '<div class="an-emph-group">' +
-      toggle("anPulse", "Pulse", '<label class="field an-sub">Grow to %<input type="text" id="anPulseVal" inputmode="decimal"></label>') +
-      toggle("anSpin", "Spin", '<label class="field an-sub">Degrees<input type="text" id="anSpinVal" inputmode="decimal"></label>') +
-      toggle("anDim", "Dim", '<label class="field an-sub">Fade to %<input type="text" id="anDimVal" inputmode="decimal"></label>') +
-    '</div>' +
-    '<div class="an-repeat"><div class="field"><span class="label-row">Repeat' + ST.info("How many times the emphasis plays, or until the next click or the end of the slide, like PowerPoint\'s Timing settings.", "About repeat") + '</span>' + seg("anRepeatMode", [["count", "Times"], ["click", "Until click", "Until the next click"], ["slide", "Until end", "Until the end of the slide"]]) + '</div>' +
-      '<label class="field an-repeat-count">Times<div class="stepper"><input type="text" id="anRepeat" inputmode="numeric"><button id="anRepeatLess" title="Fewer times">&minus;</button><button id="anRepeatMore" title="More times">+</button></div></label></div>' +
-    '<div class="group-label label-row">Ease' + ST.info("Named the way GSAP names them. Power 1 to 4 get stronger, Back overshoots, Elastic springs and Bounce bounces. In starts slowly, Out ends slowly. You can also type a name such as <code>back.out(1.7)</code>.", "About eases") + '</div>' +
-    '<div class="an-ease"><div class="an-ease-controls"><select id="anFamily" aria-label="Ease">' + FAMILIES.map(function (f) { return '<option value="' + f[0] + '">' + f[1] + '</option>'; }).join("") + '</select>' +
-      seg("anEaseDir", [["in", "In"], ["out", "Out"], ["inOut", "In out"]]) +
-      '<input type="text" id="anEase" spellcheck="false" aria-label="Ease as text"></div><svg id="anCurve" viewBox="0 0 120 64" aria-hidden="true"></svg></div>' +
-    '<div class="row"><label class="field">Duration (s)<input type="text" id="anDur" inputmode="decimal"></label><label class="field">Delay (s)<input type="text" id="anDelay" inputmode="decimal"></label></div>' +
-    '<div class="field">Start' + seg("anStart", [["click", "On click"], ["with", "With previous"], ["after", "After previous"]]) + '</div>' +
-    '<div class="row" data-min="2"><label class="field"><span class="label-row">Stagger (s)' + ST.info("With several shapes selected, each one starts this much after the one before.", "About stagger") + '</span><input type="text" id="anStagger" inputmode="decimal"></label>' +
-      '<label class="field">Order' + seg("anOrder", [["selection", "Picked", "In the order PowerPoint gives the selection"], ["lr", "&rarr;", "Left to right"], ["tb", "&darr;", "Top to bottom"]]) + '</label></div>' +
-    '<div class="toggle" data-min="2"><span class="label-row">Replace their animations' + ST.info("Removes the shapes\' earlier animations first, so applying again doesn\'t add another.", "About replacing") + '</span><label class="switch"><input type="checkbox" id="anReplace"><span></span></label></div>' +
-    '<button class="btn primary" id="anApply">Apply to selection</button>' +
-    '<div class="group-label label-row">Copy and paste' + ST.info("<b>Copy animations</b> keeps the selected shapes\' animations as a set, in order, with their clicks, with and after, and delays. <b>Paste animations</b> adds the set to the selected shapes, on this or another slide, after their own animations: the first copied shape\'s animations go to the first selected shape, and so on, in the Order chosen below. <b>Repeat set</b> plays the selected shapes\' animations again after themselves.", "About copy and paste") + '</div>' +
-    '<div class="btn-row an-copy-row"><button class="btn small" id="anCopy" title="Copy the selected shapes\' animations as a set">Copy animations</button><button class="btn small" id="anPaste" title="Add the copied set to the selected shapes" disabled>Paste animations</button></div>' +
-    '<button class="btn small" id="anRepeatSet" title="Add the selected shapes\' animations again, after themselves">Repeat set</button>' +
-    '<div class="help" id="anCopied">Nothing copied yet.</div>' +
-    '<div class="inline" data-min="2"><label class="field">Preset name<input type="text" id="anPresetName" maxlength="32" placeholder="e.g. Card in"></label>' +
-      '<div class="pair"><button class="btn small" id="anSave" title="Save these settings as a preset in this presentation">Save</button><button class="btn small" id="anCapture" title="Save the selected shape\'s own animations as a preset">Capture</button></div></div>' +
-    '<button class="btn small" id="anRemove" data-min="2" title="Remove the selected shapes\' animations">Remove animations from selection</button>';
+    '<div class="help an-copied" id="anCopied">Nothing copied yet.</div>' +
+    '<div class="an-footer"><button class="btn primary" id="anApply">Apply to selection</button></div>';
 
   function renderSegs() {
     [["anKind", "anKind"], ["anDir", "anDir"], ["anStart", "anStart"], ["anOrder", "anOrder"]].forEach(function (p) {
@@ -514,7 +577,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".an-move-group, .an-emph-group, .an-ease"), function (n) { n.classList.toggle("an-dim", !!def); });
   }
   // Leaves a keyframed starter: the panel's own effect settings apply again
-  function dropKeys() { if (ST.state.anKeys) { ST.state.anKeys = ""; renderPresets(); } }
+  function dropKeys() { if (ST.state.anKeys) { ST.state.anKeys = ""; } renderPresets(); }
   function setEaseFromControls(dir) {
     dropKeys();
     var fam = $("anFamily").value, cur = A.readEase(ST.state.anEase) || { dir: "out", params: [] };
@@ -532,15 +595,21 @@
     ["anDist", "anScaleVal", "anRotVal", "anPulseVal", "anSpinVal", "anDimVal"].forEach(function (k) { $(k).addEventListener("input", function () { if (ST.state.anKeys) { dropKeys(); renderSegs(); } }); });
     [["anKind", "anKind"], ["anDir", "anDir"], ["anStart", "anStart"], ["anOrder", "anOrder"]].forEach(function (p) {
       Array.prototype.forEach.call($(p[0]).children, function (b) {
-        b.addEventListener("click", function (e) { e.preventDefault(); if (p[0] === "anKind" || p[0] === "anDir") dropKeys(); ST.state[p[1]] = b.getAttribute("data-v"); ST.save(); renderSegs(); ST.changed(); if (p[0] !== "anOrder" && p[0] !== "anStart") play(); });
+        b.addEventListener("click", function (e) { e.preventDefault(); if (p[0] === "anKind" || p[0] === "anDir") dropKeys(); if (p[0] === "anKind") pickedName = ""; ST.state[p[1]] = b.getAttribute("data-v"); ST.save(); renderSegs(); if (p[0] === "anKind") renderPresets(); ST.changed(); if (p[0] !== "anOrder" && p[0] !== "anStart") play(); });
       });
     });
     ["anFade", "anMove", "anScale", "anRotate", "anPulse", "anSpin", "anDim", "anReplace"].forEach(function (k) {
-      $(k).addEventListener("change", function () { if (k !== "anReplace") dropKeys(); ST.state[k] = $(k).checked; ST.save(); renderSegs(); ST.changed(); if (k !== "anReplace") play(); });
+      $(k).addEventListener("change", function () { if (k !== "anReplace") { pickedName = ""; dropKeys(); } ST.state[k] = $(k).checked; ST.save(); renderSegs(); ST.changed(); if (k !== "anReplace") play(); });
     });
     $("anFamily").addEventListener("change", function () { setEaseFromControls(); });
     Array.prototype.forEach.call($("anEaseDir").children, function (b) { b.addEventListener("click", function (e) { e.preventDefault(); setEaseFromControls(b.getAttribute("data-v")); }); });
     $("anPlay").addEventListener("click", play);
+    Array.prototype.forEach.call(body.querySelectorAll(".an-sec-head"), function (h) {
+      h.addEventListener("click", function () { var id = h.parentNode.getAttribute("data-sec"); setOpen(id, !openState()[id]); ST.save(); });
+    });
+    $("anSearch").addEventListener("input", function () { search = $("anSearch").value; renderPresets(); });
+    ST.on("change", renderSections);
+    ST.on("selection", renderSections);
     ST.bindField($("anRepeat"), "anRepeat", { onInput: function () { queuePlay(); } });
     Array.prototype.forEach.call($("anRepeatMode").children, function (b) {
       b.addEventListener("click", function (e) { e.preventDefault(); ST.state.anRepeatMode = b.getAttribute("data-v"); ST.save(); renderSegs(); ST.changed(); play(); });
@@ -557,9 +626,9 @@
     $("anCapture").addEventListener("click", captureSelection);
     $("anRemove").addEventListener("click", removeFromSelection);
     $("anPresetName").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); savePreset(); } });
-    renderSegs(); renderPresets(); drawCurve(ST.state.anEase);
+    renderSegs(); renderPresets(); renderSections(); drawCurve(ST.state.anEase);
     var r = specFrom(snapshot()); $("anPreviewNote").textContent = r.bad || describe(snapshot()) + ", " + ST.nice(r.spec.dur / 1000) + " s" + (r.spec.keys ? ", keyframed" : ", " + r.spec.ease);
-    ST.on("reset", function () { renderSegs(); renderPresets(); drawCurve(ST.state.anEase); });
+    ST.on("reset", function () { renderSegs(); renderPresets(); renderSections(); drawCurve(ST.state.anEase); });
     ST.on("ready", loadPresets);
     ST.on("layout", function () { if (ST.isOpen && ST.isOpen("animate") && !document.hidden) queuePlay(); });
   }
@@ -577,5 +646,5 @@
     build: build
   });
 
-  ST._animate = { copySet: copySet, pasteSet: pasteSet, repeatSet: repeatSet, copied: function () { return copied; }, specFrom: specFrom, STARTERS: STARTERS, KEYED: KEYED, GROUPS: GROUPS, apply: apply, presets: function () { return presets; }, setPresets: function (p) { presets = p; renderPresets(); }, usePreset: usePreset, play: play };
+  ST._animate = { copySet: copySet, pasteSet: pasteSet, repeatSet: repeatSet, copied: function () { return copied; }, specFrom: specFrom, STARTERS: STARTERS, KEYED: KEYED, GROUPS: GROUPS, CATS: CATS, effectsFor: effectsFor, apply: apply, presets: function () { return presets; }, setPresets: function (p) { presets = p; renderPresets(); }, usePreset: usePreset, play: play };
 })();
