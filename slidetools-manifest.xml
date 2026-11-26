@@ -5,7 +5,7 @@
            xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
            xsi:type="TaskPaneApp">
   <Id>3fdacb2e-ca13-4e60-b6d9-4472e2e81fdc</Id>
-  <Version>1.0.0.6</Version>
+  <Version>1.0.0.7</Version>
   <ProviderName>Slide Tools</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Slide Tools Panel"/>
@@ -20,7 +20,7 @@
     <Host Name="Presentation"/>
   </Hosts>
   <DefaultSettings>
-    <SourceLocation DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html?install=6"/>
+    <SourceLocation DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html?install=7"/>
   </DefaultSettings>
   <Permissions>ReadWriteDocument</Permissions>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
@@ -74,18 +74,18 @@
         <bt:Image id="Icon.80" DefaultValue="https://chadisfred.github.io/Slidetools/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html?install=6"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://chadisfred.github.io/Slidetools/taskpane.html?install=7"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GetStarted.Title" DefaultValue="Slide Tools Panel is ready"/>
-        <bt:String id="Group.Label" DefaultValue="Slide Panel"/>
-        <bt:String id="Button.Label" DefaultValue="Grid Panel"/>
+        <bt:String id="GetStarted.Title" DefaultValue="Slide Tools is ready"/>
+        <bt:String id="Group.Label" DefaultValue="Slide Tools"/>
+        <bt:String id="Button.Label" DefaultValue="Slide Tools Panel"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="GetStarted.Description" DefaultValue="Open Grid Panel on the Home tab to draw and fit grids."/>
-        <bt:String id="Button.Tip" DefaultValue="Open the Slide Tools side panel for grids, fitting, resizing and corners."/>
+        <bt:String id="GetStarted.Description" DefaultValue="Open Slide Tools Panel at the right of the Home tab."/>
+        <bt:String id="Button.Tip" DefaultValue="Open the Slide Tools panel."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
-  <ExtendedOverrides Url="https://chadisfred.github.io/Slidetools/shortcuts.json?v=2.27.1"/>
+  <ExtendedOverrides Url="https://chadisfred.github.io/Slidetools/shortcuts.json?v=3.11.0"/>
 </OfficeApp>

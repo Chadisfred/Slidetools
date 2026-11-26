@@ -26,7 +26,7 @@ if errorlevel 1 (
   if exist "%LOCALAPPDATA%\Microsoft\Office\16.0\Wef" rmdir /s /q "%LOCALAPPDATA%\Microsoft\Office\16.0\Wef"
 )
 
-echo  Slide Tools has been removed. The Grid Panel button disappears the next
+echo  Slide Tools has been removed. The Slide Tools Panel button disappears the next
 echo  time PowerPoint starts.
 echo.
 pause

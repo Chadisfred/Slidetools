@@ -63,8 +63,8 @@ if errorlevel 1 (
 echo.
 echo  Slide Tools is installed.
 echo.
-echo  Open PowerPoint and look for the Grid Panel button on the Home tab,
-echo  in the Slide Panel group. If it isn't there, go to Home, Add-ins,
+echo  Open PowerPoint and look for the Slide Tools Panel button on the Home tab,
+echo  in the Slide Tools group. If it isn't there, go to Home, Add-ins,
 echo  My Add-ins.
 echo.
 echo  Install file saved in: %ST_DIR%

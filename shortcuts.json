@@ -44,6 +44,11 @@
       "id": "RepeatLast",
       "type": "ExecuteFunction",
       "name": "Repeat the last action"
+    },
+    {
+      "id": "ShowPanel",
+      "type": "ExecuteFunction",
+      "name": "Show the Slide Tools panel"
     }
   ],
   "shortcuts": [
@@ -126,6 +131,15 @@
         "windows": "Ctrl+Alt+Shift+D",
         "mac": "Command+Option+Shift+D",
         "web": "Ctrl+Alt+Shift+D"
+      }
+    },
+    {
+      "action": "ShowPanel",
+      "key": {
+        "default": "Ctrl+Alt+Shift+P",
+        "windows": "Ctrl+Alt+Shift+P",
+        "mac": "Command+Option+Shift+P",
+        "web": "Ctrl+Alt+Shift+P"
       }
     }
   ]
