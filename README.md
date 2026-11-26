@@ -465,16 +465,9 @@ Notes:
 2. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
 3. The colour pickers in the Styles and Shape styles editors suggest these colours.
 
-## Starting with a presentation
+## Opening the panel
 
-PowerPoint doesn't let add-ins open themselves every time PowerPoint starts, but Slide Tools can start whenever a particular presentation opens. Open the settings menu and, under This presentation:
-
-1. Start with this presentation: Slide Tools loads by itself when the file opens, with the panel hidden. Keyboard shortcuts, follow selection and Repeat last action work straight away, and Ctrl+Alt+Shift+P shows the panel.
-2. Show the panel when it starts: the panel opens with the file too.
-
-Both are saved in the file, so save after turning them on. Turn them on in your company template and every deck made from it starts with Slide Tools. They need a recent PowerPoint. In older versions the choices are greyed out.
-
-The Home tab button is called Slide Tools Panel, in a group called Slide Tools. Installs from before 3.11.0 show it as Grid Panel, so run the installer once more to get the new name and the new shortcut.
+Open the panel from Slide Tools Panel at the right of the Home tab, or from Home, Add-ins. Once it has been opened, Ctrl+Alt+Shift+P shows it again. Installs from before 3.11.0 show the Home button as Grid Panel, so run the installer once more to get the new name and the shortcut.
 
 ## Keyboard shortcuts
 
