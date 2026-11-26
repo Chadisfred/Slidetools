@@ -682,3 +682,6 @@ input[type=text]:disabled { opacity: 0.6; }
 .el-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .el-settings { display: grid; gap: 12px; }
 .el-settings[hidden] { display: none; }
+.el-col-tabs { margin-bottom: 8px; }
+.el-col-tabs[hidden] { display: none; }
+#elColNote { margin-top: 6px; }

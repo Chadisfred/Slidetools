@@ -376,6 +376,7 @@
   }
   function render() {
     var themeRow = $("colTheme"), mine = $("colMine"), edit = $("colEdit");
+    ST.emit("colours"); // other tools that offer these colours, such as Elements, follow along
     if (!themeRow) return;
     updateDatalist();
     Array.prototype.forEach.call($("colTarget").children, function (b) { b.classList.toggle("on", b.getAttribute("data-v") === ST.state.colTarget); });
@@ -479,5 +480,5 @@
   });
 
   // Exposed for testing only
-  ST._colours = { get: function () { return palette; }, theme: function () { return theme; }, put: function (list) { palette = list; return save(); } };
+  ST._colours = { get: function () { return palette; }, theme: function () { return theme; }, template: function () { return template; }, put: function (list) { palette = list; return save(); } };
 })();
