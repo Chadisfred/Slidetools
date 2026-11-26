@@ -2,6 +2,16 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.11.1] 2026-11-26
+
+### Removed
+
+1. Start with this presentation and Show the panel when it starts. With the installer's way of adding Slide Tools, PowerPoint reported the add-in as unavailable when a file tried to start it. Open the panel from the Home tab as before.
+
+### Fixed
+
+1. A file saved with Start with this presentation turned on is cleared the next time the panel opens in it. Save the file to keep the change.
+
 ## [3.11.0] 2026-11-26
 
 ### Added
