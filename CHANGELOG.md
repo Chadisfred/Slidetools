@@ -6,7 +6,7 @@ All notable changes to Slide Tools are listed here, newest first. Version number
 
 ### Added
 
-1. Elements, a new tool for prebuilt design elements in theme colours and fonts: Stat card (a header with a title and a value with an automatic up, down or flat arrow, a summary band, bullets and a footer figure), Pointer card (a dark header, a band of bullets and a light footer joined by small pointers) and Big number. An element replaces the selected shape at its size and place, or takes a typed width such as `3col` at the grid area's top left.
+1. Elements, a new tool for prebuilt design elements in theme colours and fonts: Stat card (a bordered card with a header holding a title and a value with an automatic up, down or flat arrow, a summary band, bullets and a footer figure, with rules between the bands), Pointer card (a dark header, a band of bullets and a light footer joined by small pointers) and Big number. An element replaces the selected shape at its size and place, or takes a typed width such as `3col` at the grid area's top left.
 
 ## [3.9.0] 2026-11-26
 

@@ -22,7 +22,7 @@
   ST.addDefaults(defaults);
 
   var KINDS = [
-    { id: "stat", name: "Stat card", tip: "A coloured header with a title and a value with an up or down arrow, a summary band, bullets and a footer figure." },
+    { id: "stat", name: "Stat card", tip: "A bordered card: a coloured header with a title and a value with an up or down arrow, a summary band, bullets and a footer figure." },
     { id: "pointer", name: "Pointer card", tip: "A dark header, a band of bullets and a light footer, joined by small pointers." },
     { id: "bignum", name: "Big number", tip: "A large figure in the theme colour with a label and a note, beside a colour bar." }
   ];
@@ -66,7 +66,7 @@
     var fill = o.fill ? "<a:solidFill>" + o.fill + "</a:solidFill>" : "<a:noFill/>";
     var tx = o.text || txBody([para([{ t: "", sz: 12, c: clr("tx1") }])], { l: 0, t: 0, r: 0, b: 0 });
     return '<p:sp><p:nvSpPr><p:cNvPr id="' + id + '" name="' + x(name) + '"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr>' +
-      '<p:spPr>' + xf + '<a:prstGeom prst="' + (o.geom || "rect") + '"><a:avLst/></a:prstGeom>' + fill + "<a:ln><a:noFill/></a:ln></p:spPr>" + tx + "</p:sp>";
+      '<p:spPr>' + xf + '<a:prstGeom prst="' + (o.geom || "rect") + '"><a:avLst/></a:prstGeom>' + fill + (o.line ? '<a:ln w="' + e(o.line.w) + '"><a:solidFill>' + o.line.c + "</a:solidFill></a:ln>" : "<a:ln><a:noFill/></a:ln>") + "</p:spPr>" + tx + "</p:sp>";
   }
   function group(id, name, b, kids) {
     return '<p:grpSp xmlns:p="' + NS_P + '" xmlns:a="' + NS_A + '"><p:nvGrpSpPr><p:cNvPr id="' + id + '" name="' + x(name) + '"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>' +
@@ -119,9 +119,14 @@
     y += hs[1];
     kids.push(sp(ids.next++, "Points", { x: b.x, y: y, w: W, h: hs[2] }, { fill: c.grey, text: txBody(list.map(function (t, i) { return para([{ t: t, sz: bSz, c: c.text }], { bullet: { ch: "▪", c: c.base }, marL: marL, spcBef: i ? 6 * k : 0 }); }), inset) }));
     y += hs[2];
-    kids.push(sp(ids.next++, "Rule", { x: b.x, y: y - 0.5, w: W, h: 1 }, { fill: c.rule }));
+    // Rules between the bands, in the card's colour
+    var rule = Math.max(0.75, Math.round(k * 4) / 4);
+    kids.push(sp(ids.next++, "Rule", { x: b.x, y: b.y + hs[0] + hs[1] - rule / 2, w: W, h: rule }, { fill: c.mid }));
+    kids.push(sp(ids.next++, "Rule", { x: b.x, y: y - rule / 2, w: W, h: rule }, { fill: c.mid }));
     kids.push(sp(ids.next++, "Footer", { x: b.x, y: y, w: W, h: hs[3] }, { fill: c.grey, text: txBody([para([{ t: S.elStFootB, b: true, sz: fSz, c: c.text, mj: true }, { t: S.elStFootN ? " " + S.elStFootN : "", sz: fSz, c: c.text }].filter(function (r) { return r.t; }))], inset, "ctr") }));
     y += hs[3];
+    // An outline round the whole card, on top
+    kids.push(sp(ids.next++, "Border", { x: b.x, y: b.y, w: W, h: y - b.y }, { line: { c: c.dark, w: Math.max(1, Math.round(k * 4) / 4 + 0.25) } }));
     return { name: "Stat card", kids: kids, h: y - b.y };
   }
   function pointerCard(S, b, slot, ids) {
