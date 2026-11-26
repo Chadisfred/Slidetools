@@ -286,6 +286,7 @@
       b.innerHTML = (it.checked === undefined ? "" : (it.checked ? ICONS.check : ICONS.blank)) + "<span></span>";
       b.querySelector("span").textContent = it.label;
       b.disabled = !!it.disabled;
+      if (it.checked !== undefined) { b.setAttribute("role", "menuitemcheckbox"); b.setAttribute("aria-checked", String(!!it.checked)); }
       b.addEventListener("click", function (e) { e.stopPropagation(); closeMenu(); it.action(); });
       menu.appendChild(b);
     });
@@ -312,6 +313,8 @@
     ]);
   }
   function showSettingsMenu(anchor) {
+    // The start choices are read fresh each time, then the menu opens
+    if (ST.startup && !anchor._fresh) { anchor._fresh = true; ST.startup.refresh().then(function () { showSettingsMenu(anchor); anchor._fresh = false; }); return; }
     var items = ST.update ? ST.update.menuItems().concat(["sep"]) : [];
     items.push({ title: "Show tools" });
     layout.order.forEach(function (id) {
@@ -328,6 +331,13 @@
       items.push({ label: "Unpin all", disabled: !Object.keys(layout.pinned).length, action: function () { layout.pinned = {}; saveLayout(); applyAll(); } });
     }
     items.push("sep");
+    if (ST.startup) {
+      var st = ST.startup.state();
+      items.push({ title: "This presentation" });
+      items.push({ label: st.ok ? "Start with this presentation" : "Start with this presentation (needs a newer PowerPoint)", checked: st.load, disabled: !st.ok, action: function () { ST.startup.setLoad(!st.load); } });
+      items.push({ label: "Show the panel when it starts", checked: st.show, disabled: !st.ok || !st.load, action: function () { ST.startup.setShow(!st.show); } });
+      items.push("sep");
+    }
     items.push({ label: "Share settings", action: function () { ST.openShare(); } });
     items.push({ label: "Keyboard shortcuts", action: function () { ST.shortcuts.show(); } });
     items.push({ label: "Ask before replacing a slide again", action: function () { ST.resetSwapConfirm(); ST.toast("Slide Tools will ask before cropping pictures or making copies."); } });

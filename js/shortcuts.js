@@ -20,6 +20,7 @@
     ["ShrinkHeight", "Taller", "I", function () { arr().resizeBy(0, 1); }],
     ["GrowHeight", "Shorter", "K", function () { arr().resizeBy(0, -1); }],
     ["RepeatLast", "Repeat last action", "D", function () { ST.runRepeat(); }],
+    ["ShowPanel", "Show the Slide Tools panel", "P", function () { if (ST.startup) ST.startup.showPanel(); }],
   ];
   function arr() { return ST._arrange; }
 

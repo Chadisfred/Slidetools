@@ -37,7 +37,7 @@ The install file is `slidetools-manifest.xml`. Save it somewhere permanent on yo
    reg add "HKCU\Software\Microsoft\Office\16.0\WEF\Developer" /v SlideTools /t REG_SZ /d "C:\Users\<you>\Slidetools\slidetools-manifest.xml" /f
    ```
 
-3. Open PowerPoint. A Grid Panel button appears on the Home tab in a group called Slide Panel. If it doesn't, look under Home, Add-ins, More Add-ins, My Add-ins.
+3. Open PowerPoint. A Slide Tools Panel button appears at the right of the Home tab, in a group called Slide Tools. If it doesn't, look under Home, Add-ins, More Add-ins, My Add-ins.
 
 To remove it:
 
@@ -247,12 +247,13 @@ Prebuilt design elements in your theme colours: a stat card with a value and an 
 
 Tips:
 
-1. Draw a rectangle where the element should go, select it, and click Place element. The element takes its size and place, and the rectangle is removed.
-2. Or choose Type a size and give a width such as `3col`, `2col+gap` or `8g`. Leave Height empty to fit the text. The element goes at the grid area's top left.
-3. Colours are theme colours: headers use a darker shade and lighter bands use tints, so a new theme recolours the element. Fonts are the theme's heading and body fonts.
-4. In a Stat card, a value starting with + gets ▲, one starting with - gets ▼, and 0 gets ▶.
-5. Each element is one group with the text inside each band, with real bullets. Edit the text on the slide afterwards. Bands don't grow on their own, so give long text more height.
-6. Add-ins can't set bullets or theme tints directly, so the slide is swapped for an identical copy with the element, in memory.
+1. Click the picture of the element you want. Its settings appear below.
+2. Draw a rectangle where the element should go, select it, and click Place element. The element takes its size and place, and the rectangle is removed.
+3. Or choose Type a size and give a width such as `3col`, `2col+gap` or `8g`. Leave Height empty to fit the text. The element goes at the grid area's top left.
+4. Colours are theme colours: headers use a darker shade and lighter bands use tints, so a new theme recolours the element. Fonts are the theme's heading and body fonts.
+5. In a Stat card, a value starting with + gets ▲, one starting with - gets ▼, and 0 gets ▶.
+6. Each element is one group with the text inside each band, with real bullets. Edit the text on the slide afterwards. Bands don't grow on their own, so give long text more height.
+7. Add-ins can't set bullets or theme tints directly, so the slide is swapped for an identical copy with the element, in memory.
 
 ### Typography
 
@@ -464,6 +465,17 @@ Notes:
 2. Colouring styled text from here keeps it linked to its text style, recording the new colour as a local change. The ribbon's font colour button breaks the link. Shapes keep their shape style link either way.
 3. The colour pickers in the Styles and Shape styles editors suggest these colours.
 
+## Starting with a presentation
+
+PowerPoint doesn't let add-ins open themselves every time PowerPoint starts, but Slide Tools can start whenever a particular presentation opens. Open the settings menu and, under This presentation:
+
+1. Start with this presentation: Slide Tools loads by itself when the file opens, with the panel hidden. Keyboard shortcuts, follow selection and Repeat last action work straight away, and Ctrl+Alt+Shift+P shows the panel.
+2. Show the panel when it starts: the panel opens with the file too.
+
+Both are saved in the file, so save after turning them on. Turn them on in your company template and every deck made from it starts with Slide Tools. They need a recent PowerPoint. In older versions the choices are greyed out.
+
+The Home tab button is called Slide Tools Panel, in a group called Slide Tools. Installs from before 3.11.0 show it as Grid Panel, so run the installer once more to get the new name and the new shortcut.
+
 ## Keyboard shortcuts
 
 These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of Ctrl+Alt+Shift. They need PowerPoint for Windows 2601 or later, PowerPoint for Mac 16.105.2 or later, or PowerPoint on the web. The list is also in the panel's settings menu.
@@ -473,6 +485,7 @@ These work while the slide has focus. On a Mac use Cmd+Option+Shift instead of C
 | Nudge left, up, down, right | Ctrl+Alt+Shift+Left, Up, Down, Right |
 | Wider, narrower, taller, shorter | Ctrl+Alt+Shift+L, J, I, K |
 | Repeat last action | Ctrl+Alt+Shift+D |
+| Show the Slide Tools panel | Ctrl+Alt+Shift+P |
 
 Nudge and the size keys step by the Nudge by amount in Position, and sizes change around the reference point in Size. I, J, K and L are laid out like the arrow keys. Repeat covers panel actions only. To repeat a copy dragged with the mouse, use PowerPoint's Ctrl+D: duplicate, drag the copy into place, and each further Ctrl+D uses the same offset. Shortcuts were added in 2.25.0 with a change to the install file, so an install from before 2.25.0 needs the installer run once more.
 
@@ -522,7 +535,7 @@ The panel checks `version.json` when it opens. When it's out of date, a dot appe
 | The panel shows an old version | Close PowerPoint, delete the contents of `%LOCALAPPDATA%\Microsoft\Office\16.0\Wef\`, reopen |
 | The panel is blank or shows an error | Check the web address above loads in a browser, then reopen the panel |
 | "Error loading add-ins" at launch | It can happen when the network is slow as PowerPoint starts. Restart PowerPoint. If it keeps happening, check the web address above loads in a browser |
-| The Grid Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
+| The Slide Tools Panel button is missing | Run `reg query "HKCU\Software\Microsoft\Office\16.0\WEF\Developer"` and check the path is right, then fully restart PowerPoint (end any PowerPoint entries in Task Manager) |
 | A slide button says the version is too old | Update Office. Draw, Fit, Snap, Resize, Select similar and Styles need PowerPoint API 1.5. Grouping, caps, strikethrough and superscript in styles, and Update all inside groups need 1.8. Inserting tables needs 1.8. Formatting existing tables needs 1.9. Corners need 1.10 |
 | Update all reports something you didn't expect | Click Cancel. Nothing changes until you click Update |
 

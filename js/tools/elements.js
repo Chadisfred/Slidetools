@@ -13,7 +13,7 @@
   var ICON = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="2.5" width="12" height="4" rx="1" fill="currentColor" fill-opacity="0.25"/><rect x="3" y="7.5" width="12" height="5" rx="1"/><rect x="3" y="13.5" width="12" height="2.5" rx="1"/></svg>';
 
   var defaults = {
-    elKind: "stat", elColor: "accent1", elPlace: "selection", elW: "3col", elH: "",
+    elKind: "", elColor: "accent1", elPlace: "selection", elW: "3col", elH: "",
     elStTitle: "Region name", elStValue: "+5.0%", elStArrow: true, elStSub: "Short summary of the change",
     elStBullets: "First point about the result\nSecond point", elStFootB: "120 units", elStFootN: "(15%)",
     elPtTitle: "Key insight", elPtBullets: "First point\nSecond point\nThird point", elPtLabel: "Action needed:", elPtFoot: "Next step",
@@ -39,9 +39,10 @@
   function palette(slot) {
     return {
       dark: clr(slot, 75000), base: clr(slot), mid: clr(slot, 60000, 40000), light: clr(slot, 40000, 60000), pale: clr(slot, 20000, 80000),
-      grey: clr("bg1", 95000), rule: clr("bg1", 75000), white: clr("bg1"), text: clr("tx1"), soft: clr("tx1", 65000, 35000),
+      // White is always white: some templates set the theme's Light 1 to a grey or map it to a dark colour
+      grey: clr("bg1", 95000), rule: clr("bg1", 75000), white: '<a:srgbClr val="FFFFFF"/>', text: clr("tx1"), soft: clr("tx1", 65000, 35000),
       // See-through bands, so a picture or texture behind the card shows a little
-      tint: clr(slot, null, null, 30000), mist: clr("bg1", 95000, null, 85000)
+      tint: clr(slot, null, null, 30000), mist: '<a:srgbClr val="FFFFFF"><a:alpha val="90000"/></a:srgbClr>'
     };
   }
   // runs: [{ t, b, i, sz, c (colour XML), mj (heading font) }]
@@ -218,8 +219,14 @@
     var kindName = (KINDS.filter(function (k) { return k.id === S.elKind; })[0] || KINDS[0]).name;
     ST.setRepeat("Place " + kindName, function () { place(S); });
     var placedName = null, replaced = false, missing = false;
-    ST.withSelection(["id", "name", "type", "left", "top", "width", "height"], function (context, items) {
-      if (t.fromSelection && !items.length) { ST.toast("Select a shape to replace, or choose Size and type a width.", true); return; }
+    if (!S.elKind || !BUILDERS[S.elKind]) { ST.toast("Pick an element first.", true); return; }
+    ST.run(function (context) {
+      var sel = context.presentation.getSelectedShapes();
+      sel.load("items/id,items/name,items/type,items/left,items/top,items/width,items/height");
+      return context.sync().then(function () { return go(context, sel.items.slice()); });
+    });
+    function go(context, items) {
+      if (t.fromSelection && !items.length) { ST.toast("Select a shape to replace, or choose Type a size and give a width.", true); return; }
       return ST.confirmSwap("place an element").then(function (ok) {
         if (!ok) return null;
         return R.edit(context, function (doc, extra) {
@@ -252,7 +259,7 @@
         ST.toast((replaced ? "Replaced the shape with a " : "Placed a ") + kindName.toLowerCase() + ". Edit its text on the slide.");
         ST.refreshSelection();
       }, function (err) { ST.toast("Couldn't change the slide. " + (ST.errorText ? ST.errorText(err) : ""), true); });
-    }, t.fromSelection ? "Select a shape to replace, or choose Size and type a width." : null);
+    }
   }
   // Reads the theme colours once, from a copy of the slide that is never swapped
   var themeRead = false;
@@ -261,7 +268,7 @@
     themeRead = true;
     PowerPoint.run(function (context) {
       return R.edit(context, function (doc, extra) { themeHex = readTheme(extra && extra.files); return { count: 0 }; });
-    }).catch(function () { themeRead = false; }).then(renderColors);
+    }).catch(function () { themeRead = false; }).then(function () { renderColors(); renderKinds(); });
   }
 
   // ---------- Panel ----------
@@ -279,8 +286,9 @@
     bignum: '<div class="el-fields" data-kind="bignum">' + field("elBnNum", "Number", "e.g. 75%") + field("elBnLabel", "Label", "What it measures") + field("elBnNote", "Note", "Optional") + "</div>"
   };
   var MARKUP =
-    '<div class="mini-chips el-kinds" id="elKinds"></div>' +
+    '<div class="el-kinds" id="elKinds"></div>' +
     '<div class="help" id="elKindTip"></div>' +
+    '<div class="el-settings" id="elSettings">' +
     '<div class="field"><span class="label-row">Colour' + ST.info("Theme colours, so the element follows your template. Lighter bands are tints of the colour you pick.", "About colour") + '</span><div class="el-colors" id="elColors"></div></div>' +
     FIELDS.stat + FIELDS.pointer + FIELDS.bignum +
     '<div class="group-label">Size and place</div>' +
@@ -288,21 +296,31 @@
     '<div class="row el-size"><label class="field"><span class="label-row">Width' + ST.info("Points or formulas with the grid names: <code>3col</code>, <code>2col+gap</code>, <code>8g</code> or <code>240</code>.", "About width") + '</span><input type="text" id="elW" placeholder="e.g. 3col"></label>' +
       '<label class="field">Height<input type="text" id="elH" placeholder="Fits the text"></label></div>' +
     '<div class="help el-place-help" id="elPlaceHelp"></div>' +
-    '<button class="btn primary" id="elPlaceBtn">Place element</button>';
+    '<button class="btn primary" id="elPlaceBtn">Place element</button></div>';
 
+  // A small drawing of each element, in the chosen colour, all the same size
+  function icon(kind, hex) {
+    var c = hex || "#4472C4", g = "#E9E9EC", t = "#9a9aa2";
+    if (kind === "stat") return '<svg viewBox="0 0 60 72"><rect x="8" y="4" width="44" height="64" fill="#fff" stroke="' + c + '" stroke-width="1.6"/><rect x="8" y="4" width="44" height="16" fill="' + c + '"/><rect x="12" y="9" width="16" height="3" fill="#fff"/><rect x="38" y="9" width="10" height="3" fill="#fff"/><path d="M43 17l2-3 2 3z" fill="#fff"/><rect x="8" y="20" width="44" height="10" fill="' + c + '" fill-opacity="0.28"/><rect x="12" y="24" width="22" height="2" fill="' + t + '"/><rect x="8" y="30" width="44" height="1.6" fill="' + c + '"/><rect x="12" y="35" width="3" height="3" fill="' + c + '"/><rect x="18" y="35.5" width="26" height="2" fill="' + t + '"/><rect x="12" y="42" width="3" height="3" fill="' + c + '"/><rect x="18" y="42.5" width="20" height="2" fill="' + t + '"/><rect x="8" y="57" width="44" height="1.6" fill="' + c + '"/><rect x="12" y="61.5" width="14" height="2.4" fill="#555"/></svg>';
+    if (kind === "pointer") return '<svg viewBox="0 0 60 72"><rect x="8" y="4" width="44" height="18" fill="' + c + '"/><rect x="8" y="4" width="44" height="18" fill="#000" fill-opacity="0.25"/><rect x="12" y="10" width="24" height="4" fill="#fff"/><rect x="8" y="22" width="44" height="30" fill="' + c + '"/><path d="M13 22h7l-3.5 4z" fill="' + c + '"/><path d="M13 22h7l-3.5 4z" fill="#000" fill-opacity="0.25"/><rect x="12" y="29" width="3" height="3" fill="#fff"/><rect x="18" y="29.5" width="24" height="2" fill="#fff"/><rect x="12" y="36" width="3" height="3" fill="#fff"/><rect x="18" y="36.5" width="18" height="2" fill="#fff"/><rect x="12" y="43" width="3" height="3" fill="#fff"/><rect x="18" y="43.5" width="22" height="2" fill="#fff"/><rect x="8" y="52" width="44" height="16" fill="' + c + '" fill-opacity="0.45"/><path d="M13 52h7l-3.5 4z" fill="' + c + '"/><rect x="12" y="58" width="12" height="1.8" fill="#555"/><rect x="12" y="62" width="22" height="3" fill="#222"/></svg>';
+    return '<svg viewBox="0 0 60 72"><rect x="10" y="16" width="3" height="40" fill="' + c + '"/><text x="18" y="38" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="20" fill="' + c + '">75%</text><rect x="18" y="44" width="26" height="3" fill="#333"/><rect x="18" y="50" width="32" height="2" fill="' + t + '"/></svg>';
+  }
   function renderKinds() {
-    var box = $("elKinds");
+    var box = $("elKinds"), hex = themeHex[ST.state.elColor];
     box.innerHTML = "";
     KINDS.forEach(function (k) {
       var b = document.createElement("button");
-      b.className = "mini-chip" + (ST.state.elKind === k.id ? " on" : "");
-      b.textContent = k.name; b.title = k.tip; b.setAttribute("data-kind", k.id);
+      b.className = "el-tile" + (ST.state.elKind === k.id ? " on" : "");
+      b.title = k.tip; b.setAttribute("data-kind", k.id); b.setAttribute("aria-pressed", String(ST.state.elKind === k.id));
+      b.innerHTML = '<span class="el-icon">' + icon(k.id, hex) + '</span><span class="el-name"></span>';
+      b.querySelector(".el-name").textContent = k.name;
       b.addEventListener("click", function () { ST.state.elKind = k.id; ST.save(); render(); });
       box.appendChild(b);
     });
-    var cur = KINDS.filter(function (k) { return k.id === ST.state.elKind; })[0] || KINDS[0];
-    $("elKindTip").textContent = cur.tip;
-    Array.prototype.forEach.call(document.querySelectorAll(".el-fields"), function (f) { f.hidden = f.getAttribute("data-kind") !== cur.id; });
+    var cur = KINDS.filter(function (k) { return k.id === ST.state.elKind; })[0];
+    $("elKindTip").textContent = cur ? cur.tip : "Pick an element to see its settings.";
+    $("elSettings").hidden = !cur;
+    Array.prototype.forEach.call(document.querySelectorAll(".el-fields"), function (f) { f.hidden = !cur || f.getAttribute("data-kind") !== cur.id; });
   }
   function renderColors() {
     var box = $("elColors");
@@ -313,7 +331,7 @@
       b.className = "el-color" + (ST.state.elColor === c[0] ? " on" : "");
       b.title = c[1]; b.setAttribute("aria-label", c[1]); b.setAttribute("data-slot", c[0]);
       b.innerHTML = '<span style="background:' + (themeHex[c[0]] || "var(--field-line)") + '"></span>';
-      b.addEventListener("click", function () { ST.state.elColor = c[0]; ST.save(); renderColors(); });
+      b.addEventListener("click", function () { ST.state.elColor = c[0]; ST.save(); renderColors(); renderKinds(); });
       box.appendChild(b);
     });
   }
