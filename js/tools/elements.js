@@ -121,12 +121,14 @@
     y += hs[1];
     kids.push(sp(ids.next++, "Points", { x: b.x, y: y, w: W, h: hs[2] }, { fill: c.mist, text: txBody(list.map(function (t, i) { return para([{ t: t, sz: bSz, c: c.text }], { bullet: { ch: "▪", c: c.dark }, marL: marL, spcBef: i ? gap : 0 }); }), { l: pad, t: pad * 1.2, r: pad, b: pad * 1.2 }) }));
     y += hs[2];
-    // Rules between the bands: the header colour, as thick as the outline
-    var rule = Math.max(1, Math.round(k * 4) / 4 + 0.25);
-    kids.push(sp(ids.next++, "Rule", { x: b.x, y: b.y + hs[0] + hs[1] - rule / 2, w: W, h: rule }, { fill: c.dark }));
-    kids.push(sp(ids.next++, "Rule", { x: b.x, y: y - rule / 2, w: W, h: rule }, { fill: c.dark }));
+    var footTop = y;
     kids.push(sp(ids.next++, "Footer", { x: b.x, y: y, w: W, h: hs[3] }, { fill: c.mist, text: txBody([para([{ t: S.elStFootB, b: true, sz: fSz, c: c.text, mj: true }, { t: S.elStFootN ? " " + S.elStFootN : "", sz: fSz, c: c.text }].filter(function (r) { return r.t; }))], inset, "ctr") }));
     y += hs[3];
+    // Rules between the bands in the header colour, as thick as the outline. They are drawn
+    // after the bands, so no band covers half of a rule.
+    var rule = Math.max(1, Math.round(k * 4) / 4 + 0.25);
+    kids.push(sp(ids.next++, "Rule", { x: b.x, y: b.y + hs[0] + hs[1] - rule / 2, w: W, h: rule }, { fill: c.dark }));
+    kids.push(sp(ids.next++, "Rule", { x: b.x, y: footTop - rule / 2, w: W, h: rule }, { fill: c.dark }));
     // An outline round the whole card, on top
     kids.push(sp(ids.next++, "Border", { x: b.x, y: b.y, w: W, h: y - b.y }, { line: { c: c.dark, w: rule } }));
     return { name: "Stat card", kids: kids, h: y - b.y };
