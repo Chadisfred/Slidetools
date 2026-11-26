@@ -13,7 +13,7 @@
   var ICON = '<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"><rect x="3" y="2.5" width="12" height="4" rx="1" fill="currentColor" fill-opacity="0.25"/><rect x="3" y="7.5" width="12" height="5" rx="1"/><rect x="3" y="13.5" width="12" height="2.5" rx="1"/></svg>';
 
   var defaults = {
-    elKind: "", elColor: "accent1", elPlace: "selection", elW: "3col", elH: "",
+    elKind: "", elColor: "accent1", elColTab: "", elPlace: "selection", elW: "3col", elH: "",
     elStTitle: "Region name", elStValue: "+5.0%", elStArrow: true, elStSub: "Short summary of the change",
     elStBullets: "First point about the result\nSecond point", elStFootB: "120 units", elStFootN: "(15%)",
     elPtTitle: "Key insight", elPtBullets: "First point\nSecond point\nThird point", elPtLabel: "Action needed:", elPtFoot: "Next step",
@@ -33,8 +33,12 @@
   function e(pt) { return Math.round(pt * 12700); }
   function x(t) { return String(t).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   // A theme colour, optionally darker (lumMod) or lighter (lumMod plus lumOff)
+  // slot: a theme slot such as accent1, or a colour such as #C00000 from the template or your colours.
+  // Darker and lighter variants use the same lumMod and lumOff for both, like PowerPoint's own tints.
   function clr(slot, mod, off, alpha) {
-    return '<a:schemeClr val="' + slot + '">' + (mod ? '<a:lumMod val="' + mod + '"/>' : "") + (off ? '<a:lumOff val="' + off + '"/>' : "") + (alpha ? '<a:alpha val="' + alpha + '"/>' : "") + "</a:schemeClr>";
+    var fx = (mod ? '<a:lumMod val="' + mod + '"/>' : "") + (off ? '<a:lumOff val="' + off + '"/>' : "") + (alpha ? '<a:alpha val="' + alpha + '"/>' : "");
+    if (/^#[0-9a-f]{6}$/i.test(slot)) return '<a:srgbClr val="' + slot.slice(1).toUpperCase() + '">' + fx + "</a:srgbClr>";
+    return '<a:schemeClr val="' + slot + '">' + fx + "</a:schemeClr>";
   }
   function palette(slot) {
     return {
@@ -289,7 +293,9 @@
     '<div class="el-kinds" id="elKinds"></div>' +
     '<div class="help" id="elKindTip"></div>' +
     '<div class="el-settings" id="elSettings">' +
-    '<div class="field"><span class="label-row">Colour' + ST.info("Theme colours, so the element follows your template. Lighter bands are tints of the colour you pick.", "About colour") + '</span><div class="el-colors" id="elColors"></div></div>' +
+    '<div class="field"><span class="label-row">Colour' + ST.info("<b>Theme</b> colours follow the theme. <b>Template</b> colours are the extra colours your template defines, and <b>Yours</b> are the colours saved in Colours. Headers use a darker shade of the colour you pick and lighter bands use tints of it.", "About colour") + '</span>' +
+      '<div class="seg col-tabs el-col-tabs" id="elColTabs"><button data-v="theme">Theme</button><button data-v="template">Template</button><button data-v="mine">Yours</button></div>' +
+      '<div class="el-colors" id="elColors"></div><div class="help" id="elColNote"></div></div>' +
     FIELDS.stat + FIELDS.pointer + FIELDS.bignum +
     '<div class="group-label">Size and place</div>' +
     seg("elPlace", [["selection", "Replace shape", "Draw a shape, select it, and the element takes its size and place"], ["size", "Type a size", "A width in g, col or points, at the grid area's top left"]]) +
@@ -306,7 +312,7 @@
     return '<svg viewBox="0 0 60 72"><rect x="10" y="16" width="3" height="40" fill="' + c + '"/><text x="18" y="38" font-family="Segoe UI, Arial, sans-serif" font-weight="700" font-size="20" fill="' + c + '">75%</text><rect x="18" y="44" width="26" height="3" fill="#333"/><rect x="18" y="50" width="32" height="2" fill="' + t + '"/></svg>';
   }
   function renderKinds() {
-    var box = $("elKinds"), hex = themeHex[ST.state.elColor];
+    var box = $("elKinds"), hex = /^#/.test(ST.state.elColor) ? ST.state.elColor : themeHex[ST.state.elColor];
     box.innerHTML = "";
     KINDS.forEach(function (k) {
       var b = document.createElement("button");
@@ -322,18 +328,36 @@
     $("elSettings").hidden = !cur;
     Array.prototype.forEach.call(document.querySelectorAll(".el-fields"), function (f) { f.hidden = !cur || f.getAttribute("data-kind") !== cur.id; });
   }
+  // Colours: theme colours (which follow the theme), then the template's own colours and yours,
+  // the same lists the Colours tool shows. Template and your colours are fixed colours.
+  function colourLists() {
+    var C = ST._colours || {}, tpl = C.template ? C.template() : [], mine = C.get ? C.get() : [];
+    return {
+      theme: COLORS.map(function (c) { return { v: c[0], name: c[1], hex: themeHex[c[0]] }; }),
+      template: tpl.filter(function (c) { return c && c.hex && c.hex !== "#FFFFFF"; }).map(function (c) { return { v: c.hex, name: c.name || c.hex, hex: c.hex }; }),
+      mine: mine.filter(function (c) { return c && c.hex; }).map(function (c) { return { v: c.hex, name: c.name || c.hex, hex: c.hex }; })
+    };
+  }
   function renderColors() {
-    var box = $("elColors");
+    var box = $("elColors"), tabs = $("elColTabs");
     if (!box) return;
+    var L = colourLists(), have = { theme: true, template: L.template.length > 0, mine: L.mine.length > 0 };
+    var cur = ST.state.elColor || "accent1", inTab = function (k) { return L[k].some(function (c) { return c.v === cur; }); };
+    var tab = have[ST.state.elColTab] ? ST.state.elColTab : (inTab("template") ? "template" : inTab("mine") ? "mine" : "theme");
+    Array.prototype.forEach.call(tabs.children, function (b) { var v = b.getAttribute("data-v"); b.hidden = !have[v]; b.classList.toggle("on", v === tab); });
+    tabs.hidden = !have.template && !have.mine;
+    tabs.style.gridTemplateColumns = "repeat(" + Object.keys(have).filter(function (k) { return have[k]; }).length + ", 1fr)";
     box.innerHTML = "";
-    COLORS.forEach(function (c) {
+    L[tab].forEach(function (c) {
       var b = document.createElement("button");
-      b.className = "el-color" + (ST.state.elColor === c[0] ? " on" : "");
-      b.title = c[1]; b.setAttribute("aria-label", c[1]); b.setAttribute("data-slot", c[0]);
-      b.innerHTML = '<span style="background:' + (themeHex[c[0]] || "var(--field-line)") + '"></span>';
-      b.addEventListener("click", function () { ST.state.elColor = c[0]; ST.save(); renderColors(); renderKinds(); });
+      b.className = "el-color" + (cur === c.v ? " on" : "");
+      b.title = c.name + (c.hex && c.name !== c.hex ? " " + c.hex : ""); b.setAttribute("aria-label", c.name); b.setAttribute("data-slot", c.v);
+      b.innerHTML = '<span style="background:' + (c.hex || "var(--field-line)") + '"></span>';
+      b.addEventListener("click", function () { ST.state.elColor = c.v; ST.state.elColTab = tab; ST.save(); renderColors(); renderKinds(); });
       box.appendChild(b);
     });
+    var note = $("elColNote"), chosen = L.theme.concat(L.template, L.mine).filter(function (c) { return c.v === cur; })[0];
+    note.textContent = /^#/.test(cur) ? (chosen ? chosen.name + ", " : "") + cur + ". A fixed colour: it stays the same if the theme changes." : "A theme colour: the element follows the theme.";
   }
   function renderPlace() {
     var size = ST.state.elPlace === "size";
@@ -355,11 +379,15 @@
     Array.prototype.forEach.call($("elPlace").children, function (b) {
       b.addEventListener("click", function (ev) { ev.preventDefault(); ST.state.elPlace = b.getAttribute("data-v"); ST.save(); renderPlace(); });
     });
+    Array.prototype.forEach.call($("elColTabs").children, function (b) {
+      b.addEventListener("click", function (ev) { ev.preventDefault(); ST.state.elColTab = b.getAttribute("data-v"); ST.save(); renderColors(); });
+    });
     $("elPlaceBtn").addEventListener("click", function () { place(null); });
     render();
     ST.on("reset", render);
     ST.on("change", renderPlace);
-    ST.on("layout", loadTheme);
+    ST.on("layout", function () { loadTheme(); renderColors(); });
+    ST.on("colours", function () { renderColors(); renderKinds(); });
     ST.on("ready", loadTheme);
   }
 

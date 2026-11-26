@@ -2,6 +2,12 @@
 
 All notable changes to Slide Tools are listed here, newest first. Version numbers follow [Semantic Versioning](https://semver.org/): a major number for changes to how the panel is organised, a minor number for new features and a patch number for fixes.
 
+## [3.12.0] 2026-11-26
+
+### Added
+
+1. Elements: Colour has Theme, Template and Yours tabs, the same colours the Colours tool offers. Template and your colours get the same darker header and lighter tints as theme colours, and stay fixed when the theme changes.
+
 ## [3.11.1] 2026-11-26
 
 ### Removed

@@ -250,7 +250,7 @@ Tips:
 1. Click the picture of the element you want. Its settings appear below.
 2. Draw a rectangle where the element should go, select it, and click Place element. The element takes its size and place, and the rectangle is removed.
 3. Or choose Type a size and give a width such as `3col`, `2col+gap` or `8g`. Leave Height empty to fit the text. The element goes at the grid area's top left.
-4. Colours are theme colours: headers use a darker shade and lighter bands use tints, so a new theme recolours the element. Fonts are the theme's heading and body fonts.
+4. Colour has the same tabs as Colours: Theme, Template and Yours. Theme colours follow the theme, so a new theme recolours the element. Template colours (your template's extra colours and families) and Yours (colours saved in Colours) are fixed colours. Either way, headers use a darker shade and lighter bands use tints. Fonts are the theme's heading and body fonts.
 5. In a Stat card, a value starting with + gets ▲, one starting with - gets ▼, and 0 gets ▶.
 6. Each element is one group with the text inside each band, with real bullets. Edit the text on the slide afterwards. Bands don't grow on their own, so give long text more height.
 7. Add-ins can't set bullets or theme tints directly, so the slide is swapped for an identical copy with the element, in memory.
