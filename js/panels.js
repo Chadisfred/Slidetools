@@ -22,7 +22,7 @@
     pin: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5h4M7 2.5v4L4.5 9h7L9 6.5v-4M8 9v4.5"/></svg>'
   };
   // The first order, grouped by job: placing shapes, text and colour, then content.
-  var DEFAULT_ORDER = ["layout", "arrange", "resize", "copies", "animate", "typography", "colours", "styles", "shapestyles", "images", "tables", "corners", "match"];
+  var DEFAULT_ORDER = ["layout", "arrange", "resize", "copies", "animate", "elements", "typography", "colours", "styles", "shapestyles", "images", "tables", "corners", "match"];
   var LAYOUT_VERSION = 2;
   // What a tool's launcher button is called, when that differs from its title.
   var SHORT = { styles: "Text styles", match: "Similar" };
